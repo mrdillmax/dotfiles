@@ -6,7 +6,7 @@ SYNC_TARGET ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor dns-check hooks restore sync-status sync-diff sync-pull sync-packages audit lint check
+.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor dns-check hooks restore sync-status sync-diff sync-pull sync-packages theme-menu audit lint check
 
 help:
 	@printf '%s\n' \
@@ -17,6 +17,7 @@ help:
 	  '  make monitors    detect and configure monitor layout' \
 	  '  make mouse       interactive mouse/touchpad tuner' \
 	  '  make theme       regenerate colors with matugen' \
+	  '  make theme-menu  wallpaper/mode/scheme menu (DRY_RUN=1)' \
 	  '  make wallpaper   store a wallpaper path and apply it' \
 	  '  make kernel      detect the CPU level and install a kernel' \
 	  '  make doctor      read-only system and config health check' \
@@ -94,6 +95,9 @@ theme:
 	printf 'Generating colors from %s\n' "$$wall"; \
 	matugen image "$$wall" --config "$$HOME/.config/matugen/config.toml"; \
 	pkill -SIGUSR2 waybar 2>/dev/null || true
+
+theme-menu:
+	@./modules/theme-menu/home/.local/bin/theme-menu.sh $(if $(filter 1,$(DRY_RUN)),--dry-run,)
 
 lint:
 	@find . -path ./.git -prune -o -type f -name '*.sh' -print0 \

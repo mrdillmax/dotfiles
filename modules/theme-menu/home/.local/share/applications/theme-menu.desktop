@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Theme Menu
+Comment=Wallpaper, matugen mode and color scheme
+Exec=theme-menu.sh
+Icon=preferences-desktop-theme
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=theme;wallpaper;color;matugen;
