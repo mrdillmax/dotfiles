@@ -5,7 +5,7 @@ WALLPAPER ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor hooks audit lint check
+.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor hooks restore audit lint check
 
 help:
 	@printf '%s\n' \
@@ -20,6 +20,7 @@ help:
 	  '  make kernel      detect the CPU level and install a kernel' \
 	  '  make doctor      read-only system and config health check' \
 	  '  make hooks       install the repository pre-commit hook' \
+	  '  make restore     list and restore a backup (RESTORE_DATE=, MODULES=)' \
 	  '  make audit       read-only configuration audit' \
 	  '  make lint        bash -n + shellcheck' \
 	  '  make check       lint + audit'
@@ -51,6 +52,9 @@ doctor:
 
 hooks:
 	@./scripts/install-hooks.sh $(if $(filter 1,$(DRY_RUN)),--dry-run)
+
+restore:
+	@./install.sh --restore $(RESTORE_DATE) $(if $(MODULES),--modules $(MODULES),) $(if $(filter 1,$(DRY_RUN)),--dry-run,)
 
 theme:
 	@wall="$(WALLPAPER)"; \

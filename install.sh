@@ -39,6 +39,8 @@ DO_WALLPAPER=0
 DO_HOOKS=0
 DO_DOCTOR=0
 DO_JSON=0
+DO_RESTORE=0
+RESTORE_DATE=""
 IFACE_ARG=""
 KERNEL_LEVEL_ARG=""
 
@@ -59,6 +61,8 @@ source "$DOTFILES_DIR/lib/cursor.sh"
 source "$DOTFILES_DIR/lib/kernel.sh"
 # shellcheck source=lib/wallpaper.sh
 source "$DOTFILES_DIR/lib/wallpaper.sh"
+# shellcheck source=lib/restore.sh
+source "$DOTFILES_DIR/lib/restore.sh"
 
 usage() {
     cat <<'EOF'
@@ -88,6 +92,8 @@ Modes:
   --hooks               install the repository pre-commit hook and exit
   --doctor              read-only health check and exit (never needs sudo)
   --json                machine-readable output (use with --doctor)
+  --restore [date]      list backups and restore one from ~/.dotfiles-backup
+                        (combine with --modules a,b; /etc needs --system)
   --list                list modules, GPU profiles and package groups
   -h, --help            this help
 
@@ -122,6 +128,13 @@ while (($#)); do
         --hooks)      DO_HOOKS=1 ;;
         --doctor)     DO_DOCTOR=1 ;;
         --json)       DO_JSON=1 ;;
+        --restore)
+            DO_RESTORE=1
+            if [[ -n ${2:-} && ${2} != -* ]]; then
+                RESTORE_DATE="$2"
+                shift
+            fi
+            ;;
         --list)       LIST_ONLY=1 ;;
         -h|--help)    usage; exit 0 ;;
         *)            die "unknown option: $1 (see --help)" ;;
@@ -196,6 +209,11 @@ if (( DO_DOCTOR )); then
     doctor_args=()
     (( DO_JSON )) && doctor_args+=(--json)
     exec bash "$DOTFILES_DIR/scripts/doctor.sh" "${doctor_args[@]}"
+fi
+
+if (( DO_RESTORE )); then
+    restore_run "$RESTORE_DATE" "$MODULES_ARG"
+    exit $?
 fi
 
 if (( DO_HOOKS )); then
@@ -509,6 +527,7 @@ for name in workspaces-split mouse-sensitivity; do
     fi
 done
 
+maybe_create_snapshot
 install_selected_modules
 
 if (( DO_PACKAGES )); then
