@@ -33,6 +33,8 @@ GPU_ARG=""
 CURSOR_ARCHIVE_ARG=""
 CURSOR_THEME_ARG=""
 CURSOR_SIZE_ARG=""
+WALLPAPER_ARG=""
+DO_WALLPAPER=0
 
 # Load helpers before parsing so die() is available for bad options.
 # shellcheck source=lib/common.sh
@@ -47,6 +49,8 @@ source "$DOTFILES_DIR/lib/packages.sh"
 source "$DOTFILES_DIR/lib/system.sh"
 # shellcheck source=lib/cursor.sh
 source "$DOTFILES_DIR/lib/cursor.sh"
+# shellcheck source=lib/wallpaper.sh
+source "$DOTFILES_DIR/lib/wallpaper.sh"
 
 usage() {
     cat <<'EOF'
@@ -67,6 +71,7 @@ Modes:
   --cursor-archive PATH install a cursor theme from a local archive (not committed)
   --cursor-theme NAME   cursor theme name (default: host cursor.conf)
   --cursor-size N       cursor size 16..128 (default: 24)
+  --wallpaper PATH      store the wallpaper path and optionally apply it
   --system              install opt-in /etc files (run with sudo)
   --list                list modules, GPU profiles and package groups
   -h, --help            this help
@@ -94,6 +99,7 @@ while (($#)); do
         --cursor-archive) CURSOR_ARCHIVE_ARG="${2:?missing value for --cursor-archive}"; shift ;;
         --cursor-theme)   CURSOR_THEME_ARG="${2:?missing value for --cursor-theme}"; shift ;;
         --cursor-size)    CURSOR_SIZE_ARG="${2:?missing value for --cursor-size}"; shift ;;
+        --wallpaper)  WALLPAPER_ARG="${2:?missing value for --wallpaper}"; DO_WALLPAPER=1; shift ;;
         --system)     DO_SYSTEM=1 ;;
         --list)       LIST_ONLY=1 ;;
         -h|--help)    usage; exit 0 ;;
@@ -122,6 +128,10 @@ fi
 HOST_NAME="${HOST_ARG:-$(detect_host_type)}"
 GPU_PROFILE="${GPU_ARG:-$(detect_gpu_profile)}"
 
+if (( DO_WALLPAPER )); then
+    set_wallpaper "$WALLPAPER_ARG"
+    exit 0
+fi
 
 list_all() {
     printf '%s\n' "Modules:"

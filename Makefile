@@ -5,7 +5,7 @@ WALLPAPER ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install all dry-run monitors mouse theme audit lint check
+.PHONY: help install all dry-run monitors mouse theme wallpaper audit lint check
 
 help:
 	@printf '%s\n' \
@@ -16,6 +16,7 @@ help:
 	  '  make monitors    detect and configure monitor layout' \
 	  '  make mouse       interactive mouse/touchpad tuner' \
 	  '  make theme       regenerate colors with matugen' \
+	  '  make wallpaper   store a wallpaper path and apply it' \
 	  '  make audit       read-only configuration audit' \
 	  '  make lint        bash -n + shellcheck' \
 	  '  make check       lint + audit'
@@ -35,8 +36,17 @@ monitors:
 mouse:
 	./install.sh --mouse
 
+wallpaper:
+	@[[ -n "$(WALLPAPER)" ]] || { printf 'Use: make wallpaper WALLPAPER=/path/to/image\n' >&2; exit 1; }
+	./install.sh --wallpaper "$(WALLPAPER)"
+
 theme:
 	@wall="$(WALLPAPER)"; \
+	if [[ -z $$wall ]]; then \
+	    if [[ -r $$HOME/.config/hypr/wallpaper.path ]]; then \
+	        wall=$$(<"$$HOME/.config/hypr/wallpaper.path"); \
+	    fi; \
+	fi; \
 	if [[ -z $$wall ]]; then \
 	    wall=$$(awk -F'"' '/^[[:space:]]*image[[:space:]]*=/{print $$2; exit}' "$$HOME/.config/hypr/colors.lua" 2>/dev/null || true); \
 	fi; \
