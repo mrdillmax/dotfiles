@@ -23,6 +23,11 @@ tui_confirm() {
         return 0
     fi
 
+    # Without a terminal there is nobody to answer; treat it as "no".
+    if [[ ! -t 0 ]]; then
+        return 1
+    fi
+
     if tui_has_gum; then
         if [[ $default == yes ]]; then
             gum confirm --default=true "$prompt"

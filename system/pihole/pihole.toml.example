@@ -167,7 +167,8 @@
   #
   # Allowed values are:
   #     a valid interface name
-  interface = "enp9s0" ### CHANGED, default = ""
+  # @IFACE@ is rendered by install.sh from --iface or the default route.
+  interface = "@IFACE@"
 
   # Add an A, AAAA and PTR record to the DNS. This adds a singular name to the DNS with
   # associated IPv4 (A) and IPv6 (AAAA) records

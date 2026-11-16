@@ -35,6 +35,7 @@ CURSOR_THEME_ARG=""
 CURSOR_SIZE_ARG=""
 WALLPAPER_ARG=""
 DO_WALLPAPER=0
+IFACE_ARG=""
 
 # Load helpers before parsing so die() is available for bad options.
 # shellcheck source=lib/common.sh
@@ -73,6 +74,7 @@ Modes:
   --cursor-size N       cursor size 16..128 (default: 24)
   --wallpaper PATH      store the wallpaper path and optionally apply it
   --system              install opt-in /etc files (run with sudo)
+  --iface IFACE         network interface for Pi-hole (@IFACE@ rendering)
   --list                list modules, GPU profiles and package groups
   -h, --help            this help
 
@@ -101,6 +103,7 @@ while (($#)); do
         --cursor-size)    CURSOR_SIZE_ARG="${2:?missing value for --cursor-size}"; shift ;;
         --wallpaper)  WALLPAPER_ARG="${2:?missing value for --wallpaper}"; DO_WALLPAPER=1; shift ;;
         --system)     DO_SYSTEM=1 ;;
+        --iface)      IFACE_ARG="${2:?missing value for --iface}"; shift ;;
         --list)       LIST_ONLY=1 ;;
         -h|--help)    usage; exit 0 ;;
         *)            die "unknown option: $1 (see --help)" ;;

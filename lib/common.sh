@@ -48,6 +48,7 @@ real_home() {
 backup_path() {
     local target="$1"
     local rel="${target#"$REAL_HOME"/}"
+    rel="${rel#/}"
     local dest="$BACKUP_DIR/$rel"
 
     if (( DRY_RUN )); then
