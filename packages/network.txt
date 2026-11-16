@@ -1,0 +1,12 @@
+# Networking, DNS and remote access.
+networkmanager
+pi-hole-core
+pi-hole-ftl-bin
+pi-hole-web
+rclone
+rclone-browser
+sshfs
+syncthing
+ufw
+unbound
+zerotier-one

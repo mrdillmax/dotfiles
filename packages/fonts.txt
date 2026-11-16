@@ -1,0 +1,14 @@
+# Fonts and Ukrainian language support.
+gnu-free-fonts
+hunspell-uk
+hyphen-uk
+noto-fonts-cjk
+noto-fonts-emoji
+noto-fonts-extra
+terminus-font
+ttf-croscore
+ttf-dejavu
+ttf-jetbrains-mono-nerd
+ttf-liberation
+ttf-ms-fonts
+woff2-font-awesome

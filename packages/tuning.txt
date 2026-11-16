@@ -1,0 +1,8 @@
+# CPU/IO tuning, scheduling and stress tools.
+ananicy-cpp
+cachyos-ananicy-rules-git
+cpupower
+intel-mlc
+irqbalance
+mprime
+preload

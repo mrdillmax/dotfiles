@@ -1,0 +1,36 @@
+# Alternative applications, grouped by category.
+# Format: package <TAB> category <TAB> role <TAB> note
+# role=main  -> used by the owner AND a config exists in this repo
+# role=alt   -> package only, no config in this repo
+kitty	terminal	main	config: modules/kitty
+foot	terminal	alt	package only
+alacritty	terminal	alt	package only
+wezterm	terminal	alt	package only
+ghostty	terminal	alt	package only
+rofi	launcher	main	config: modules/rofi
+fuzzel	launcher	alt	package only
+wofi	launcher	alt	package only
+anyrun	launcher	alt	package only
+waybar	status-bar	main	config: modules/waybar
+hyprpanel	status-bar	alt	package only
+ags	status-bar	alt	package only
+dunst	notifications	main	config: modules/matugen (template)
+mako	notifications	alt	package only
+swaync	notifications	alt	package only
+firefox	browser	main	config: modules/apps (userContent.css)
+chromium	browser	alt	package only
+brave-bin	browser	alt	package only
+librewolf	browser	alt	package only
+dolphin	file-manager	main	config: modules/apps (dolphinrc)
+nautilus	file-manager	alt	package only
+thunar	file-manager	alt	package only
+yazi	file-manager	alt	package only
+btop	system-monitor	main	config: modules/apps
+htop	system-monitor	alt	package only
+bottom	system-monitor	alt	package only
+micro	editor	main	config: modules/apps
+neovim	editor	alt	package only
+kate	editor	alt	package only
+spotify-launcher	music	main	config: modules/apps (spicetify)
+amberol	music	alt	package only
+elisa	music	alt	package only

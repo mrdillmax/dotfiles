@@ -1,0 +1,6 @@
+# Image and thumbnail tooling (no GUI editors here).
+ffmpegthumbnailer
+imagemagick
+img2pdf
+jpegoptim
+oxipng

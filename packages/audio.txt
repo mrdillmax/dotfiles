@@ -1,0 +1,13 @@
+# PipeWire stack, audio production and routing.
+calf
+carla
+guitarix
+gxplugins.lv2
+lib32-pipewire
+pavucontrol
+pipewire-alsa
+pipewire-pulse
+qpwgraph
+reaper
+realtime-privileges
+rtkit
