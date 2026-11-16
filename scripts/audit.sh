@@ -47,7 +47,8 @@ if has git && git -C "$DOTFILES_DIR" rev-parse --git-dir >/dev/null 2>&1; then
         fail "pihole.toml is NOT git-ignored"
     fi
 
-    tracked_generated="$(git -C "$DOTFILES_DIR" ls-files | grep -E \
+    # Templates under matugen/templates/ are the source files, not generated output.
+    tracked_generated="$(git -C "$DOTFILES_DIR" ls-files | grep -v '/matugen/templates/' | grep -E \
         '(^|/)(colors\.lua|colors\.css|colors\.rasi|Matugen\.conf|dunstrc)$' || true)"
     if [[ -z $tracked_generated ]]; then
         pass "no generated matugen output is tracked"
