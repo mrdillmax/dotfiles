@@ -69,8 +69,8 @@ GPU profile, not with `vm` or `software`.
 If none of these produce a value, the installer **skips the file with an
 error**. It never silently substitutes `enp9s0`.
 
-`enp9s0` is only a value in the owner's generated `dill-desktop` host preset,
-not in the universal templates.
+`enp9s0` is never stored in universal templates. If a specific host needs a
+fixed interface name, keep it in that host's generated preset, not in `system/`.
 
 ## DNS safety net
 

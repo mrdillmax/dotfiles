@@ -12,6 +12,7 @@
 - **Пакети:** pacman + AUR-хелпер (`yay` або `paru`)
 
 Англійська документація: [README.md](README.md).  
+Посібник зі встановлення: [docs/arch-install.uk.md](docs/arch-install.uk.md).  
 Результати аудиту та відкладені виправлення: [AUDIT.md](AUDIT.md).
 
 ## Безпека
@@ -72,6 +73,7 @@ make theme WALLPAPER=~/Pictures/wallpaper.jpg
 ├── packages/                  групи пакетів + реєстр альтернатив
 ├── scripts/                   audit, обгортка mouse-tune
 ├── personal/                  приватні файли, gitignored
+├── docs/                      посібник зі встановлення Arch (EN/UK)
 ├── Makefile
 ├── README.md / README.uk.md
 └── AUDIT.md
@@ -91,7 +93,15 @@ make theme WALLPAPER=~/Pictures/wallpaper.jpg
   --gpu PROFILE         nvidia|amd|intel|hybrid|vm|software
   --monitors            переналаштувати монітори й вийти
   --mouse               запустити тюнер миші/тачпада
+  --cursor              встановити/налаштувати тему курсора й вийти
+  --cursor-archive PATH встановити тему курсора з локального архіву (не комітиться)
+  --cursor-theme NAME   назва теми курсора (типово: host cursor.conf)
+  --cursor-size N       розмір курсора 16..128 (типово: 24)
+  --wallpaper PATH      записати шлях до шпалер і за бажанням застосувати
   --system              встановити /etc-файли (запускати через sudo)
+  --iface IFACE         мережевий інтерфейс для Pi-hole (рендер @IFACE@)
+  --kernel              визначити рівень CPU і встановити відповідне ядро
+  --kernel-level LEVEL  перевизначити рівень ядра: v1..v4
   --list                список модулів, GPU-профілів і груп пакетів
   -h, --help            довідка
 ```
@@ -116,6 +126,7 @@ GPU-профіль — через `lspci`/`systemd-detect-virt`. Обидва м
 | `dunst` | демон сповіщень (кольори генерує matugen) |
 | `matugen` | шаблони й `config.toml` (без згенерованих кольорів) |
 | `theming` | GTK/Qt/KDE налаштування і symlink-и adw-gtk3 |
+| `cursor` | тема/розмір курсора в uwsm, GTK3/4, Qt, xsettingsd і Hyprland |
 | `scripts` | допоміжні скрипти в `~/.local/bin` |
 | `systemd-user` | rclone sync, бекап omniroute, сервіс invite-site |
 | `apps` | btop, micro, spicetify, vesktop, Firefox chrome, dolphinrc |
@@ -230,17 +241,18 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 - `[main, config]` — власник реально користується, і конфіг є в репозиторії;
 - `[package only]` — лише пакет, конфігу в репозиторії немає.
 
-| Категорія | Основна (конфіг є) | Аналоги (лише пакет) |
-|-----------|--------------------|----------------------|
-| термінал | kitty | foot, alacritty, wezterm, ghostty |
-| лаунчер | rofi | fuzzel, wofi, anyrun |
-| статус-бар | waybar | hyprpanel, ags |
-| сповіщення | dunst | mako, swaync |
-| браузер | firefox | chromium, brave-bin, librewolf |
-| файловий менеджер | dolphin | nautilus, thunar, yazi |
-| системний монітор | btop | htop, bottom |
-| редактор | micro | neovim, kate |
-| музика | spotify-launcher | amberol, elisa |
+| Категорія         | Основна (конфіг є)   | Аналоги (лише пакет)                        |
+| ----------------- | -------------------- | ------------------------------------------- |
+| термінал          | kitty                | foot, alacritty, wezterm, ghostty           |
+| лаунчер           | rofi                 | fuzzel, wofi, anyrun                        |
+| статус-бар        | waybar               | hyprpanel, ags                              |
+| сповіщення        | dunst                | mako, swaync                                |
+| браузер           | firefox              | chromium, brave-bin, librewolf              |
+| файловий менеджер | dolphin              | nautilus, thunar, yazi                      |
+| системний монітор | btop                 | htop, bottom                                |
+| редактор          | micro                | neovim, kate                                |
+| музика            | spotify-launcher     | amberol, elisa                              |
+| ядро              | керується `--kernel` | linux, linux-lts, linux-zen, linux-hardened |
 
 Огляд груп:
 
@@ -262,6 +274,22 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 
 `install.sh --no-packages` повністю пропускає цей крок.
 
+### Ядро за рівнем CPU
+
+```bash
+./install.sh --kernel
+```
+
+Інсталятор визначає рівень x86-64 (`v1`..`v4`) і пропонує ядра не вище нього:
+`linux-lts` (резервне), `linux`, `linux-zen` і відповідний xanmod на десктопах.
+Ноутбуки трактуються консервативно. Рівень вище CPU вимагає червоного
+попередження й введення `I UNDERSTAND`; неінтерактивний режим його відхиляє.
+Поточне й резервне ядра ніколи не видаляються.
+
+NVIDIA DKMS завжди отримує відповідні headers. Інсталятор друкує команди
+`mkinitcpio`/`grub-mkconfig` і ніколи їх не запускає. `make doctor` порівнює
+рівень CPU з рівнем встановленого ядра.
+
 ## Темізація
 
 Кольори генеруються matugen з шпалер:
@@ -270,8 +298,10 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 make theme WALLPAPER=~/Pictures/wallpaper.jpg
 ```
 
-Без `WALLPAPER` `make theme` читає поле `image` з поточного
-`~/.config/hypr/colors.lua`. Згенеровані файли ігноруються git:
+Без `WALLPAPER` `make theme` спершу читає
+`~/.config/hypr/wallpaper.path` (його пише `./install.sh --wallpaper`), а потім
+поле `image` з `~/.config/hypr/colors.lua`. Сам файл зображення не комітиться.
+Згенеровані файли ігноруються git:
 
 - `~/.config/hypr/colors.lua`
 - кольори waybar/rofi/kitty/dunst
@@ -289,13 +319,22 @@ make theme WALLPAPER=~/Pictures/wallpaper.jpg
 Запускати від root:
 
 ```bash
-sudo ./install.sh --system
+sudo ./install.sh --system --iface eno1
 ```
+
+Лише цей режим пише `/etc`, по одному файлу, після бекапу. `@IFACE@`
+рендериться з `--iface`, далі з інтерфейсу default-route, далі з інтерактивного
+запиту. Якщо жодного немає — файл пропускається з помилкою; `enp9s0` ніколи не
+підставляється в універсальні шаблони.
 
 Маніфест:
 
 | Джерело | Призначення |
 |---------|-------------|
+| `system/zram/zram-generator.conf` | `/etc/systemd/zram-generator.conf` |
+| `system/cpupower/cpupower` | `/etc/default/cpupower` |
+| `system/networkmanager/dns.conf` | `/etc/NetworkManager/conf.d/dns.conf` (лише з Pi-hole + Unbound) |
+| `system/networkmanager/rc-manager.conf` | `/etc/NetworkManager/conf.d/rc-manager.conf` (лише з Pi-hole + Unbound) |
 | `system/unbound/unbound.conf` | `/etc/unbound/unbound.conf` |
 | `system/pihole/dnsmasq.conf` | `/etc/pihole/dnsmasq.conf` |
 | `system/pihole/pihole.toml.example` | `/etc/pihole/pihole.toml` (лише після перевірки) |
@@ -306,9 +345,18 @@ sudo ./install.sh --system
 | `system/modprobe/*` | `/etc/modprobe.d/*` |
 | `system/sysctl/*` | `/etc/sysctl.d/*` |
 
+`pacman.conf` і `makepkg.conf` не копіюються, а зливаються: інсталятор показує
+diff, питає підтвердження і створює бекап. З `--yes` злиття пропускається.
+Опційні сервіси лише вмикаються через `systemctl enable`, без `start` чи
+`restart`.
+
+UFW — лише документація. Репозиторій не змінює стан фаєрвола чи правила; див.
+`system/ufw/README.md` із зафіксованим живим станом.
+
 Поза репозиторієм: `/etc/fstab`, профілі NetworkManager, конфігурація snapper.
 Інсталятор ніколи не запускає `grub-mkconfig` чи `mkinitcpio -P`; він лише
-друкує команди для ручної перевірки.
+друкує команди для ручної перевірки. Робота з ядром — окремо через
+`./install.sh --kernel`; `--system` лише звітує про drift CPU/ядра.
 
 Сам `pihole.toml` виключений. У прикладі порожні `pwhash`, `totp_secret`,
 `app_pwhash` і `cli_pw = false`; перегляньте його і додайте секрети самі.
@@ -338,13 +386,14 @@ cp -a ~/.dotfiles-backup/2026-11-16_120000/.config/hypr/hyprland.lua \
 ```bash
 make lint     # bash -n + shellcheck
 make audit    # read-only аудит живої системи й репозиторію
-make check    # lint + audit
+make doctor   # рівень CPU/ядра, курсор, шпалери, керовані symlink-и
+make check    # lint + audit + doctor
 ```
 
 Аудит перевіряє помилки конфігу Hyprland, дублі біндів, переносимість
 моніторів, захардкожені home-шляхи, systemd-юніти, синтаксис Unbound,
-`.pacnew`, секрети й згенеровані файли. Він нічого не редагує й не потребує
-root.
+`.pacnew`, секрети, згенеровані файли та відповідність рівня CPU рівню
+встановленого ядра. Він нічого не редагує й не потребує root.
 
 ## Секрети, які треба ротувати
 
