@@ -105,9 +105,9 @@ while (($#)); do
         --monitors)   DO_MONITORS=1 ;;
         --mouse)      DO_MOUSE=1 ;;
         --cursor)     DO_CURSOR=1 ;;
-        --cursor-archive) CURSOR_ARCHIVE_ARG="${2:?missing value for --cursor-archive}"; shift ;;
-        --cursor-theme)   CURSOR_THEME_ARG="${2:?missing value for --cursor-theme}"; shift ;;
-        --cursor-size)    CURSOR_SIZE_ARG="${2:?missing value for --cursor-size}"; shift ;;
+        --cursor-archive) CURSOR_ARCHIVE_ARG="${2:?missing value for --cursor-archive}"; DO_CURSOR=1; shift ;;
+        --cursor-theme)   CURSOR_THEME_ARG="${2:?missing value for --cursor-theme}"; DO_CURSOR=1; shift ;;
+        --cursor-size)    CURSOR_SIZE_ARG="${2:?missing value for --cursor-size}"; DO_CURSOR=1; shift ;;
         --wallpaper)  WALLPAPER_ARG="${2:?missing value for --wallpaper}"; DO_WALLPAPER=1; shift ;;
         --system)     DO_SYSTEM=1 ;;
         --iface)      IFACE_ARG="${2:?missing value for --iface}"; shift ;;
