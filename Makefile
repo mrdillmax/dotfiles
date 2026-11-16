@@ -5,7 +5,7 @@ WALLPAPER ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor audit lint check
+.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor hooks audit lint check
 
 help:
 	@printf '%s\n' \
@@ -19,6 +19,7 @@ help:
 	  '  make wallpaper   store a wallpaper path and apply it' \
 	  '  make kernel      detect the CPU level and install a kernel' \
 	  '  make doctor      read-only system and config health check' \
+	  '  make hooks       install the repository pre-commit hook' \
 	  '  make audit       read-only configuration audit' \
 	  '  make lint        bash -n + shellcheck' \
 	  '  make check       lint + audit'
@@ -48,6 +49,9 @@ kernel:
 doctor:
 	./scripts/doctor.sh
 
+hooks:
+	@./scripts/install-hooks.sh $(if $(filter 1,$(DRY_RUN)),--dry-run)
+
 theme:
 	@wall="$(WALLPAPER)"; \
 	if [[ -z $$wall ]]; then \
@@ -69,7 +73,8 @@ theme:
 lint:
 	@find . -path ./.git -prune -o -type f -name '*.sh' -print0 \
 	    | xargs -0 -r -n1 bash -n
-	@files=$$(find . -path ./.git -prune -o -type f -name '*.sh' -print); \
+	@bash -n hooks/pre-commit
+	@files=$$(find . -path ./.git -prune -o -type f -name '*.sh' -print; printf '%s\n' hooks/pre-commit); \
 	shellcheck -x $$files
 	@printf 'lint: ok\n'
 

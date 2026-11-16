@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# Pre-commit guard for this dotfiles repository.
+#
+# Blocks:
+#   * forbidden secret paths (pihole.toml, personal/, keys, rclone.conf, ...)
+#   * high-confidence secret patterns in the staged content
+#   * shellcheck errors in staged *.sh files
+#   * generated matugen output (templates are the source of truth)
+#
+# Warns (asks for confirmation):
+#   * hardcoded /home/<user> paths
+#   * disk UUIDs
+#
+# Install with `make hooks` (adds a symlink in .git/hooks, nothing global).
+# The only bypass is `git commit --no-verify`, which is not recommended.
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+    printf 'pre-commit: not inside a git repository\n' >&2
+    exit 1
+}
+
+# Resolve this script's real location so the hook also works as a symlink.
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L $SOURCE ]]; do
+    dir="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$dir/$SOURCE"
+done
+HOOK_REPO="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
+
+if [[ -r $HOOK_REPO/lib/secrets.sh ]]; then
+    DOTFILES_DIR="$HOOK_REPO"
+elif [[ -r $REPO_ROOT/lib/secrets.sh ]]; then
+    DOTFILES_DIR="$REPO_ROOT"
+else
+    printf 'pre-commit: cannot find lib/secrets.sh\n' >&2
+    exit 1
+fi
+export DOTFILES_DIR
+# shellcheck source=/dev/null
+source "$DOTFILES_DIR/lib/secrets.sh"
+
+if [[ -t 1 ]]; then
+    C_RED=$'\033[31m' C_YELLOW=$'\033[33m' C_GREEN=$'\033[32m' C_RESET=$'\033[0m'
+else
+    C_RED="" C_YELLOW="" C_GREEN="" C_RESET=""
+fi
+
+blocked=0
+block() { printf '%sBLOCK%s %s\n' "$C_RED" "$C_RESET" "$*"; blocked=1; }
+warn_line() { printf '%sWARN%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
+
+mapfile -t staged < <(git -C "$REPO_ROOT" diff --cached --name-only --diff-filter=ACMR -z | tr '\0' '\n')
+((${#staged[@]})) || exit 0
+
+# ---------------------------------------------------------------- paths ----
+for path in "${staged[@]}"; do
+    if is_forbidden_path "$path"; then
+        block "forbidden secret path: $path"
+    fi
+    if is_generated_output_path "$path"; then
+        block "generated matugen output: $path (edit the template instead)"
+    fi
+done
+
+# -------------------------------------------------------------- secrets ----
+if ! scan_staged_secrets "$REPO_ROOT"; then
+    block "secret patterns found in the staged content (see matches above)"
+fi
+
+# ----------------------------------------------------------- shellcheck ----
+if command -v shellcheck >/dev/null 2>&1; then
+    tmpdir="$(mktemp -d)"
+    trap 'rm -rf "$tmpdir"' EXIT
+    idx=0
+
+    for path in "${staged[@]}"; do
+        case "$path" in
+            *.sh) ;;
+            *) continue ;;
+        esac
+
+        idx=$((idx + 1))
+        tmp="$tmpdir/$idx.sh"
+        git -C "$REPO_ROOT" show ":$path" >"$tmp" 2>/dev/null || continue
+
+        if ! output="$(shellcheck -x -S error -f gcc "$tmp" 2>&1)"; then
+            printf '%s\n' "$output" | sed "s|$tmp|$path|g"
+            block "shellcheck errors in $path"
+        fi
+    done
+else
+    warn_line "shellcheck is not installed; staged shell scripts were not checked"
+fi
+
+# ------------------------------------------------- machine-specific WARN ----
+# Test fixtures intentionally contain synthetic examples, so skip them.
+# The lookbehind keeps repository-relative paths such as modules/hypr/home/...
+# from being treated as absolute user home directories.
+warn_re='(?<![A-Za-z0-9._/-])/home/[A-Za-z0-9._-]+/|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+warnings=()
+
+while IFS= read -r hit; do
+    warnings+=("$hit")
+done < <(
+    for path in "${staged[@]}"; do
+        case "$path" in
+            tests/*|hooks/pre-commit) continue ;;
+        esac
+        git -C "$REPO_ROOT" show ":$path" 2>/dev/null \
+            | grep -nIPe "$warn_re" 2>/dev/null \
+            | sed "s|^|$path:|"
+    done
+)
+
+if ((${#warnings[@]})); then
+    warn_line "possible machine-specific values:"
+    printf '  %s\n' "${warnings[@]}"
+
+    answer=""
+    if [[ -t 0 ]]; then
+        read -r -p 'Commit anyway? [y/N] ' answer
+    elif { true </dev/tty; } 2>/dev/null; then
+        read -r -p 'Commit anyway? [y/N] ' answer </dev/tty
+    else
+        block "machine-specific values found; run the commit in a terminal to confirm"
+    fi
+
+    case "$answer" in
+        y|Y|yes|YES) ;;
+        *) block "aborted at the WARN prompt" ;;
+    esac
+fi
+
+# ---------------------------------------------------------------- result ----
+if ((blocked)); then
+    printf '\npre-commit: %scommit blocked%s. Fix the items above.\n' "$C_RED" "$C_RESET" >&2
+    printf 'Bypassing with --no-verify is possible but not recommended.\n' >&2
+    exit 1
+fi
+
+printf '%spre-commit: ok%s (%d staged file(s))\n' "$C_GREEN" "$C_RESET" "${#staged[@]}"
+exit 0

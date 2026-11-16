@@ -36,6 +36,7 @@ CURSOR_THEME_ARG=""
 CURSOR_SIZE_ARG=""
 WALLPAPER_ARG=""
 DO_WALLPAPER=0
+DO_HOOKS=0
 IFACE_ARG=""
 KERNEL_LEVEL_ARG=""
 
@@ -82,6 +83,7 @@ Modes:
   --kernel              detect the CPU level and install a matching kernel
   --kernel-level LEVEL  override the kernel level: v1, v2, v3 or v4
                         (above-CPU levels require typing I UNDERSTAND)
+  --hooks               install the repository pre-commit hook and exit
   --list                list modules, GPU profiles and package groups
   -h, --help            this help
 
@@ -113,6 +115,7 @@ while (($#)); do
         --iface)      IFACE_ARG="${2:?missing value for --iface}"; shift ;;
         --kernel)     DO_KERNEL=1 ;;
         --kernel-level) KERNEL_LEVEL_ARG="${2:?missing value for --kernel-level}"; shift ;;
+        --hooks)      DO_HOOKS=1 ;;
         --list)       LIST_ONLY=1 ;;
         -h|--help)    usage; exit 0 ;;
         *)            die "unknown option: $1 (see --help)" ;;
@@ -177,6 +180,12 @@ list_all() {
 if (( LIST_ONLY )); then
     list_all
     exit 0
+fi
+
+if (( DO_HOOKS )); then
+    hook_args=()
+    (( DRY_RUN )) && hook_args+=(--dry-run)
+    exec bash "$DOTFILES_DIR/scripts/install-hooks.sh" "${hook_args[@]}"
 fi
 
 if (( DO_SYSTEM )); then
