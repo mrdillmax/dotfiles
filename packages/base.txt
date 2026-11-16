@@ -27,9 +27,8 @@ iotop
 jq
 less
 linux-firmware
+linux-lts
 linux-lts-headers
-linux-xanmod-linux-bin-x64v3
-linux-xanmod-linux-headers-bin-x64v3
 micro
 mokutil
 ncdu

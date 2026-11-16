@@ -34,3 +34,7 @@ kate	editor	alt	package only
 spotify-launcher	music	main	config: modules/apps (spicetify)
 amberol	music	alt	package only
 elisa	music	alt	package only
+linux	kernel	alt	package only, generic x86-64
+linux-lts	kernel	alt	package only, fallback kernel
+linux-zen	kernel	alt	package only, desktop responsiveness
+linux-hardened	kernel	alt	package only, security focused

@@ -21,8 +21,6 @@ kopia-ui-bin
 lib32-nvidia-580xx-utils
 lib32-opencl-nvidia-580xx
 libxnvctrl-580xx
-linux-xanmod-linux-bin-x64v3
-linux-xanmod-linux-headers-bin-x64v3
 matugen-bin
 mprime
 notepadnext-bin

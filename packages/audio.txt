@@ -5,9 +5,13 @@ guitarix
 gxplugins.lv2
 lib32-pipewire
 pavucontrol
+pipewire
 pipewire-alsa
+pipewire-audio
 pipewire-pulse
+playerctl
 qpwgraph
 reaper
 realtime-privileges
 rtkit
+wireplumber
