@@ -37,6 +37,8 @@ CURSOR_SIZE_ARG=""
 WALLPAPER_ARG=""
 DO_WALLPAPER=0
 DO_HOOKS=0
+DO_DOCTOR=0
+DO_JSON=0
 IFACE_ARG=""
 KERNEL_LEVEL_ARG=""
 
@@ -84,6 +86,8 @@ Modes:
   --kernel-level LEVEL  override the kernel level: v1, v2, v3 or v4
                         (above-CPU levels require typing I UNDERSTAND)
   --hooks               install the repository pre-commit hook and exit
+  --doctor              read-only health check and exit (never needs sudo)
+  --json                machine-readable output (use with --doctor)
   --list                list modules, GPU profiles and package groups
   -h, --help            this help
 
@@ -116,6 +120,8 @@ while (($#)); do
         --kernel)     DO_KERNEL=1 ;;
         --kernel-level) KERNEL_LEVEL_ARG="${2:?missing value for --kernel-level}"; shift ;;
         --hooks)      DO_HOOKS=1 ;;
+        --doctor)     DO_DOCTOR=1 ;;
+        --json)       DO_JSON=1 ;;
         --list)       LIST_ONLY=1 ;;
         -h|--help)    usage; exit 0 ;;
         *)            die "unknown option: $1 (see --help)" ;;
@@ -180,6 +186,16 @@ list_all() {
 if (( LIST_ONLY )); then
     list_all
     exit 0
+fi
+
+if (( DO_JSON && !DO_DOCTOR )); then
+    die "--json requires --doctor"
+fi
+
+if (( DO_DOCTOR )); then
+    doctor_args=()
+    (( DO_JSON )) && doctor_args+=(--json)
+    exec bash "$DOTFILES_DIR/scripts/doctor.sh" "${doctor_args[@]}"
 fi
 
 if (( DO_HOOKS )); then
