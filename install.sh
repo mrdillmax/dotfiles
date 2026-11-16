@@ -39,6 +39,7 @@ DO_WALLPAPER=0
 DO_HOOKS=0
 DO_DOCTOR=0
 DO_JSON=0
+DO_DNS_CHECK=0
 DO_RESTORE=0
 RESTORE_DATE=""
 DO_SYNC=0
@@ -94,7 +95,8 @@ Modes:
                         (above-CPU levels require typing I UNDERSTAND)
   --hooks               install the repository pre-commit hook and exit
   --doctor              read-only health check and exit (never needs sudo)
-  --json                machine-readable output (use with --doctor)
+  --json                machine-readable output (use with --doctor/--dns-check)
+  --dns-check           read-only DNS chain check and exit
   --restore [date]      list backups and restore one from ~/.dotfiles-backup
                         (combine with --modules a,b; /etc needs --system)
   --sync COMMAND [target]
@@ -134,6 +136,7 @@ while (($#)); do
         --hooks)      DO_HOOKS=1 ;;
         --doctor)     DO_DOCTOR=1 ;;
         --json)       DO_JSON=1 ;;
+        --dns-check)  DO_DNS_CHECK=1 ;;
         --restore)
             DO_RESTORE=1
             if [[ -n ${2:-} && ${2} != -* ]]; then
@@ -216,14 +219,20 @@ if (( LIST_ONLY )); then
     exit 0
 fi
 
-if (( DO_JSON && !DO_DOCTOR )); then
-    die "--json requires --doctor"
+if (( DO_JSON && !DO_DOCTOR && !DO_DNS_CHECK )); then
+    die "--json requires --doctor or --dns-check"
 fi
 
 if (( DO_DOCTOR )); then
     doctor_args=()
     (( DO_JSON )) && doctor_args+=(--json)
     exec bash "$DOTFILES_DIR/scripts/doctor.sh" "${doctor_args[@]}"
+fi
+
+if (( DO_DNS_CHECK )); then
+    dns_args=()
+    (( DO_JSON )) && dns_args+=(--json)
+    exec bash "$DOTFILES_DIR/scripts/dns-check.sh" "${dns_args[@]}"
 fi
 
 if (( DO_RESTORE )); then

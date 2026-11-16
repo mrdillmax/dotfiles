@@ -4,6 +4,9 @@
 [[ -n ${_DOTFILES_SYSTEM:-} ]] && return 0
 _DOTFILES_SYSTEM=1
 
+# shellcheck source=lib/dns.sh
+source "$DOTFILES_DIR/lib/dns.sh"
+
 system_file_map() {
     local root="$DOTFILES_DIR/system"
     local src rel
@@ -287,7 +290,7 @@ install_system_configs() {
     fi
 
     local src dst mode tmp_src iface
-    local count=0
+    local count=0 dns_ok=1 dns_skipped=0
     local rows=()
 
     mapfile -t rows < <(system_file_map)
@@ -303,9 +306,29 @@ install_system_configs() {
         printf '  %s -> %s\n' "$src" "$dst"
     done
 
+    # Fail closed: if the resolver chain cannot be verified, leave every DNS
+    # file alone but keep reviewing the rest of /etc.
+    if ! dns_chain_ok; then
+        dns_ok=0
+        warn "DNS chain is not healthy; only DNS files will be skipped."
+        while IFS= read -r row; do
+            [[ -n $row ]] && warn "  $row"
+        done < <(dns_failures)
+        while IFS= read -r row; do
+            [[ -n $row ]] && warn "  $row"
+        done < <(dns_warnings)
+        dns_emergency_help
+    fi
+
     for row in "${rows[@]}"; do
         IFS=$'\t' read -r src dst mode <<<"$row"
         tmp_src=""
+
+        if ((!dns_ok)) && dns_is_dns_file "$dst"; then
+            warn "skipping DNS file $dst (resolver chain is not healthy)"
+            dns_skipped=$((dns_skipped + 1))
+            continue
+        fi
 
         if [[ $dst == /etc/NetworkManager/conf.d/* ]]; then
             if [[ ! -e /etc/pihole/pihole.toml || ! -e /etc/unbound/unbound.conf ]]; then
@@ -350,6 +373,10 @@ install_system_configs() {
         [[ -n $tmp_src ]] && rm -f -- "$tmp_src"
         count=$((count + 1))
     done
+
+    if ((dns_skipped)); then
+        warn "skipped $dns_skipped DNS file(s); fix the resolver chain and re-run --system"
+    fi
 
     printf '\n'
     merge_pacman_conf
