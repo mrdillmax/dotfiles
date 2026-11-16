@@ -2,10 +2,11 @@ SHELL := /bin/bash
 
 DOTFILES_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 WALLPAPER ?=
+SYNC_TARGET ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor hooks restore audit lint check
+.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor hooks restore sync-status sync-diff sync-pull sync-packages audit lint check
 
 help:
 	@printf '%s\n' \
@@ -21,6 +22,10 @@ help:
 	  '  make doctor      read-only system and config health check' \
 	  '  make hooks       install the repository pre-commit hook' \
 	  '  make restore     list and restore a backup (RESTORE_DATE=, MODULES=)' \
+	  '  make sync-status show files that differ from the repository' \
+	  '  make sync-diff   show diffs for those files (SYNC_TARGET=hypr)' \
+	  '  make sync-pull   copy live changes back (DRY_RUN=1, YES=1)' \
+	  '  make sync-packages compare installed packages with packages/*.txt' \
 	  '  make audit       read-only configuration audit' \
 	  '  make lint        bash -n + shellcheck' \
 	  '  make check       lint + audit'
@@ -55,6 +60,18 @@ hooks:
 
 restore:
 	@./install.sh --restore $(RESTORE_DATE) $(if $(MODULES),--modules $(MODULES),) $(if $(filter 1,$(DRY_RUN)),--dry-run,)
+
+sync-status:
+	@./scripts/sync.sh status $(SYNC_TARGET)
+
+sync-diff:
+	@./scripts/sync.sh diff $(SYNC_TARGET)
+
+sync-pull:
+	@./scripts/sync.sh pull $(SYNC_TARGET) $(if $(filter 1,$(DRY_RUN)),--dry-run,) $(if $(filter 1,$(YES)),--yes,)
+
+sync-packages:
+	@./scripts/sync.sh packages $(if $(filter 1,$(LIST)),--list,)
 
 theme:
 	@wall="$(WALLPAPER)"; \

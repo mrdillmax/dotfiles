@@ -41,6 +41,9 @@ DO_DOCTOR=0
 DO_JSON=0
 DO_RESTORE=0
 RESTORE_DATE=""
+DO_SYNC=0
+SYNC_COMMAND=""
+SYNC_TARGET=""
 IFACE_ARG=""
 KERNEL_LEVEL_ARG=""
 
@@ -94,6 +97,9 @@ Modes:
   --json                machine-readable output (use with --doctor)
   --restore [date]      list backups and restore one from ~/.dotfiles-backup
                         (combine with --modules a,b; /etc needs --system)
+  --sync COMMAND [target]
+                        status|diff|pull to copy live changes back, or
+                        packages to compare package lists
   --list                list modules, GPU profiles and package groups
   -h, --help            this help
 
@@ -132,6 +138,15 @@ while (($#)); do
             DO_RESTORE=1
             if [[ -n ${2:-} && ${2} != -* ]]; then
                 RESTORE_DATE="$2"
+                shift
+            fi
+            ;;
+        --sync)
+            DO_SYNC=1
+            SYNC_COMMAND="${2:?missing command for --sync}"
+            shift
+            if [[ -n ${2:-} && ${2} != -* ]]; then
+                SYNC_TARGET="$2"
                 shift
             fi
             ;;
@@ -214,6 +229,14 @@ fi
 if (( DO_RESTORE )); then
     restore_run "$RESTORE_DATE" "$MODULES_ARG"
     exit $?
+fi
+
+if (( DO_SYNC )); then
+    sync_args=("$SYNC_COMMAND")
+    [[ -n $SYNC_TARGET ]] && sync_args+=("$SYNC_TARGET")
+    (( DRY_RUN )) && sync_args+=(--dry-run)
+    (( ASSUME_YES )) && sync_args+=(--yes)
+    exec bash "$DOTFILES_DIR/scripts/sync.sh" "${sync_args[@]}"
 fi
 
 if (( DO_HOOKS )); then

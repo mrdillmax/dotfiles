@@ -53,6 +53,27 @@ scan_secrets() {
     return "$found"
 }
 
+# Scan a single candidate file, regardless of its extension. Used before a
+# sync pull writes live content back into the repository.
+scan_secret_content() {
+    local file="$1"
+    local pattern found=0
+
+    [[ -r $file ]] || return 1
+
+    case "${file##*/}" in
+        *.md|*.example) return 0 ;;
+    esac
+
+    for pattern in "${SECRET_PATTERNS[@]}"; do
+        if grep -nIiE -- "$pattern" "$file" 2>/dev/null; then
+            found=1
+        fi
+    done
+
+    return "$found"
+}
+
 # Files that must be excluded from the repository entirely.
 check_forbidden_paths() {
     local root="${1:-$DOTFILES_DIR}"
