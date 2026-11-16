@@ -1,0 +1,7 @@
+# Documentation-only preset. install.sh merges exactly these settings into
+# /etc/pacman.conf after showing a diff and creating a backup.
+Color
+ILoveCandy
+ParallelDownloads = @NPROC@
+[multilib]
+Include = /etc/pacman.d/mirrorlist

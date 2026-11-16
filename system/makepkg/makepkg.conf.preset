@@ -1,0 +1,3 @@
+# Documentation-only preset. install.sh merges this single line after showing
+# a diff and creating a backup. @NPROC@ is replaced with nproc.
+MAKEFLAGS="-j@NPROC@"

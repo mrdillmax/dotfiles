@@ -1,0 +1,2 @@
+# CPU frequency governor. Installed only with: sudo ./install.sh --system
+governor='performance'
