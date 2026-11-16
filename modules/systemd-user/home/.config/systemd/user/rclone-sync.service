@@ -1,0 +1,6 @@
+[Unit]
+Description=Rclone Sync Syncthing folder to Google Drive
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rclone sync %h/Навчання "Навчання:" --exclude ".stfolder/**" --exclude ".stversions/**"

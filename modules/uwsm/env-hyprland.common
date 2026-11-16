@@ -1,0 +1,3 @@
+# Hyprland-only environment (HYPR* and AQ_* variables).
+# Rendered by install.sh: module defaults + hosts/<host>/env-hyprland.
+# Format: export KEY=VALUE (one per line).
