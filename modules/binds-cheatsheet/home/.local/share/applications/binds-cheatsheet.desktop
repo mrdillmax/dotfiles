@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Hyprland Keybinds
+Comment=Searchable keybind cheatsheet
+Exec=binds-cheatsheet.sh --rofi
+Icon=input-keyboard
+Terminal=false
+Categories=Utility;Settings;
+Keywords=hyprland;keybind;shortcut;cheatsheet;

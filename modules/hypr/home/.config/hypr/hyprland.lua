@@ -211,6 +211,8 @@ hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(dmenu))
 hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd(menu))
 -- theme-menu is optional; the bind does nothing when it is not installed.
 hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("theme-menu.sh"))
+-- binds-cheatsheet is optional; same rule.
+hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd("binds-cheatsheet.sh --rofi"))
 
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd('uwsm app -- sh -c "cliphist list | rofi -dmenu | cliphist decode | wl-copy"'), { dont_inhibit = true })
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd(powermenu))
