@@ -1,0 +1,11 @@
+# Hybrid graphics (integrated GPU + NVIDIA dGPU).
+# The iGPU is normally the primary renderer; NVIDIA is used on demand.
+export LIBVA_DRIVER_NAME=nvidia
+export GBM_BACKEND=nvidia-drm
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+export NVD_BACKEND=direct
+export __NV_PRIME_RENDER_OFFLOAD=1
+export __VK_LAYER_NV_optimus=NVIDIA_only
+
+# AQ_DRM_DEVICES belongs to env-hyprland and is generated per host,
+# using stable /dev/dri/by-path/... names (see hosts/<host>/env-hyprland).

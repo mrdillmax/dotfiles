@@ -1,0 +1,4 @@
+# AMD GPU (Mesa).
+export LIBVA_DRIVER_NAME=radeonsi
+# Optional, usually not needed:
+# export AMD_VULKAN_ICD=RADV

@@ -1,0 +1,4 @@
+# Intel GPU (Mesa).
+export LIBVA_DRIVER_NAME=iHD
+# Older hardware using libva-intel-driver needs:
+# export LIBVA_DRIVER_NAME=i965

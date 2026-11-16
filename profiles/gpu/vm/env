@@ -1,0 +1,3 @@
+# Virtual machine (virtio-gpu): no vendor-specific variables are required.
+# For a render-only vGPU without display outputs, add to env-hyprland:
+#   export AQ_NO_KMS_REQUIREMENT=1

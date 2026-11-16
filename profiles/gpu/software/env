@@ -1,0 +1,2 @@
+# Software rendering (llvmpipe). Slow; intended for debugging only.
+export LIBGL_ALWAYS_SOFTWARE=1

@@ -1,0 +1,2 @@
+# Hyprland-only environment for the desktop host.
+# Add HYPR* or AQ_* variables here when this machine needs them.
