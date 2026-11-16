@@ -1,0 +1,4 @@
+! Cursor for X11 and Qt applications.
+! Rendered from hosts/<host>/cursor.conf by ./install.sh --cursor.
+Xcursor.theme: @CURSOR_THEME@
+Xcursor.size: @CURSOR_SIZE@
