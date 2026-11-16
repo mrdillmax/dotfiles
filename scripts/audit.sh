@@ -8,6 +8,10 @@ export DOTFILES_DIR
 
 # shellcheck source=lib/secrets.sh
 source "$DOTFILES_DIR/lib/secrets.sh"
+# shellcheck source=lib/common.sh
+source "$DOTFILES_DIR/lib/common.sh"
+# shellcheck source=lib/kernel.sh
+source "$DOTFILES_DIR/lib/kernel.sh"
 
 if [[ -t 1 ]]; then
     C_RESET=$'\033[0m' C_BOLD=$'\033[1m'
@@ -199,6 +203,57 @@ if [[ -e $HOME/.config/gtk-4.0/gtk.css ]]; then
     else
         warn "GTK4 gtk.css is not a valid symlink"
     fi
+fi
+
+section "Kernel and CPU"
+cpu_level="$(detect_cpu_level)"
+note "CPU supports x86-64-$cpu_level"
+
+installed_level=""
+mapfile -t audit_kernels < <(installed_kernel_packages)
+for pkg in "${audit_kernels[@]}"; do
+    pkg_level="$(kernel_package_level "$pkg")"
+    if [[ $pkg_level != generic ]]; then
+        if [[ -z $installed_level ]] || (( $(kernel_level_rank "$pkg_level") > $(kernel_level_rank "$installed_level") )); then
+            installed_level="$pkg_level"
+        fi
+    fi
+done
+
+if [[ -z $installed_level ]]; then
+    note "no level-aware kernel installed; generic kernels are not a bug"
+elif (( $(kernel_level_rank "$installed_level") > $(kernel_level_rank "$cpu_level") )); then
+    fail "installed kernel level x86-64-$installed_level is above CPU level x86-64-$cpu_level"
+elif (( $(kernel_level_rank "$installed_level") < $(kernel_level_rank "$cpu_level") )); then
+    warn "installed kernel level x86-64-$installed_level is below CPU level x86-64-$cpu_level"
+else
+    pass "installed kernel level matches CPU level (x86-64-$cpu_level)"
+fi
+
+if pacman -Qq "$FALLBACK_KERNEL_PACKAGE" >/dev/null 2>&1; then
+    pass "fallback kernel present: $FALLBACK_KERNEL_PACKAGE"
+else
+    warn "fallback kernel missing: $FALLBACK_KERNEL_PACKAGE"
+fi
+
+if any_dkms_installed; then
+    dkms_missing=0
+    for pkg in "${audit_kernels[@]}"; do
+        case "$pkg" in
+            linux)     hdr="linux-headers" ;;
+            linux-lts) hdr="linux-lts-headers" ;;
+            linux-zen) hdr="linux-zen-headers" ;;
+            *-x64v*)   hdr="${pkg/-linux-bin-/-linux-headers-bin-}" ;;
+            *)         hdr="" ;;
+        esac
+        if [[ -n $hdr ]] && ! pacman -Qq "$hdr" >/dev/null 2>&1; then
+            warn "DKMS headers missing for $pkg: $hdr"
+            dkms_missing=1
+        fi
+    done
+    ((dkms_missing)) || pass "NVIDIA DKMS has matching headers for every kernel"
+else
+    note "NVIDIA DKMS not installed; header pairing is not required"
 fi
 
 section "Ownership notes"

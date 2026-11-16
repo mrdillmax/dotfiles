@@ -5,7 +5,7 @@ WALLPAPER ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install all dry-run monitors mouse theme wallpaper audit lint check
+.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor audit lint check
 
 help:
 	@printf '%s\n' \
@@ -17,6 +17,8 @@ help:
 	  '  make mouse       interactive mouse/touchpad tuner' \
 	  '  make theme       regenerate colors with matugen' \
 	  '  make wallpaper   store a wallpaper path and apply it' \
+	  '  make kernel      detect the CPU level and install a kernel' \
+	  '  make doctor      read-only system and config health check' \
 	  '  make audit       read-only configuration audit' \
 	  '  make lint        bash -n + shellcheck' \
 	  '  make check       lint + audit'
@@ -39,6 +41,12 @@ mouse:
 wallpaper:
 	@[[ -n "$(WALLPAPER)" ]] || { printf 'Use: make wallpaper WALLPAPER=/path/to/image\n' >&2; exit 1; }
 	./install.sh --wallpaper "$(WALLPAPER)"
+
+kernel:
+	./install.sh --kernel
+
+doctor:
+	./scripts/doctor.sh
 
 theme:
 	@wall="$(WALLPAPER)"; \
@@ -68,4 +76,4 @@ lint:
 audit:
 	./scripts/audit.sh
 
-check: lint audit
+check: lint audit doctor

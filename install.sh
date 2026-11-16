@@ -26,6 +26,7 @@ DO_SYSTEM=0
 DO_MOUSE=0
 DO_MONITORS=0
 DO_CURSOR=0
+DO_KERNEL=0
 LIST_ONLY=0
 MODULES_ARG=""
 HOST_ARG=""
@@ -36,6 +37,7 @@ CURSOR_SIZE_ARG=""
 WALLPAPER_ARG=""
 DO_WALLPAPER=0
 IFACE_ARG=""
+KERNEL_LEVEL_ARG=""
 
 # Load helpers before parsing so die() is available for bad options.
 # shellcheck source=lib/common.sh
@@ -50,6 +52,8 @@ source "$DOTFILES_DIR/lib/packages.sh"
 source "$DOTFILES_DIR/lib/system.sh"
 # shellcheck source=lib/cursor.sh
 source "$DOTFILES_DIR/lib/cursor.sh"
+# shellcheck source=lib/kernel.sh
+source "$DOTFILES_DIR/lib/kernel.sh"
 # shellcheck source=lib/wallpaper.sh
 source "$DOTFILES_DIR/lib/wallpaper.sh"
 
@@ -75,6 +79,9 @@ Modes:
   --wallpaper PATH      store the wallpaper path and optionally apply it
   --system              install opt-in /etc files (run with sudo)
   --iface IFACE         network interface for Pi-hole (@IFACE@ rendering)
+  --kernel              detect the CPU level and install a matching kernel
+  --kernel-level LEVEL  override the kernel level: v1, v2, v3 or v4
+                        (above-CPU levels require typing I UNDERSTAND)
   --list                list modules, GPU profiles and package groups
   -h, --help            this help
 
@@ -104,6 +111,8 @@ while (($#)); do
         --wallpaper)  WALLPAPER_ARG="${2:?missing value for --wallpaper}"; DO_WALLPAPER=1; shift ;;
         --system)     DO_SYSTEM=1 ;;
         --iface)      IFACE_ARG="${2:?missing value for --iface}"; shift ;;
+        --kernel)     DO_KERNEL=1 ;;
+        --kernel-level) KERNEL_LEVEL_ARG="${2:?missing value for --kernel-level}"; shift ;;
         --list)       LIST_ONLY=1 ;;
         -h|--help)    usage; exit 0 ;;
         *)            die "unknown option: $1 (see --help)" ;;
@@ -130,6 +139,11 @@ fi
 
 HOST_NAME="${HOST_ARG:-$(detect_host_type)}"
 GPU_PROFILE="${GPU_ARG:-$(detect_gpu_profile)}"
+
+if (( DO_KERNEL )); then
+    install_kernel
+    exit 0
+fi
 
 if (( DO_WALLPAPER )); then
     set_wallpaper "$WALLPAPER_ARG"
@@ -166,6 +180,8 @@ if (( LIST_ONLY )); then
 fi
 
 if (( DO_SYSTEM )); then
+    kernel_report
+    printf '\n'
     install_system_configs
     exit 0
 fi
