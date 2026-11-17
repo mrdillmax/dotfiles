@@ -10,6 +10,7 @@ machine-specific values and links the rest into `$HOME`.
 - **Bar / launcher / notifications:** waybar, rofi, dunst
 - **Theming:** matugen templates (generated colors are never committed)
 - **Packages:** pacman + an AUR helper (`yay` or `paru`)
+- **Checks:** shell test suite under `tests/`, run in CI on an Arch container
 
 Ukrainian documentation: [README.uk.md](README.uk.md).  
 Install guide: [docs/arch-install.md](docs/arch-install.md).  
@@ -35,6 +36,8 @@ Read-only findings and pending fixes: [AUDIT.md](AUDIT.md).
 - Arch Linux (or an Arch-based distribution) with `pacman`
 - `git`, `jq`, `bash` 5.x
 - Optional but recommended: `gum` (TUI), `shellcheck` (lint), `yay`/`paru` (AUR)
+- For the laptop tools: `hypridle`, `hyprlock` (both in `packages/laptop.txt`)
+- For dock hotplug profiles: `socat`
 - For GPU profiles: the matching driver packages (`packages/nvidia.txt`,
   Mesa for AMD/Intel, etc.)
 
@@ -45,8 +48,16 @@ git clone <repo-url> ~/Projects/dotfiles
 cd ~/Projects/dotfiles
 
 make lint                 # bash -n + shellcheck
+./tests/run.sh            # shell suite; temporary HOME, live files untouched
 make dry-run              # full install preview, changes nothing
 ./install.sh              # interactive installer
+```
+
+On a machine that does not have the prerequisites yet:
+
+```bash
+./bootstrap.sh            # base-devel/git/curl, then the installer
+./bootstrap.sh --dry-run  # show every command first
 ```
 
 A typical first run:
@@ -58,11 +69,26 @@ fish -c 'fisher update'   # install the tide prompt plugins
 make theme WALLPAPER=~/Pictures/wallpaper.jpg
 ```
 
+## Bootstrap a fresh machine
+
+```bash
+./bootstrap.sh --dry-run
+./bootstrap.sh
+./bootstrap.sh --yes -- --host laptop --gpu intel
+```
+
+Bootstrap installs only the tools the installer needs (`base-devel`, `git`,
+`curl`), checks network reachability and reports a missing AUR helper — it
+never builds one. It then runs `install.sh` (with `--all --yes` when `--yes` is
+given) and finishes with a read-only `--doctor` pass. Everything after `--` is
+forwarded to `install.sh`.
+
 ## Repository layout
 
 ```text
 .
 ├── install.sh                 interactive installer and entry point
+├── bootstrap.sh               fresh-machine prerequisites, then install.sh
 ├── lib/                       common, TUI, monitors, packages, system, secrets
 ├── profiles/gpu/              nvidia, amd, intel, hybrid, vm, software
 ├── hosts/
@@ -71,7 +97,9 @@ make theme WALLPAPER=~/Pictures/wallpaper.jpg
 ├── modules/<name>/home/...    files linked or rendered into $HOME
 ├── system/                    opt-in /etc files (--system)
 ├── packages/                  package groups + alternatives registry
-├── scripts/                   audit, mouse tuner wrapper
+├── scripts/                   audit, doctor, sync, pkg-sync, DNS check
+├── tests/                     shell tests + run.sh local runner
+├── .github/workflows/ci.yml   lint + tests on an Arch container
 ├── personal/                  private files, gitignored
 ├── docs/                      Arch install guide (EN/UK)
 ├── Makefile
@@ -92,6 +120,7 @@ make theme WALLPAPER=~/Pictures/wallpaper.jpg
   --host desktop|laptop override host detection
   --gpu PROFILE         nvidia|amd|intel|hybrid|vm|software
   --monitors            reconfigure the monitor layout and exit
+  --dock-layout LAYOUT  store right|left|mirror|ask for external monitors
   --mouse               run the mouse/touchpad tuner
   --cursor              install/configure the cursor theme and exit
   --cursor-archive PATH install a cursor theme from a local archive (not committed)
@@ -102,6 +131,13 @@ make theme WALLPAPER=~/Pictures/wallpaper.jpg
   --iface IFACE         network interface for Pi-hole (@IFACE@ rendering)
   --kernel              detect the CPU level and install a matching kernel
   --kernel-level LEVEL  override the kernel level: v1..v4
+  --hooks               install the repository pre-commit hook and exit
+  --doctor              read-only health check and exit (never needs sudo)
+  --json                machine-readable output (with --doctor/--dns-check)
+  --dns-check           read-only DNS chain check and exit
+  --restore [date]      list backups and restore one (with --modules a,b;
+                        /etc also needs --system)
+  --sync COMMAND        status|diff|pull|packages
   --list                list modules, GPU profiles and package groups
   -h, --help            help
 ```
@@ -118,7 +154,14 @@ it, a plain numbered prompt is used.
 
 | Module | What it installs |
 |--------|------------------|
-| `hypr` | Hyprland Lua config, binds, autostart, window rules, generated monitors |
+| `hypr` | Hyprland Lua config, binds, autostart hook, window rules, generated monitors |
+| `autostart` | login-application state manager (`autostart.sh`, `SUPER+SHIFT+A` picker) |
+| `binds-cheatsheet` | Hyprland keybind cheatsheet (plain, markdown, JSON, rofi) |
+| `gamemode` | toggle animations, blur, shadows and rounding for gaming |
+| `idle` | hypridle battery/AC profiles and reload helper |
+| `lid` | lid-switch safety handler and hyprlock |
+| `monitor-profiles` | dock/external-display hotplug profiles |
+| `theme-menu` | rofi menu for wallpaper, matugen mode and colour scheme |
 | `uwsm` | `~/.config/uwsm/env` (common + GPU profile) and `env-hyprland` |
 | `waybar` | status bar config, style and scripts |
 | `rofi` | launcher, power menu and dunst history scripts |
@@ -189,6 +232,127 @@ hardcoded. Without the module, `SUPER+1..0` uses Hyprland's native workspace
 dispatchers. The owner's two-monitor behaviour is preserved as the
 `dill-desktop` preset. The live `switch_ws.sh` works and is verified; it is not
 a bug.
+
+### Dock and hotplug profiles
+
+The optional `monitor-profiles` module handles a laptop docked to an external
+display. The preference lives in `~/.config/hypr/monitor-profiles.conf`:
+
+```bash
+DOCK_LAYOUT=right      # right|left|mirror|ask
+```
+
+Store it through the installer or change it directly:
+
+```bash
+./install.sh --dock-layout right
+make monitor-profiles ACTION=status
+make monitor-profiles ACTION=apply DRY_RUN=1
+make monitor-profiles ACTION=watch
+```
+
+`watch` listens on the Hyprland event socket (`socket2`) with `socat` and
+debounces bursts, so a dock that registers several outputs at once triggers one
+layout pass. `apply` changes the running session only; it never rewrites
+Hyprland configuration files. Before applying it saves the current
+`hyprctl monitors -j` under `~/.local/state/dotfiles/monitor-profiles/`.
+`ask` never changes monitors.
+
+> **Not verified on real dock hardware.** Run `apply --dry-run` first and keep
+> the saved monitor snapshot. A first real run should be followed by
+> `./install.sh --restore` if the layout is wrong.
+
+## Desktop helpers
+
+These small modules share one rule: state lives under
+`~/.local/state/dotfiles/`, never in the compositor config.
+
+### Theme menu
+
+```bash
+make theme-menu                 # rofi/gum/whiptail/dialog/plain menu
+make theme-menu DRY_RUN=1
+```
+
+Choose a wallpaper, matugen mode (`dark`/`light`) and colour scheme. The choice
+is stored in `~/.local/state/dotfiles/theme.conf`; `make theme` can then reuse
+it.
+
+### Keybind cheatsheet
+
+```bash
+make binds                      # aligned table
+make binds ROFI=1               # rofi menu
+make binds JSON=1               # JSON for scripts
+~/.local/bin/binds-cheatsheet.sh --duplicates
+```
+
+The cheatsheet parses the Lua configuration, because Hyprland 0.57 with Lua
+dispatchers reports opaque numeric arguments in `hyprctl binds -j`.
+
+### Gamemode
+
+```bash
+make gamemode ACTION=toggle
+make gamemode ACTION=status
+make gamemode ACTION=on DRY_RUN=1
+```
+
+Enabling disables animations, blur, shadows and rounding. The values that were
+active before the first enable are read with `hyprctl getoption` and stored in
+`~/.local/state/dotfiles/gamemode.conf`, so enabling twice cannot overwrite the
+originals and `off` always restores them.
+
+### Idle and lock
+
+The `idle` module renders `~/.config/hypr/hypridle.conf` from two profiles:
+
+| Profile | Dim | Lock | Screen off | Suspend |
+|---------|-----|------|------------|---------|
+| battery | 150 | 300 | 330 | 900 |
+| AC | 300 | 600 | 660 | 1800 |
+
+`0` disables a stage; enabled stages must satisfy `dim < lock <= off < suspend`.
+Settings live in `~/.local/state/dotfiles/idle.conf`.
+
+```bash
+make idle ACTION=status
+make idle ACTION=apply PROFILE=battery
+make idle ACTION=configure              # prompts for all eight values
+make idle ACTION=watch                  # re-apply on AC/battery changes
+```
+
+The previous `hypridle.conf` is backed up before it is replaced. `hypridle` and
+`hyprlock` belong to the laptop package group, not to the base group.
+
+### Lid switch
+
+```bash
+make lid ACTION=status
+make lid ACTION=closed
+make lid ACTION=closed DRY_RUN=1
+```
+
+On close, the handler reads `hyprctl monitors -j` immediately before acting:
+if another active monitor exists it disables every `eDP-*`/`LVDS`/`DSI` output
+and remembers mode, position and scale in `~/.local/state/dotfiles/lid.conf`;
+otherwise it suspends through `systemctl`. Opening the lid always restores the
+internal panel. logind configuration is never modified. The decision logic is
+covered by synthetic tests only, not by physical lid hardware.
+
+### Autostart
+
+```bash
+make autostart                        # list
+make autostart ACTION=disable NAME=vesktop
+make autostart ACTION=add NAME=notes CMD=obsidian
+make autostart ACTION=pick            # rofi/gum/whiptail/dialog/plain
+```
+
+Entries live in `~/.local/state/dotfiles/autostart.tsv` and are seeded from the
+17 built-in applications on first use. `hyprland.lua` calls
+`autostart.sh run`; disabling an entry keeps it off at the next login without
+editing the Lua config. `SUPER+SHIFT+A` opens the picker.
 
 ## Mouse and touchpad tuner
 
@@ -270,9 +434,29 @@ Group overview:
 | `nvidia.txt` | NVIDIA 580xx stack and monitoring |
 | `tuning.txt` | CPU/IO tuning and stress tools |
 | `fonts.txt` | fonts and Ukrainian language support |
+| `laptop.txt` | hypridle, hyprlock (laptop sessions only) |
 | `aur.txt` | AUR-only packages |
 
 `install.sh --no-packages` skips this step entirely.
+
+### Package drift
+
+```bash
+make pkg-sync                        # report only
+make pkg-sync ACTION=check           # exit 1 when lists drift
+make pkg-sync ACTION=pull DRY_RUN=1
+make pkg-sync ACTION=pull YES=1      # append, never remove
+```
+
+`pkg-sync` compares explicitly installed packages with `packages/*.txt`.
+`pull` only appends installed-but-unlisted packages to
+`packages/extra-installed.txt`; it never removes an entry and never installs
+anything. Host-specific files are compared only on the matching host.
+
+With `--system`, the repository installs a pacman hook that touches
+`/var/lib/dotfiles/pkg-sync.stamp` after every package transaction. `status`
+warns when the stamp is newer than the last review, so package changes can be
+triaged later instead of during the transaction.
 
 ### Kernel and CPU level
 
@@ -371,30 +555,79 @@ Every replaced file is copied to:
 ~/.dotfiles-backup/<YYYY-MM-DD_HHMMSS>/manifest.tsv
 ```
 
-To restore a file:
+To restore a file manually:
 
 ```bash
 cp -a ~/.dotfiles-backup/2026-11-16_120000/.config/hypr/hyprland.lua \
       ~/.config/hypr/hyprland.lua
 ```
 
-The installer records managed paths in
-`${XDG_STATE_HOME:-~/.local/state}/dotfiles/managed.tsv`. Nothing is deleted
-automatically.
-
-## Audit and lint
+Or use the built-in restore flow:
 
 ```bash
-make lint     # bash -n + shellcheck
-make audit    # read-only live + repository audit
-make doctor   # CPU/kernel level, cursor, wallpaper, managed symlinks
-make check    # lint + audit + doctor
+./install.sh --restore                       # list backups with file counts
+./install.sh --restore 2026-11-16_120000
+make restore RESTORE_DATE=2026-11-16_120000
+make restore RESTORE_DATE=2026-11-16_120000 MODULES=hypr DRY_RUN=1
+```
+
+Restore reads `manifest.tsv`, shows a diff, asks for confirmation and backs up
+the current state before writing. `/etc` files are restored only with
+`--system` and a separate confirmation. If a snapper configuration exists, a
+pre-restore snapshot is offered.
+
+The installer records managed paths in
+`${XDG_STATE_HOME:-~/.local/state}/dotfiles/managed.tsv`. Nothing is deleted
+automatically. Other state files in the same directory: `theme.conf`,
+`gamemode.conf`, `idle.conf`, `autostart.tsv`, `lid.conf`,
+`monitor-profiles/` and `sync-backup/`.
+
+## Syncing live changes back
+
+The direction is always **live system → repository**. Nothing under `$HOME` is
+written.
+
+```bash
+make sync-status                    # files that differ
+make sync-diff SYNC_TARGET=hypr     # unified diffs
+make sync-pull DRY_RUN=1            # preview
+make sync-pull YES=1                # write back (diff + secret scan)
+./scripts/sync.sh packages          # compare installed packages
+```
+
+Pull reverse-renders `@HOME@`, `@FIREFOX_PROFILE_DIR@` and `@OBSIDIAN_VAULT@`,
+skips generated matugen output, `personal/` and secret paths, and runs the
+secret scanner before writing. A pre-pull copy of every repository file is
+stored under `~/.local/state/dotfiles/sync-backup/<timestamp>/` with a
+`manifest.tsv`.
+
+## Checks, tests and CI
+
+```bash
+make lint       # bash -n + shellcheck
+make audit      # read-only live + repository audit
+make doctor     # CPU/kernel level, cursor, wallpaper, managed symlinks
+make dns-check  # resolv.conf -> Pi-hole -> unbound
+make check      # lint + audit + doctor
+./tests/run.sh  # full shell suite
+make hooks      # install the repository pre-commit hook
 ```
 
 The audit checks Hyprland config errors, duplicate binds, monitor portability,
 hardcoded home paths, systemd units, Unbound syntax, `.pacnew` files, secrets,
 generated files, and the CPU level versus the installed kernel level. It never
 edits anything and never requires root.
+
+`./install.sh --doctor` is the same read-only check with `--json` available;
+`./install.sh --dns-check` verifies the DNS chain and warns that a configuration
+needs a working Pi-hole/Unbound pair before `--system` changes resolver files.
+
+Every test uses a temporary `$HOME`/`XDG_STATE_HOME` and stub system tools, so
+the live configuration, package database and monitors are never touched.
+Restore and sync tests additionally verify that live files stay unchanged and
+that a backup is created. `tests/run.sh [pattern] [-v] [--list]` runs one or all
+files and never runs itself. CI (`.github/workflows/ci.yml`) runs `make lint`
+and the suite in an `archlinux:latest` container.
 
 ## Secrets that must be rotated
 

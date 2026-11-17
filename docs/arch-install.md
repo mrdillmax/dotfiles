@@ -38,11 +38,23 @@ git clone <repo-url> ~/Projects/dotfiles
 cd ~/Projects/dotfiles
 
 make lint
+./tests/run.sh        # temporary HOME; live files are never touched
 make dry-run          # full preview, changes nothing
 make doctor           # read-only health check
 ```
 
 `make dry-run` selects every module and package group but never touches `/etc`.
+
+If the machine lacks the prerequisites (`base-devel`, `git`, `curl`), bootstrap
+can install them and then start the installer:
+
+```bash
+./bootstrap.sh --dry-run
+./bootstrap.sh --yes -- --host laptop --gpu intel
+```
+
+Bootstrap never builds an AUR helper; it only reports a missing `yay`/`paru`.
+Everything after `--` is passed to `install.sh`.
 
 ## 3. Interactive install
 
@@ -86,6 +98,25 @@ The image is not copied into the repository. Its absolute path is written to
 make theme
 ```
 
+### State and daily helpers
+
+Small runtime tools keep their state under `~/.local/state/dotfiles/`, not in
+the compositor config:
+
+```bash
+make autostart                         # list login applications
+make autostart ACTION=pick             # SUPER+SHIFT+A picker
+make theme-menu                        # wallpaper, mode, colour scheme
+make binds ROFI=1                      # keybind cheatsheet
+make gamemode ACTION=toggle            # animations, blur, shadows, rounding
+make idle ACTION=status                # battery/AC idle profiles
+make lid ACTION=status                 # lid-switch behaviour
+```
+
+`idle` renders `~/.config/hypr/hypridle.conf` and backs up the previous file.
+`hypridle`/`hyprlock` come from `packages/laptop.txt`, not from `base.txt`.
+`autostart.sh` replaces the static login list in `hyprland.lua`.
+
 ## 4. Monitors and input
 
 ```bash
@@ -96,6 +127,20 @@ make theme
 Monitor names live in `hosts/<host>/monitors.conf.sh`; the installer renders
 `~/.config/hypr/monitors.lua` and never hardcodes the owner's layout into
 universal templates.
+
+For a laptop with a dock or an external display, install the optional hotplug
+module and choose a layout:
+
+```bash
+./install.sh --modules monitor-profiles --dock-layout right
+make monitor-profiles ACTION=apply DRY_RUN=1
+make monitor-profiles ACTION=watch
+```
+
+`watch` listens on the Hyprland event socket with `socat`. The monitor-profile
+code is **not verified on real dock hardware**: run a dry run first, keep the
+saved `hyprctl monitors -j` snapshot, and use `./install.sh --restore` if the
+result is wrong. `DOCK_LAYOUT=ask` never changes monitors.
 
 ## 5. Kernel by CPU level
 
@@ -156,6 +201,11 @@ What is included:
 UFW is documentation only. This repository never changes firewall state or
 rules; see `system/ufw/README.md` for the recorded live state.
 
+The same mode installs a pacman hook that touches
+`/var/lib/dotfiles/pkg-sync.stamp` after a package transaction. Review package
+drift later with `make pkg-sync`; `make pkg-sync ACTION=pull YES=1` only
+appends missing packages to `packages/extra-installed.txt`.
+
 ## 7. Theming
 
 ```bash
@@ -171,11 +221,20 @@ Firefox. Generated color files are never committed.
 make lint       # bash -n + shellcheck
 make audit      # read-only configuration audit
 make doctor     # CPU/kernel, cursor, wallpaper, managed symlinks
+make dns-check  # resolv.conf -> Pi-hole -> unbound
 make check      # lint + audit + doctor
+./tests/run.sh  # full shell suite
 ```
 
 `make doctor` exits non-zero only on failures (above-CPU kernel, broken
 managed links, missing repository files). Warnings are informational.
+`./install.sh --doctor --json` gives the same result in machine-readable form;
+`./install.sh --dns-check` fails when the resolver chain cannot work.
+
+The tests use a temporary `$HOME` and stub system tools. Restore and sync tests
+also verify that live files stay unchanged and that a backup is created.
+`tests/run.sh [pattern]` runs selected files and excludes itself. CI runs lint
+and the suite inside an `archlinux:latest` container.
 
 ## 9. Secrets
 
@@ -194,5 +253,13 @@ that was ever stored in a tracked file.
 
 - `--all` means modules + packages only; `/etc` requires `--system`.
 - Every replaced file is backed up under `~/.dotfiles-backup/<timestamp>/`.
+- Restore with `./install.sh --restore [date]` (or `make restore`): it shows a
+  diff, confirms, and backs up the current state first. `/etc` needs `--system`.
+- Copy live changes back with `make sync-status`, `make sync-diff`,
+  `make sync-pull` — direction is always system → repository.
+- Pre-commit safety checks: `make hooks` installs them into this repository
+  only; `git commit --no-verify` is the only bypass.
+- The lid handler and monitor profiles are covered by synthetic tests only.
+  Verify them on the real laptop/dock with `--dry-run` first.
 - Live configuration is never modified without an explicit installer step.
 - Unmerged `.pacnew` files and other live drift are listed in `AUDIT.md`.

@@ -38,11 +38,23 @@ git clone <repo-url> ~/Projects/dotfiles
 cd ~/Projects/dotfiles
 
 make lint
+./tests/run.sh        # тимчасовий HOME; живі файли не чіпаються
 make dry-run          # повний попередній перегляд, нічого не змінює
 make doctor           # перевірка стану лише читанням
 ```
 
 `make dry-run` вибирає всі модулі й групи пакетів, але не торкається `/etc`.
+
+Якщо на машині бракує передумов (`base-devel`, `git`, `curl`), bootstrap
+встановить їх і запустить інсталятор:
+
+```bash
+./bootstrap.sh --dry-run
+./bootstrap.sh --yes -- --host laptop --gpu intel
+```
+
+Bootstrap ніколи не збирає AUR-хелпер; він лише повідомляє про відсутній
+`yay`/`paru`. Усе після `--` передається в `install.sh`.
 
 ## 3. Інтерактивне встановлення
 
@@ -86,6 +98,25 @@ Qt, xsettingsd і (за бажанням) застосовує через `hyprc
 make theme
 ```
 
+### Стан і щоденні помічники
+
+Малі runtime-інструменти тримають стан у `~/.local/state/dotfiles/`, а не в
+конфізі композитора:
+
+```bash
+make autostart                         # список програм входу
+make autostart ACTION=pick             # вибір SUPER+SHIFT+A
+make theme-menu                        # шпалери, режим, схема кольорів
+make binds ROFI=1                      # шпаргалка біндів
+make gamemode ACTION=toggle            # анімації, blur, тіні, заокруглення
+make idle ACTION=status                # профілі idle для батареї/мережі
+make lid ACTION=status                 # поведінка кришки
+```
+
+`idle` рендерить `~/.config/hypr/hypridle.conf` і бекапить попередній файл.
+`hypridle`/`hyprlock` постачаються з `packages/laptop.txt`, не з `base.txt`.
+`autostart.sh` замінює статичний список автозапуску в `hyprland.lua`.
+
 ## 4. Монітори й введення
 
 ```bash
@@ -96,6 +127,21 @@ make theme
 Назви моніторів зберігаються в `hosts/<host>/monitors.conf.sh`; інсталятор
 рендерить `~/.config/hypr/monitors.lua` і не вшиває розкладку власника в
 універсальні шаблони.
+
+Для ноутбука з док-станцією або зовнішнім екраном встановіть опційний модуль
+гарячого підключення й виберіть розкладку:
+
+```bash
+./install.sh --modules monitor-profiles --dock-layout right
+make monitor-profiles ACTION=apply DRY_RUN=1
+make monitor-profiles ACTION=watch
+```
+
+`watch` слухає сокет подій Hyprland через `socat`. Код профілів моніторів
+**не перевірено на реальному док-обладнанні**: спершу зробіть dry run,
+збережіть знімок `hyprctl monitors -j`, а в разі хибного результату
+скористайтеся `./install.sh --restore`. `DOCK_LAYOUT=ask` ніколи не змінює
+монітори.
 
 ## 5. Ядро за рівнем CPU
 
@@ -157,6 +203,11 @@ sudo ./install.sh --system --iface eno1
 UFW — тільки документація. Репозиторій не змінює стан фаєрвола чи правила;
 фактичний стан записано в `system/ufw/README.md`.
 
+Цей самий режим встановлює pacman-hook, який після транзакції пакетів оновлює
+`/var/lib/dotfiles/pkg-sync.stamp`. Переглядайте дрейф пізніше через
+`make pkg-sync`; `make pkg-sync ACTION=pull YES=1` лише дописує відсутні
+пакети в `packages/extra-installed.txt`.
+
 ## 7. Темізація
 
 ```bash
@@ -172,12 +223,21 @@ Firefox. Згенеровані файли кольорів ніколи не к
 make lint       # bash -n + shellcheck
 make audit      # аудит конфігурації лише читанням
 make doctor     # CPU/ядро, курсор, шпалери, керовані symlink-и
+make dns-check  # resolv.conf -> Pi-hole -> unbound
 make check      # lint + audit + doctor
+./tests/run.sh  # повний набір shell-тестів
 ```
 
 `make doctor` завершується з помилкою лише за наявності failures (ядро вище
 CPU, зламані керовані посилання, відсутні файли репозиторію). Попередження —
-інформаційні.
+інформаційні. `./install.sh --doctor --json` дає той самий результат у
+машинозчитуваному вигляді; `./install.sh --dns-check` падає, якщо ланцюжок
+резолвера не може працювати.
+
+Тести використовують тимчасовий `$HOME` і заглушки системних утиліт. Тести
+restore і sync додатково перевіряють, що живі файли не змінилися, а бекап
+створено. `tests/run.sh [pattern]` запускає вибрані файли й виключає себе. CI
+виконує lint і набір тестів у контейнері `archlinux:latest`.
 
 ## 9. Секрети
 
@@ -196,5 +256,14 @@ CPU, зламані керовані посилання, відсутні фай
 
 - `--all` означає лише модулі + пакети; `/etc` потребує `--system`.
 - Кожен замінений файл зберігається в `~/.dotfiles-backup/<timestamp>/`.
+- Відновлення: `./install.sh --restore [date]` (або `make restore`) — показує
+  diff, питає підтвердження й спершу бекапить поточний стан. Для `/etc`
+  потрібен `--system`.
+- Копіювання живих змін назад: `make sync-status`, `make sync-diff`,
+  `make sync-pull` — напрямок завжди система → репозиторій.
+- Перевірки pre-commit: `make hooks` встановлює їх лише в цей репозиторій;
+  єдиний обхід — `git commit --no-verify`.
+- Обробник кришки й профілі моніторів покриті лише синтетичними тестами.
+  Перевіряйте їх на реальному ноутбуці/док-станції спершу з `--dry-run`.
 - Жива конфігурація не змінюється без явного кроку інсталятора.
 - Незамержені `.pacnew` та інший живий drift перелічені в `AUDIT.md`.

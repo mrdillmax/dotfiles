@@ -10,6 +10,7 @@
 - **Панель / лаунчер / сповіщення:** waybar, rofi, dunst
 - **Темізація:** шаблони matugen (згенеровані кольори не комітяться)
 - **Пакети:** pacman + AUR-хелпер (`yay` або `paru`)
+- **Перевірки:** набір shell-тестів у `tests/`, запускається в CI на Arch-контейнері
 
 Англійська документація: [README.md](README.md).  
 Посібник зі встановлення: [docs/arch-install.uk.md](docs/arch-install.uk.md).  
@@ -35,6 +36,8 @@
 - Arch Linux (або Arch-based) з `pacman`
 - `git`, `jq`, `bash` 5.x
 - Бажано: `gum` (TUI), `shellcheck` (lint), `yay`/`paru` (AUR)
+- Для ноутбука: `hypridle`, `hyprlock` (обидва в `packages/laptop.txt`)
+- Для профілів док-станції: `socat`
 - Для GPU-профілів — відповідні драйвери (`packages/nvidia.txt`, Mesa для
   AMD/Intel тощо)
 
@@ -45,8 +48,16 @@ git clone <repo-url> ~/Projects/dotfiles
 cd ~/Projects/dotfiles
 
 make lint                 # bash -n + shellcheck
+./tests/run.sh            # shell-тести; тимчасовий HOME, живі файли не чіпаються
 make dry-run              # повний прев'ю-інстал, нічого не змінює
 ./install.sh              # інтерактивний інсталятор
+```
+
+На машині, де ще немає передумов:
+
+```bash
+./bootstrap.sh            # base-devel/git/curl, далі інсталятор
+./bootstrap.sh --dry-run  # спершу показати всі команди
 ```
 
 Типовий перший запуск:
@@ -58,11 +69,26 @@ fish -c 'fisher update'   # встановити плагіни tide
 make theme WALLPAPER=~/Pictures/wallpaper.jpg
 ```
 
+## Bootstrap на чистій машині
+
+```bash
+./bootstrap.sh --dry-run
+./bootstrap.sh
+./bootstrap.sh --yes -- --host laptop --gpu intel
+```
+
+Bootstrap встановлює лише те, що потрібно інсталятору (`base-devel`, `git`,
+`curl`), перевіряє доступність мережі й повідомляє про відсутній AUR-хелпер —
+сам його не збирає. Далі запускає `install.sh` (з `--all --yes`, якщо дано
+`--yes`) і завершує read-only проходом `--doctor`. Усе після `--`
+передається в `install.sh`.
+
 ## Структура
 
 ```text
 .
 ├── install.sh                 інсталятор і точка входу
+├── bootstrap.sh               передумови для чистої машини, далі install.sh
 ├── lib/                       common, TUI, monitors, packages, system, secrets
 ├── profiles/gpu/              nvidia, amd, intel, hybrid, vm, software
 ├── hosts/
@@ -71,7 +97,9 @@ make theme WALLPAPER=~/Pictures/wallpaper.jpg
 ├── modules/<name>/home/...    файли, що лінкуються або рендеряться в $HOME
 ├── system/                    опційні /etc-файли (--system)
 ├── packages/                  групи пакетів + реєстр альтернатив
-├── scripts/                   audit, обгортка mouse-tune
+├── scripts/                   audit, doctor, sync, pkg-sync, DNS-перевірка
+├── tests/                     shell-тести + локальний запуск run.sh
+├── .github/workflows/ci.yml   lint + тести в Arch-контейнері
 ├── personal/                  приватні файли, gitignored
 ├── docs/                      посібник зі встановлення Arch (EN/UK)
 ├── Makefile
@@ -92,6 +120,7 @@ make theme WALLPAPER=~/Pictures/wallpaper.jpg
   --host desktop|laptop перевизначити тип хоста
   --gpu PROFILE         nvidia|amd|intel|hybrid|vm|software
   --monitors            переналаштувати монітори й вийти
+  --dock-layout LAYOUT  зберегти right|left|mirror|ask для зовнішніх моніторів
   --mouse               запустити тюнер миші/тачпада
   --cursor              встановити/налаштувати тему курсора й вийти
   --cursor-archive PATH встановити тему курсора з локального архіву (не комітиться)
@@ -102,6 +131,13 @@ make theme WALLPAPER=~/Pictures/wallpaper.jpg
   --iface IFACE         мережевий інтерфейс для Pi-hole (рендер @IFACE@)
   --kernel              визначити рівень CPU і встановити відповідне ядро
   --kernel-level LEVEL  перевизначити рівень ядра: v1..v4
+  --hooks               встановити pre-commit hook репозиторію й вийти
+  --doctor              read-only перевірка й вихід (ніколи не потребує sudo)
+  --json                машинозчитуваний вивід (з --doctor/--dns-check)
+  --dns-check           read-only перевірка DNS-ланцюжка й вихід
+  --restore [date]      показати бекапи й відновити один (разом з --modules a,b;
+                        для /etc також потрібен --system)
+  --sync COMMAND        status|diff|pull|packages
   --list                список модулів, GPU-профілів і груп пакетів
   -h, --help            довідка
 ```
@@ -117,7 +153,14 @@ GPU-профіль — через `lspci`/`systemd-detect-virt`. Обидва м
 
 | Модуль | Що встановлює |
 |--------|----------------|
-| `hypr` | Lua-конфіг Hyprland, бінди, автозапуск, правила вікон, згенеровані монітори |
+| `hypr` | Lua-конфіг Hyprland, бінди, хук автозапуску, правила вікон, згенеровані монітори |
+| `autostart` | менеджер стану програм входу (`autostart.sh`, вибір `SUPER+SHIFT+A`) |
+| `binds-cheatsheet` | шпаргалка біндів Hyprland (plain, markdown, JSON, rofi) |
+| `gamemode` | перемикання анімацій, blur, тіней і заокруглень для ігор |
+| `idle` | профілі hypridle для батареї/мережі й хелпер перезавантаження |
+| `lid` | безпечна обробка кришки й hyprlock |
+| `monitor-profiles` | профілі гарячого підключення док-станції/зовнішнього екрана |
+| `theme-menu` | rofi-меню шпалер, режиму matugen і схеми кольорів |
 | `uwsm` | `~/.config/uwsm/env` (common + GPU-профіль) і `env-hyprland` |
 | `waybar` | конфіг, стиль і скрипти панелі |
 | `rofi` | лаунчер, power menu, історія dunst |
@@ -187,6 +230,126 @@ GPU-профіль — через `lspci`/`systemd-detect-virt`. Обидва м
 захардкожено. Без модуля `SUPER+1..0` використовує рідні диспетчери Hyprland.
 Поточна двомоніторна логіка власника збережена як пресет `dill-desktop`.
 Живий `switch_ws.sh` працює, перевірено; це не баг.
+
+### Док-станція й гаряче підключення
+
+Опційний модуль `monitor-profiles` обробляє ноутбук із зовнішнім екраном.
+Налаштування зберігається в `~/.config/hypr/monitor-profiles.conf`:
+
+```bash
+DOCK_LAYOUT=right      # right|left|mirror|ask
+```
+
+Записати через інсталятор або змінити напряму:
+
+```bash
+./install.sh --dock-layout right
+make monitor-profiles ACTION=status
+make monitor-profiles ACTION=apply DRY_RUN=1
+make monitor-profiles ACTION=watch
+```
+
+`watch` слухає сокет подій Hyprland (`socket2`) через `socat` і об'єднує
+сплески, тому док, який реєструє кілька виходів одразу, викликає один прохід
+розкладки. `apply` змінює лише поточну сесію й ніколи не переписує конфіги
+Hyprland. Перед застосуванням зберігає поточний `hyprctl monitors -j` у
+`~/.local/state/dotfiles/monitor-profiles/`. `ask` ніколи не змінює монітори.
+
+> **Не перевірено на реальному док-обладнанні.** Спершу запустіть
+> `apply --dry-run` і збережіть знімок моніторів. Якщо реальна розкладка
+> виявиться хибною, скористайтеся `./install.sh --restore`.
+
+## Помічники робочого столу
+
+Усі вони дотримуються одного правила: стан живе в
+`~/.local/state/dotfiles/`, а не в конфізі композитора.
+
+### Меню теми
+
+```bash
+make theme-menu                 # меню rofi/gum/whiptail/dialog/plain
+make theme-menu DRY_RUN=1
+```
+
+Вибір шпалер, режиму matugen (`dark`/`light`) і схеми кольорів зберігається в
+`~/.local/state/dotfiles/theme.conf`; `make theme` може його використати.
+
+### Шпаргалка біндів
+
+```bash
+make binds                      # вирівняна таблиця
+make binds ROFI=1               # меню rofi
+make binds JSON=1               # JSON для скриптів
+~/.local/bin/binds-cheatsheet.sh --duplicates
+```
+
+Шпаргалка читає Lua-конфіг, бо Hyprland 0.57 з Lua-диспетчерами повертає
+непрозорі числові аргументи в `hyprctl binds -j`.
+
+### Gamemode
+
+```bash
+make gamemode ACTION=toggle
+make gamemode ACTION=status
+make gamemode ACTION=on DRY_RUN=1
+```
+
+Увімкнення вимикає анімації, blur, тіні й заокруглення. Значення, активні до
+першого ввімкнення, читаються через `hyprctl getoption` і зберігаються в
+`~/.local/state/dotfiles/gamemode.conf`, тому повторне ввімкнення не перезапише
+оригінали, а `off` завжди їх відновлює.
+
+### Idle і блокування
+
+Модуль `idle` рендерить `~/.config/hypr/hypridle.conf` з двох профілів:
+
+| Профіль | Затемнення | Блокування | Екран off | Suspend |
+|---------|------------|------------|-----------|---------|
+| батарея | 150 | 300 | 330 | 900 |
+| мережа | 300 | 600 | 660 | 1800 |
+
+`0` вимикає стадію; увімкнені стадії мають задовольняти
+`dim < lock <= off < suspend`. Налаштування — в
+`~/.local/state/dotfiles/idle.conf`.
+
+```bash
+make idle ACTION=status
+make idle ACTION=apply PROFILE=battery
+make idle ACTION=configure              # запитує всі вісім значень
+make idle ACTION=watch                  # перезастосовує при зміні живлення
+```
+
+Попередній `hypridle.conf` бекапиться перед заміною. `hypridle` і `hyprlock`
+належать до групи пакетів ноутбука, а не до base.
+
+### Кришка
+
+```bash
+make lid ACTION=status
+make lid ACTION=closed
+make lid ACTION=closed DRY_RUN=1
+```
+
+Під час закриття обробник безпосередньо перед дією читає `hyprctl monitors -j`:
+якщо є інший активний монітор — вимикає всі виходи `eDP-*`/`LVDS`/`DSI` і
+запам'ятовує режим, позицію та масштаб у `~/.local/state/dotfiles/lid.conf`;
+інакше засинає через `systemctl`. Відкриття кришки завжди відновлює внутрішню
+панель. Конфіг logind не змінюється. Логіку покривають лише синтетичні тести,
+не фізичне залізо.
+
+### Автозапуск
+
+```bash
+make autostart                        # список
+make autostart ACTION=disable NAME=vesktop
+make autostart ACTION=add NAME=notes CMD=obsidian
+make autostart ACTION=pick            # rofi/gum/whiptail/dialog/plain
+```
+
+Записи живуть у `~/.local/state/dotfiles/autostart.tsv` і створюються з 17
+вбудованих програм при першому використанні. `hyprland.lua` викликає
+`autostart.sh run`; вимкнений запис не стартує наступного входу без редагування
+Lua-конфігу. `SUPER+SHIFT+A` відкриває вибір.
 
 ## Тюнер миші й тачпада
 
@@ -270,9 +433,29 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 | `nvidia.txt` | NVIDIA 580xx і моніторинг |
 | `tuning.txt` | CPU/IO-тюнінг і стрес-тести |
 | `fonts.txt` | шрифти й українська локалізація |
+| `laptop.txt` | hypridle, hyprlock (лише ноутбучні сесії) |
 | `aur.txt` | лише AUR-пакети |
 
 `install.sh --no-packages` повністю пропускає цей крок.
+
+### Дрейф пакетів
+
+```bash
+make pkg-sync                        # лише звіт
+make pkg-sync ACTION=check           # код 1, якщо списки різняться
+make pkg-sync ACTION=pull DRY_RUN=1
+make pkg-sync ACTION=pull YES=1      # лише додає, ніколи не видаляє
+```
+
+`pkg-sync` порівнює явно встановлені пакети зі `packages/*.txt`. `pull` лише
+дописує встановлені, але не внесені пакети в `packages/extra-installed.txt`;
+він ніколи не видаляє записи й нічого не встановлює. Файли конкретного хоста
+порівнюються лише на відповідному хості.
+
+З `--system` репозиторій встановлює pacman-hook, який після кожної транзакції
+пакетів оновлює `/var/lib/dotfiles/pkg-sync.stamp`. `status` попереджає, коли
+штамп новіший за останній огляд, тож зміни можна розібрати пізніше, а не під
+час транзакції.
 
 ### Ядро за рівнем CPU
 
@@ -370,30 +553,79 @@ UFW — лише документація. Репозиторій не змін�
 ~/.dotfiles-backup/<РРРР-ММ-ДД_ГГХХСС>/manifest.tsv
 ```
 
-Відновлення:
+Відновлення вручну:
 
 ```bash
 cp -a ~/.dotfiles-backup/2026-11-16_120000/.config/hypr/hyprland.lua \
       ~/.config/hypr/hyprland.lua
 ```
 
-Керовані шляхи записуються в
-`${XDG_STATE_HOME:-~/.local/state}/dotfiles/managed.tsv`. Нічого не видаляється
-автоматично.
-
-## Аудит і lint
+Або через вбудований режим:
 
 ```bash
-make lint     # bash -n + shellcheck
-make audit    # read-only аудит живої системи й репозиторію
-make doctor   # рівень CPU/ядра, курсор, шпалери, керовані symlink-и
-make check    # lint + audit + doctor
+./install.sh --restore                       # список бекапів із кількістю файлів
+./install.sh --restore 2026-11-16_120000
+make restore RESTORE_DATE=2026-11-16_120000
+make restore RESTORE_DATE=2026-11-16_120000 MODULES=hypr DRY_RUN=1
+```
+
+Restore читає `manifest.tsv`, показує diff, питає підтвердження й бекапить
+поточний стан перед записом. Файли `/etc` відновлюються лише з `--system` і
+окремим підтвердженням. Якщо є конфігурація snapper, пропонується знімок перед
+відновленням.
+
+Керовані шляхи записуються в
+`${XDG_STATE_HOME:-~/.local/state}/dotfiles/managed.tsv`. Нічого не
+видаляється автоматично. Інші файли стану в цьому каталозі: `theme.conf`,
+`gamemode.conf`, `idle.conf`, `autostart.tsv`, `lid.conf`,
+`monitor-profiles/` і `sync-backup/`.
+
+## Синхронізація живих змін назад
+
+Напрямок завжди **жива система → репозиторій**. Під `$HOME` нічого не
+записується.
+
+```bash
+make sync-status                    # файли, що різняться
+make sync-diff SYNC_TARGET=hypr     # unified diff
+make sync-pull DRY_RUN=1            # попередній перегляд
+make sync-pull YES=1                # записати (diff + скан секретів)
+./scripts/sync.sh packages          # порівняти встановлені пакети
+```
+
+Pull зворотно рендерить `@HOME@`, `@FIREFOX_PROFILE_DIR@` і
+`@OBSIDIAN_VAULT@`, пропускає згенеровані matugen-файли, `personal/` і шляхи
+секретів, а перед записом запускає сканер секретів. Копія кожного файла
+репозиторію до pull зберігається в
+`~/.local/state/dotfiles/sync-backup/<timestamp>/` з `manifest.tsv`.
+
+## Перевірки, тести й CI
+
+```bash
+make lint       # bash -n + shellcheck
+make audit      # read-only аудит живої системи й репозиторію
+make doctor     # рівень CPU/ядра, курсор, шпалери, керовані symlink-и
+make dns-check  # resolv.conf -> Pi-hole -> unbound
+make check      # lint + audit + doctor
+./tests/run.sh  # повний набір shell-тестів
+make hooks      # встановити pre-commit hook репозиторію
 ```
 
 Аудит перевіряє помилки конфігу Hyprland, дублі біндів, переносимість
 моніторів, захардкожені home-шляхи, systemd-юніти, синтаксис Unbound,
 `.pacnew`, секрети, згенеровані файли та відповідність рівня CPU рівню
 встановленого ядра. Він нічого не редагує й не потребує root.
+
+`./install.sh --doctor` — та сама read-only перевірка з доступним `--json`;
+`./install.sh --dns-check` перевіряє DNS-ланцюжок і попереджає, що для зміни
+resolver-файлів через `--system` потрібна робоча пара Pi-hole/Unbound.
+
+Кожен тест використовує тимчасовий `$HOME`/`XDG_STATE_HOME` і заглушки
+системних утиліт, тому живі конфіги, база пакетів і монітори не чіпаються.
+Тести restore і sync додатково перевіряють, що живі файли не змінилися, а
+бекап створено. `tests/run.sh [pattern] [-v] [--list]` запускає один або всі
+файли й ніколи не запускає себе. CI (`.github/workflows/ci.yml`) виконує
+`make lint` і набір тестів у контейнері `archlinux:latest`.
 
 ## Секрети, які треба ротувати
 

@@ -21,7 +21,7 @@ input-параметри до і після тесту збігаються. Н�
 | A-06 | низька | Pi-hole rate limit збільшено до 5000/60 |
 | A-07 | середня | Імена моніторів захардкожені в живих конфігах |
 | A-08 | інфо | Поточні input-налаштування та тачпад |
-| A-09 | низька | Абсолютні `/home/dill` шляхи в живих конфігах |
+| A-09 | низька | Абсолютні `/home/<user>` шляхи в живих конфігах |
 | A-10 | низька | `rustup` і `spicetify` поза pacman |
 | A-11 | низька | Старий згенерований `chrome/firefox-colors.css` |
 | A-12 | інфо | Порожні `~/.config/mpv`, `~/.config/fastfetch` |
@@ -50,7 +50,7 @@ input-параметри до і після тесту збігаються. Н�
 | Параметр | Посібник / припущення | Фактично на `dill-turbo-pc` |
 |----------|------------------------|-----------------------------|
 | hostname | `dill-xeon-pc` | `dill-turbo-pc` |
-| домашній каталог | `/home/dill-xeon-pc` | `/home/dill` |
+| домашній каталог | `/home/<user>-xeon-pc` | `/home/<user>` |
 | UFW | раніше припускалося «вимкнено» | `ENABLED=yes`, service `enabled` + `active` |
 | CPU | — | Intel Xeon E5-2690 v4, 28 threads, x86-64-**v3** (v4 не підтримується) |
 | ядро | — | `7.3.4-x64v3-xanmod1`, пакет `linux-xanmod-linux-bin-x64v3 7.3.4-1` |
@@ -68,7 +68,7 @@ input-параметри до і після тесту збігаються. Н�
 
 Висновок: живі конфіги та посібник розійшлися в hostname, шляхах, стані UFW,
 версії ядра й шпалерах. Репозиторій фіксує живий стан як джерело істини, а
-універсальні шаблони не містять `enp9s0`, `/home/dill` чи UUID дисків.
+універсальні шаблони не містять `enp9s0`, `/home/<user>` чи UUID дисків.
 
 ## Деталі
 
@@ -94,7 +94,7 @@ hl.bind(mainMod .. " + H", hl.dsp.exec_cmd('dunstctl history-pop'))
 
 ### A-03. Копія `pihole.toml` у корені репозиторію
 
-`/home/dill/Projects/dotfiles/pihole.toml`:
+`/home/<user>/Projects/dotfiles/pihole.toml`:
 
 - права `777`, власник `root:root`;
 - файл уже доданий у `.gitignore` до першого коміту і не відстежується git;
@@ -175,21 +175,21 @@ Sunshine поки не входить до репозиторію; якщо до
 `natural_scroll`, `tap-to-click`, `disable_while_typing` або `device:` у
 `~/.config/hypr` і `~/.config/uwsm` немає. Тачпада на цьому хості немає.
 
-### A-09. Абсолютні `/home/dill` у живих конфігах
+### A-09. Абсолютні `/home/<user>` у живих конфігах
 
 | Файл | Рядок | Приклад |
 |------|-------|---------|
-| `~/.config/fish/config.fish` | 93 | `fish_add_path /home/dill/.spicetify` |
-| `~/.config/btop/btop.conf` | 5 | `color_theme = "/home/dill/..."` |
-| `~/.config/qt5ct/qt5ct.conf` | 2 | `color_scheme_path=/home/dill/...` |
-| `~/.config/qt6ct/qt6ct.conf` | 2 | `color_scheme_path=/home/dill/...` |
-| `~/.gtkrc-2.0` | 4 | `include "/home/dill/.gtkrc-2.0.mine"` |
+| `~/.config/fish/config.fish` | 93 | `fish_add_path /home/<user>/.spicetify` |
+| `~/.config/btop/btop.conf` | 5 | `color_theme = "/home/<user>/..."` |
+| `~/.config/qt5ct/qt5ct.conf` | 2 | `color_scheme_path=/home/<user>/...` |
+| `~/.config/qt6ct/qt6ct.conf` | 2 | `color_scheme_path=/home/<user>/...` |
+| `~/.gtkrc-2.0` | 4 | `include "/home/<user>/.gtkrc-2.0.mine"` |
 | `~/.config/spicetify/config-xpui.ini` | 14, 17 | `prefs_path`, `spotify_path` |
 | `~/.config/matugen/config.toml` | 9 | Firefox profile path |
-| `~/.config/systemd/user/rclone-sync.service` | 6 | `ExecStart=... /home/dill/...` |
+| `~/.config/systemd/user/rclone-sync.service` | 6 | `ExecStart=... /home/<user>/...` |
 | `~/.config/systemd/user/zirochka-invite.service` | 3, 7, 8 | `Documentation`, `WorkingDirectory`, `ExecStart` |
 | `~/.config/hypr/hyprland.lua` | 240, 244 | шлях до `switch_ws.sh` |
-| `~/.config/hypr/colors.lua` | — | wallpaper `image = "/home/dill/Картинки/..."` |
+| `~/.config/hypr/colors.lua` | — | wallpaper `image = "/home/<user>/Картинки/..."` |
 
 У репозиторії статичні шляхи замінені на `$HOME`/`%h`, а шаблони `.in`
 рендеряться з `@HOME@`, `@FIREFOX_PROFILE_DIR@`, `@OBSIDIAN_VAULT@`.
@@ -242,12 +242,14 @@ User-сервіс слухає `0.0.0.0:80`. Це працює завдяки
 
 - `.gitignore` створено до першого коміту; `pihole.toml` ігнорується.
 - `install.sh` + `lib/` з бекапами, `--dry-run`, `--all`, `--system`, `--mouse`,
-  `--monitors`, `--list`.
+  `--monitors`, `--list`, `--hooks`, `--doctor`, `--dns-check`, `--restore`,
+  `--sync`, `--dock-layout`, `--json`.
 - GPU-профілі: `nvidia`, `amd`, `intel`, `hybrid`, `vm`, `software`.
 - Host-профілі: `desktop`, `laptop`.
 - Модулі: `hypr`, `uwsm`, `waybar`, `rofi`, `kitty`, `fish`, `dunst`, `matugen`,
   `theming`, `scripts`, `systemd-user`, `apps`, `workspaces-split`,
-  `mouse-sensitivity`.
+  `mouse-sensitivity`, `autostart`, `binds-cheatsheet`, `gamemode`, `idle`,
+  `lid`, `monitor-profiles`, `theme-menu`.
 - `monitors.conf.sh` як єдине джерело; `monitors.lua` генерується; пресет
   `dill-desktop` збережено.
 - `switch_ws.sh` переписано config-driven; живий файл не змінювався.
@@ -255,11 +257,44 @@ User-сервіс слухає `0.0.0.0:80`. Це працює завдяки
   `hyprctl eval 'hl.config(...)'`, збереження лише у `hosts/<host>/input.lua`
   після diff + backup + підтвердження.
 - Пакети згруповано за категоріями; `alternatives.txt` розділяє
-  `[main, config]` і `[package only]`.
+  `[main, config]` і `[package only]`; додано `packages/laptop.txt`
+  (`hypridle`, `hyprlock`).
 - `system/pihole/pihole.toml.example` без хешів/TOTP/app_pwhash; `cli_pw=false`.
 - `wait-iface.sh` і `pi-hole` drop-in узагальнено для будь-якого NIC.
 - `scripts/audit.sh`, `lib/secrets.sh`, `Makefile` (`lint`, `audit`, `check`,
   `theme`, `mouse`, `monitors`).
+- Нові read-only/керовані інструменти: `scripts/doctor.sh`,
+  `scripts/dns-check.sh`, `scripts/sync.sh`, `scripts/pkg-sync.sh`,
+  `bootstrap.sh`, `theme-menu.sh`, `binds-cheatsheet.sh`, `gamemode.sh`,
+  `monitor-profiles.sh`, `lid-handler.sh`, `idle-tune.sh`, `autostart.sh`.
+- `--restore` читає `manifest.tsv`, показує diff, бекапить поточний стан і
+  вимагає `--system` для `/etc`; `sync pull` працює лише система → репозиторій
+  з бекапом під `~/.local/state/dotfiles/sync-backup/`.
+- `pkg-sync` за замовчуванням лише звітує; pacman-hook лише оновлює штамп.
+- Pre-commit hook (`make hooks`) блокує секрети, shellcheck-помилки й
+  згенеровані matugen-файли; встановлюється лише в цей репозиторій.
+- `tests/` — 14 файлів, 246 перевірок; `tests/run.sh` — локальний запуск із
+  тимчасовим `$HOME`; CI (`.github/workflows/ci.yml`) жене lint і тести в
+  `archlinux:latest`.
+
+## Нові інструменти: стан перевірки
+
+| Інструмент | Перевірено | Не перевірено / обмеження |
+|------------|------------|---------------------------|
+| `lid-handler.sh` | синтетичні тести для трьох випадків: зовнішній монітор, без нього, відкриття | фізична кришка ноутбука |
+| `monitor-profiles.sh` | синтетичні тести сокета/дебаунсу, dry-run, `ask` | реальна док-станція; потрібен `socat` |
+| `gamemode.sh` | зчитування `getoption` до ввімкнення, відновлення, повторне ввімкнення | жива ігрова сесія |
+| `idle-tune.sh` | валідація профілів, рендер, бекап, CLI-перекриття стану | `hypridle`/`hyprlock` на цій машині не встановлені |
+| `autostart.sh` | 17 записів, enable/disable/add/remove/run, dry-run | живий `hyprland.lua` досі має статичний список |
+| `pkg-sync.sh` | дрейф у два боки, `pull` лише додає, host-файли | pacman-hook не встановлений без `--system` |
+| `sync.sh` | статус/diff/pull, зворотний рендер, скан секретів, бекап | реальні живі конфіги не тягнулися |
+| `--restore` | diff, підтвердження, бекап, `/etc` лише з `--system` | реальне відновлення не виконувалося |
+| `theme-menu.sh` | matugen `--mode`/`--type`, стан `theme.conf` | живий rofi-виклик |
+| `binds-cheatsheet.sh` | парсинг Lua, plain/markdown/JSON, дублі | живий rofi-виклик |
+
+`make check` на цій машині: `26 OK, 3 WARN, 0 FAIL, 2 SKIPPED`. Відомі
+попередження: дубль `SUPER + H`, незамержені `.pacnew`, 6 зламаних
+symlink-ів застосунків (`Singleton*`). Вони не є регресіями репозиторію.
 
 ## Що НЕ змінено у живих конфігах
 
