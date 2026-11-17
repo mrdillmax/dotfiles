@@ -31,7 +31,6 @@ DEFAULTS=(
     "per-window-layout|uwsm app -- hyprland-per-window-layout"
     "kbuildsycoca|uwsm app -- kbuildsycoca6 --noincremental"
     "kopia-ui|uwsm app -- /opt/KopiaUI/kopia-ui"
-    "clip-to-vm|uwsm app -- ~/.local/bin/clip-to-vm.sh"
     "monitor-profiles|monitor-profiles.sh watch"
     "hypridle|uwsm app -- hypridle"
     "vesktop|uwsm app -- vesktop"

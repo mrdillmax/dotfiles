@@ -168,7 +168,6 @@ GPU-профіль — через `lspci`/`systemd-detect-virt`. Обидва м
 | `matugen` | шаблони й `config.toml` (без згенерованих кольорів) |
 | `theming` | GTK/Qt/KDE налаштування і symlink-и adw-gtk3 |
 | `cursor` | тема/розмір курсора в uwsm, GTK3/4, Qt, xsettingsd і Hyprland |
-| `scripts` | допоміжні скрипти в `~/.local/bin` |
 | `apps` | btop, micro, spicetify, vesktop, Firefox chrome, dolphinrc |
 | `workspaces-split` | воркспейси на монітор; пропонується лише за 2+ моніторів |
 | `mouse-sensitivity` | інтерактивний тюнер і overlay для input |

@@ -169,7 +169,6 @@ it, a plain numbered prompt is used.
 | `matugen` | templates and `config.toml` (no generated colors) |
 | `theming` | GTK/Qt/KDE settings and the adw-gtk3 symlinks |
 | `cursor` | cursor theme/size rendered into uwsm, GTK3/4, Qt, xsettingsd and Hyprland |
-| `scripts` | helper scripts in `~/.local/bin` |
 | `apps` | btop, micro, spicetify, vesktop, Firefox chrome, dolphinrc |
 | `workspaces-split` | per-monitor workspace slots; offered only with 2+ monitors |
 | `mouse-sensitivity` | interactive pointer tuner and the input overlay |

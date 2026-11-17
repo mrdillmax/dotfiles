@@ -77,7 +77,3 @@ post_hook = 'pkill -SIGUSR2 waybar'
 [templates.rofi]
 input_path = '~/.config/matugen/templates/rofi.rasi'
 output_path = '~/.config/rofi/colors.rasi'
-
-[templates.clockwall]
-input_path = '~/.config/matugen/templates/clockwall.env'
-output_path = '~/.cache/clockwall/colors.env'
