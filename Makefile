@@ -6,7 +6,7 @@ SYNC_TARGET ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor dns-check hooks restore sync-status sync-diff sync-pull sync-packages theme-menu binds audit lint check
+.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor dns-check hooks restore sync-status sync-diff sync-pull sync-packages theme-menu binds gamemode audit lint check
 
 help:
 	@printf '%s\n' \
@@ -19,6 +19,7 @@ help:
 	  '  make theme       regenerate colors with matugen' \
 	  '  make theme-menu  wallpaper/mode/scheme menu (DRY_RUN=1)' \
 	  '  make binds       Hyprland keybind cheatsheet (ROFI=1, JSON=1)' \
+	  '  make gamemode    on|off|toggle|status via ACTION= (DRY_RUN=1)' \
 	  '  make wallpaper   store a wallpaper path and apply it' \
 	  '  make kernel      detect the CPU level and install a kernel' \
 	  '  make doctor      read-only system and config health check' \
@@ -103,6 +104,10 @@ theme-menu:
 binds:
 	@./modules/binds-cheatsheet/home/.local/bin/binds-cheatsheet.sh \
 	    $(if $(filter 1,$(ROFI)),--rofi,) $(if $(filter 1,$(JSON)),--json,)
+
+gamemode:
+	@./modules/gamemode/home/.local/bin/gamemode.sh \
+	    $(if $(ACTION),$(ACTION),status) $(if $(filter 1,$(DRY_RUN)),--dry-run,)
 
 lint:
 	@find . -path ./.git -prune -o -type f -name '*.sh' -print0 \

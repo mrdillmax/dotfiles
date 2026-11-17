@@ -213,6 +213,8 @@ hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("theme-menu.sh"))
 -- binds-cheatsheet is optional; same rule.
 hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd("binds-cheatsheet.sh --rofi"))
+-- gamemode is optional; toggles animations, blur, shadows and rounding.
+hl.bind(mainMod .. " + SHIFT + G", hl.dsp.exec_cmd("gamemode.sh toggle"))
 
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd('uwsm app -- sh -c "cliphist list | rofi -dmenu | cliphist decode | wl-copy"'), { dont_inhibit = true })
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd(powermenu))
