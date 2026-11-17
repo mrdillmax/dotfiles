@@ -48,6 +48,7 @@ DO_SYNC=0
 SYNC_COMMAND=""
 SYNC_TARGET=""
 IFACE_ARG=""
+AUTOLOGIN_USER_ARG=""
 KERNEL_LEVEL_ARG=""
 
 # Load helpers before parsing so die() is available for bad options.
@@ -95,6 +96,7 @@ Modes:
   --wallpaper PATH      store the wallpaper path and optionally apply it
   --system              install opt-in /etc files (run with sudo)
   --iface IFACE         network interface for Pi-hole (@IFACE@ rendering)
+  --autologin-user USER user for the getty autologin drop-in (with --system)
   --kernel              detect the CPU level and install a matching kernel
   --kernel-level LEVEL  override the kernel level: v1, v2, v3 or v4
                         (above-CPU levels require typing I UNDERSTAND)
@@ -137,6 +139,7 @@ while (($#)); do
         --wallpaper)  WALLPAPER_ARG="${2:?missing value for --wallpaper}"; DO_WALLPAPER=1; shift ;;
         --system)     DO_SYSTEM=1 ;;
         --iface)      IFACE_ARG="${2:?missing value for --iface}"; shift ;;
+        --autologin-user) AUTOLOGIN_USER_ARG="${2:?missing value for --autologin-user}"; shift ;;
         --kernel)     DO_KERNEL=1 ;;
         --kernel-level) KERNEL_LEVEL_ARG="${2:?missing value for --kernel-level}"; shift ;;
         --hooks)      DO_HOOKS=1 ;;
@@ -165,6 +168,10 @@ while (($#)); do
     esac
     shift
 done
+
+if [[ -n $AUTOLOGIN_USER_ARG && $DO_SYSTEM -eq 0 ]]; then
+    die "--autologin-user requires --system"
+fi
 
 REAL_HOME="$(real_home)"
 [[ -n $REAL_HOME ]] || die "cannot determine home directory"

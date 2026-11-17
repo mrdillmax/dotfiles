@@ -93,10 +93,46 @@ resolve_iface() {
     printf '%s\n' "$iface"
 }
 
-render_iface_placeholders() {
-    local src="$1" iface="$2" tmp
+valid_login_name() {
+    [[ $1 =~ ^[A-Za-z0-9._-]+$ ]]
+}
+
+resolve_autologin_user() {
+    local user="${AUTOLOGIN_USER_ARG:-}"
+
+    if [[ -z $user && -n ${SUDO_USER:-} ]]; then
+        user="$SUDO_USER"
+    fi
+    if [[ -z $user ]]; then
+        user="$(logname 2>/dev/null || true)"
+    fi
+    if [[ -z $user ]]; then
+        user="$(id -un 2>/dev/null || true)"
+    fi
+    if [[ -z $user ]] && [[ -t 0 ]]; then
+        user="$(tui_input "User for getty autologin" "")"
+    fi
+
+    if [[ -z $user ]]; then
+        warn "cannot determine the autologin user; pass --autologin-user USER"
+        return 1
+    fi
+    if ! valid_login_name "$user"; then
+        warn "invalid autologin user: $user"
+        return 1
+    fi
+    if command -v getent >/dev/null 2>&1 && ! getent passwd "$user" >/dev/null; then
+        warn "autologin user does not exist: $user"
+        return 1
+    fi
+
+    printf '%s\n' "$user"
+}
+
+render_system_placeholders() {
+    local src="$1" iface="${2:-}" user="${3:-}" tmp
     tmp="$(mktemp)"
-    sed "s|@IFACE@|$iface|g" "$src" >"$tmp"
+    sed -e "s|@IFACE@|$iface|g" -e "s|@USER@|$user|g" "$src" >"$tmp"
     printf '%s\n' "$tmp"
 }
 
@@ -291,7 +327,7 @@ install_system_configs() {
         die "system configs require root: sudo ./install.sh --system"
     fi
 
-    local src dst mode tmp_src iface
+    local src dst mode tmp_src iface user
     local count=0 dns_ok=1 dns_skipped=0
     local rows=()
 
@@ -339,14 +375,29 @@ install_system_configs() {
             fi
         fi
 
+        iface=""
+        user=""
         if grep -q '@IFACE@' "$src"; then
             if ! iface="$(resolve_iface)"; then
                 warn "skipping $dst: no interface name"
                 continue
             fi
-            tmp_src="$(render_iface_placeholders "$src" "$iface")"
+        fi
+        if grep -q '@USER@' "$src"; then
+            if ! user="$(resolve_autologin_user)"; then
+                warn "skipping $dst: no valid autologin user"
+                continue
+            fi
+        fi
+        if [[ -n $iface || -n $user ]]; then
+            tmp_src="$(render_system_placeholders "$src" "$iface" "$user")"
             src="$tmp_src"
-            info "rendered @IFACE@ as $iface for $dst"
+            if [[ -n $iface ]]; then
+                info "rendered @IFACE@ as $iface for $dst"
+            fi
+            if [[ -n $user ]]; then
+                info "rendered @USER@ as $user for $dst"
+            fi
         fi
 
         if is_critical_system_path "$dst"; then
