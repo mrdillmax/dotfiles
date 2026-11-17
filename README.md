@@ -225,9 +225,7 @@ The `workspaces-split` module is offered only when two or more monitors are
 detected. It installs `~/.config/hypr/switch_ws.sh`, which reads monitor names
 and workspace ranges from the generated `monitors.conf.sh` — nothing is
 hardcoded. Without the module, `SUPER+1..0` uses Hyprland's native workspace
-dispatchers. The owner's two-monitor behaviour is preserved as the
-`dill-desktop` preset. The live `switch_ws.sh` works and is verified; it is not
-a bug.
+dispatchers. The `dill-desktop` example preset covers a two-monitor setup.
 
 ### Dock and hotplug profiles
 
@@ -398,8 +396,8 @@ so a missing file is safe.
 ## Packages
 
 Package groups live in `packages/<category>.txt`. The installer lets you pick
-groups, and marks alternatives as `[main, config]` (the owner uses it and this
-repository contains its config) or `[package only]` (no config here).
+groups, and marks alternatives as `[main, config]` (this repository contains
+its config) or `[package only]` (no config here).
 
 | Category | Main (config included) | Alternatives (package only) |
 |----------|------------------------|-----------------------------|
@@ -504,8 +502,8 @@ sudo ./install.sh --system --iface eno1
 
 Only this mode writes `/etc`, one file at a time, after a backup. `@IFACE@` is
 rendered from `--iface`, then the default-route interface, then an interactive
-prompt. If none is available the file is skipped with an error; `enp9s0` is
-never substituted in universal templates.
+prompt. If none is available the file is skipped with an error; a fixed
+interface name is never substituted in universal templates.
 
 Manifest:
 
@@ -523,7 +521,6 @@ Manifest:
 | `system/grub/default-grub` | `/etc/default/grub` (extra confirmation) |
 | `system/mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` (extra confirmation) |
 | `system/modprobe/*` | `/etc/modprobe.d/*` |
-| `system/sysctl/*` | `/etc/sysctl.d/*` |
 
 `pacman.conf` and `makepkg.conf` are merged, not copied: the installer shows a
 diff, asks for confirmation and creates a backup. The merge is skipped with
@@ -531,7 +528,7 @@ diff, asks for confirmation and creates a backup. The merge is skipped with
 started or restarted.
 
 UFW is documentation only. The repository does not change firewall state or
-rules; see `system/ufw/README.md` for the recorded live state.
+rules; see `system/ufw/README.md` for general guidance.
 
 Not managed by this repository: `/etc/fstab`, NetworkManager connection
 profiles, snapper configuration. The installer never runs `grub-mkconfig` or

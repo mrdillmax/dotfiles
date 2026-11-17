@@ -224,7 +224,7 @@ for pkg in "${audit_kernels[@]}"; do
 done
 
 if [[ -z $installed_level ]]; then
-    note "no level-aware kernel installed; generic kernels are not a bug"
+    note "no level-aware kernel installed; the generic kernel is supported"
 elif (( $(kernel_level_rank "$installed_level") > $(kernel_level_rank "$cpu_level") )); then
     fail "installed kernel level x86-64-$installed_level is above CPU level x86-64-$cpu_level"
 elif (( $(kernel_level_rank "$installed_level") < $(kernel_level_rank "$cpu_level") )); then

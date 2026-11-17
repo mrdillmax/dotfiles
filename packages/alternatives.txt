@@ -1,6 +1,6 @@
 # Alternative applications, grouped by category.
 # Format: package <TAB> category <TAB> role <TAB> note
-# role=main  -> used by the owner AND a config exists in this repo
+# role=main  -> a config exists in this repo
 # role=alt   -> package only, no config in this repo
 kitty	terminal	main	config: modules/kitty
 foot	terminal	alt	package only

@@ -1,5 +1,4 @@
 # NVIDIA proprietary driver (single GPU).
-# Verified against the user's current working session (Hyprland 0.57 / 580xx).
 export LIBVA_DRIVER_NAME=nvidia
 export GBM_BACKEND=nvidia-drm
 export __GLX_VENDOR_LIBRARY_NAME=nvidia

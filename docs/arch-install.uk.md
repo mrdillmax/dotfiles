@@ -195,7 +195,7 @@ sudo ./install.sh --system --iface eno1
 - GRUB, mkinitcpio і `modprobe/nvidia.conf` лише для GPU-профілів `nvidia`
   і `hybrid`
 - конфіги Pi-hole + Unbound (рендерять `@IFACE@` з `--iface` або default-route;
-  `enp9s0` ніколи не підставляється автоматично)
+  фіксована назва інтерфейсу ніколи не підставляється автоматично)
 - NetworkManager `dns=none` / `rc-manager=unmanaged` (лише коли Pi-hole і
   Unbound вже існують; заздалегідь підготуйте DNS-запас)
 - пропозиції злиття pacman/makepkg (diff, підтвердження, бекап; з `--yes`
@@ -203,7 +203,7 @@ sudo ./install.sh --system --iface eno1
 - опційне вмикання сервісів лише через `systemctl enable`, без `start`
 
 UFW — тільки документація. Репозиторій не змінює стан фаєрвола чи правила;
-фактичний стан записано в `system/ufw/README.md`.
+загальні рекомендації є в `system/ufw/README.md`.
 
 Цей самий режим встановлює pacman-hook, який після транзакції пакетів оновлює
 `/var/lib/dotfiles/pkg-sync.stamp`. Переглядайте дрейф пізніше через

@@ -125,7 +125,7 @@ make lid ACTION=status                 # lid-switch behaviour
 ```
 
 Monitor names live in `hosts/<host>/monitors.conf.sh`; the installer renders
-`~/.config/hypr/monitors.lua` and never hardcodes the owner's layout into
+`~/.config/hypr/monitors.lua` and never hardcodes a monitor layout into
 universal templates.
 
 For a laptop with a dock or an external display, install the optional hotplug
@@ -193,7 +193,7 @@ What is included:
 - GRUB, mkinitcpio and `modprobe/nvidia.conf` only for the `nvidia` and
   `hybrid` GPU profiles
 - Pi-hole + Unbound configs (render `@IFACE@` from `--iface` or the default
-  route; `enp9s0` is never substituted automatically)
+  route; a fixed interface name is never substituted automatically)
 - NetworkManager `dns=none` / `rc-manager=unmanaged` (only when Pi-hole and
   Unbound already exist; keep a DNS safety net)
 - pacman/makepkg merge proposals (diff, confirmation, backup; skipped with
@@ -201,7 +201,7 @@ What is included:
 - optional service enablement with `systemctl enable` only, never `start`
 
 UFW is documentation only. This repository never changes firewall state or
-rules; see `system/ufw/README.md` for the recorded live state.
+rules; see `system/ufw/README.md` for general guidance.
 
 The same mode installs a pacman hook that touches
 `/var/lib/dotfiles/pkg-sync.stamp` after a package transaction. Review package

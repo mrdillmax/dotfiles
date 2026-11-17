@@ -39,7 +39,6 @@ or the invoking login. It always requires a separate confirmation.
 | `mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` | nvidia/hybrid only; extra critical confirmation |
 | `modprobe/nvidia.conf` | `/etc/modprobe.d/nvidia.conf` | nvidia/hybrid only |
 | `modprobe/*` | `/etc/modprobe.d/*` | other modprobe files |
-| `sysctl/*` | `/etc/sysctl.d/*` | |
 
 ## Merge-only presets
 
@@ -77,10 +76,10 @@ GPU profile, not with `vm` or `software`.
 3. an interactive prompt when both fail.
 
 If none of these produce a value, the installer **skips the file with an
-error**. It never silently substitutes `enp9s0`.
+error**. It never silently substitutes a fixed interface name.
 
-`enp9s0` is never stored in universal templates. If a specific host needs a
-fixed interface name, keep it in that host's generated preset, not in `system/`.
+Universal templates contain only `@IFACE@`. If a specific host needs a fixed
+interface name, keep it in that host's generated preset, not in `system/`.
 
 ## DNS safety net
 

@@ -264,7 +264,7 @@ configure_monitors() {
         "Single monitor" \
         "Two or more (choose order and positions)" \
         "Auto (preferred mode, automatic positions)" \
-        "Preset dill-desktop (owner layout: two 1920x1080 monitors)" \
+        "Preset dill-desktop (example two-monitor preset)" \
         "Edit hosts/$HOST_NAME/monitors.conf.sh manually")" || return 1
 
     case "$choice" in
