@@ -13,6 +13,13 @@ under `~/.dotfiles-backup/<timestamp>/` for the invoking user (resolved via
 The installer never starts or restarts a service and never runs
 `grub-mkconfig` or `mkinitcpio -P`. It prints the commands to review manually.
 
+The GRUB, mkinitcpio and `modprobe/nvidia.conf` files are installed only when
+the selected GPU profile is `nvidia` or `hybrid`. Other GPU profiles skip them
+and keep their existing boot and initramfs configuration.
+
+The getty autologin drop-in is rendered from `--autologin-user`, `SUDO_USER`
+or the invoking login. It always requires a separate confirmation.
+
 ## Files
 
 | Source | Destination | Notes |
@@ -28,9 +35,10 @@ The installer never starts or restarts a service and never runs
 | `systemd/...` | `/etc/systemd/system/...` | |
 | `pacman/hooks/dotfiles-pkg-sync.hook` | `/etc/pacman.d/hooks/dotfiles-pkg-sync.hook` | marks package changes for a later review |
 | `pkg-sync/dotfiles-pkg-sync-mark.sh` | `/usr/local/bin/dotfiles-pkg-sync-mark.sh` | writes `/var/lib/dotfiles/pkg-sync.stamp` |
-| `grub/default-grub` | `/etc/default/grub` | extra critical confirmation |
-| `mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` | extra critical confirmation |
-| `modprobe/*` | `/etc/modprobe.d/*` | |
+| `grub/default-grub` | `/etc/default/grub` | nvidia/hybrid only; extra critical confirmation |
+| `mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` | nvidia/hybrid only; extra critical confirmation |
+| `modprobe/nvidia.conf` | `/etc/modprobe.d/nvidia.conf` | nvidia/hybrid only |
+| `modprobe/*` | `/etc/modprobe.d/*` | other modprobe files |
 | `sysctl/*` | `/etc/sysctl.d/*` | |
 
 ## Merge-only presets

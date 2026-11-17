@@ -188,8 +188,10 @@ Only this mode writes `/etc`, one file at a time, with a backup. It never runs
 
 What is included:
 
-- zram swap, `cpupower` governor, sysctl and modprobe files
-- systemd units and drop-ins
+- zram swap, `cpupower` governor and modprobe files
+- systemd units and drop-ins, including optional getty autologin
+- GRUB, mkinitcpio and `modprobe/nvidia.conf` only for the `nvidia` and
+  `hybrid` GPU profiles
 - Pi-hole + Unbound configs (render `@IFACE@` from `--iface` or the default
   route; `enp9s0` is never substituted automatically)
 - NetworkManager `dns=none` / `rc-manager=unmanaged` (only when Pi-hole and

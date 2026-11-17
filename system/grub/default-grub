@@ -3,8 +3,14 @@
 GRUB_DEFAULT=0
 GRUB_TIMEOUT=3
 GRUB_DISTRIBUTOR="Arch"
-GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=2 nvidia_drm.modeset=1 nvidia_drm.fbdev=1 module_blacklist=tpm,tpm_tis,tpm_tis_core mitigations=off nowatchdog psi=1"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=2 nvidia_drm.modeset=1 nvidia_drm.fbdev=1 nowatchdog psi=1"
 GRUB_CMDLINE_LINUX=""
+
+# Not enabled by default:
+#   module_blacklist=tpm,tpm_tis,tpm_tis_core disables the TPM. Measured boot
+#   and disk encryption setups that use a TPM stop working.
+#   mitigations=off disables CPU vulnerability mitigations.
+# Add either option only if you understand the security tradeoff.
 
 # Preload both GPT and MBR modules so that they are not missed
 GRUB_PRELOAD_MODULES="part_gpt part_msdos"
@@ -62,6 +68,6 @@ GRUB_DISABLE_RECOVERY=true
 # operating systems.
 GRUB_DISABLE_OS_PROBER=false
 
-GRUB_THEME="/boot/grub/themes/win-tux-dualboot-fullscreen/theme.txt"
+#GRUB_THEME="/boot/grub/themes/your-theme/theme.txt"
 
 GRUB_DISABLE_MEMTEST=true

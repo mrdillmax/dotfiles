@@ -190,8 +190,10 @@ sudo ./install.sh --system --iface eno1
 
 Що входить:
 
-- zram swap, governor `cpupower`, sysctl і modprobe
-- systemd-юніти та drop-in-и
+- zram swap, governor `cpupower` і modprobe
+- systemd-юніти та drop-in-и, включно з необов'язковим getty autologin
+- GRUB, mkinitcpio і `modprobe/nvidia.conf` лише для GPU-профілів `nvidia`
+  і `hybrid`
 - конфіги Pi-hole + Unbound (рендерять `@IFACE@` з `--iface` або default-route;
   `enp9s0` ніколи не підставляється автоматично)
 - NetworkManager `dns=none` / `rc-manager=unmanaged` (лише коли Pi-hole і

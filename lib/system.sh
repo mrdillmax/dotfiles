@@ -28,8 +28,21 @@ system_file_map() {
             networkmanager/dns.conf)         printf '%s\t%s\t%s\n' "$src" "/etc/NetworkManager/conf.d/dns.conf" "0644" ;;
             networkmanager/rc-manager.conf)  printf '%s\t%s\t%s\n' "$src" "/etc/NetworkManager/conf.d/rc-manager.conf" "0644" ;;
             systemd/*)                       printf '%s\t%s\t%s\n' "$src" "/etc/systemd/system/${rel#systemd/}" "0644" ;;
-            grub/default-grub)               printf '%s\t%s\t%s\n' "$src" "/etc/default/grub" "0644" ;;
-            mkinitcpio/mkinitcpio.conf)      printf '%s\t%s\t%s\n' "$src" "/etc/mkinitcpio.conf" "0644" ;;
+            grub/default-grub)
+                if [[ ${GPU_PROFILE:-} == nvidia || ${GPU_PROFILE:-} == hybrid ]]; then
+                    printf '%s\t%s\t%s\n' "$src" "/etc/default/grub" "0644"
+                fi
+                ;;
+            mkinitcpio/mkinitcpio.conf)
+                if [[ ${GPU_PROFILE:-} == nvidia || ${GPU_PROFILE:-} == hybrid ]]; then
+                    printf '%s\t%s\t%s\n' "$src" "/etc/mkinitcpio.conf" "0644"
+                fi
+                ;;
+            modprobe/nvidia.conf)
+                if [[ ${GPU_PROFILE:-} == nvidia || ${GPU_PROFILE:-} == hybrid ]]; then
+                    printf '%s\t%s\t%s\n' "$src" "/etc/modprobe.d/nvidia.conf" "0644"
+                fi
+                ;;
             modprobe/*)                      printf '%s\t%s\t%s\n' "$src" "/etc/modprobe.d/${rel#modprobe/}" "0644" ;;
             sysctl/*)                        printf '%s\t%s\t%s\n' "$src" "/etc/sysctl.d/${rel#sysctl/}" "0644" ;;
             *)                               printf 'warning: unmapped system file: %s\n' "$rel" >&2 ;;
