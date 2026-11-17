@@ -636,4 +636,7 @@ only placeholders that may be committed.
 
 ## License
 
-No license file is included yet. Add one before publishing the repository.
+MIT. See [LICENSE](LICENSE).
+
+Third-party configuration examples and themes keep their upstream licenses.
+See [THIRD_PARTY.md](THIRD_PARTY.md).
