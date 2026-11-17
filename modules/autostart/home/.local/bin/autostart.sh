@@ -1,0 +1,414 @@
+#!/usr/bin/env bash
+# Manage the applications started by Hyprland.
+#
+# Entries live in ~/.local/state/dotfiles/autostart.tsv:
+#   <enabled 0|1><TAB><name><TAB><command>
+# The file is seeded from the defaults below on the first `run`. Hyprland calls
+# `autostart.sh run` from its start handler, so disabling an entry here keeps it
+# off at the next login without editing hyprland.lua.
+#
+# Only this state file is written. The compositor config and running processes
+# are never touched.
+set -uo pipefail
+
+REAL_HOME="${HOME:?HOME is not set}"
+STATE_DIR="${XDG_STATE_HOME:-$REAL_HOME/.local/state}/dotfiles"
+STATE_FILE="$STATE_DIR/autostart.tsv"
+LOG_FILE="$STATE_DIR/autostart.log"
+
+DRY_RUN=0
+COMMAND=""
+
+# Seeded on the first run. Keep in sync with the old hyprland.lua start block.
+DEFAULTS=(
+    "waybar|uwsm app -- waybar"
+    "dunst|uwsm app -- dunst"
+    "awww-daemon|uwsm app -- awww-daemon"
+    "hyprpolkitagent|uwsm app -- /usr/lib/hyprpolkitagent/hyprpolkitagent"
+    "cliphist-text|uwsm app -- wl-paste --type text --watch cliphist store"
+    "cliphist-image|uwsm app -- wl-paste --type image --watch cliphist store"
+    "wl-clip-persist|uwsm app -- wl-clip-persist --clipboard regular"
+    "per-window-layout|uwsm app -- hyprland-per-window-layout"
+    "kbuildsycoca|uwsm app -- kbuildsycoca6 --noincremental"
+    "kopia-ui|uwsm app -- /opt/KopiaUI/kopia-ui"
+    "clip-to-vm|uwsm app -- ~/.local/bin/clip-to-vm.sh"
+    "monitor-profiles|monitor-profiles.sh watch"
+    "hypridle|uwsm app -- hypridle"
+    "vesktop|uwsm app -- vesktop"
+    "obsidian|uwsm app -- obsidian"
+    "firefox|uwsm app -- firefox"
+    "steam|uwsm app -- steam -silent"
+)
+
+usage() {
+    cat <<'EOF'
+Usage: autostart.sh <list|status|enable NAME|disable NAME|toggle NAME|
+                    add NAME COMMAND|remove NAME|run|reset|pick> [--dry-run]
+
+  list            show every entry and whether it starts
+  enable NAME     start NAME at the next login
+  disable NAME    keep NAME off at the next login
+  toggle NAME     flip the state of NAME
+  add NAME CMD    add a new entry (starts at the next login)
+  remove NAME     delete an entry
+  run             start the enabled entries (used by Hyprland at login)
+  reset           restore the built-in list, all enabled
+  pick            interactive toggle menu (rofi/gum/whiptail/dialog/plain)
+
+Options:
+  --dry-run       print what would change; do not write or start anything
+
+State: ~/.local/state/dotfiles/autostart.tsv
+Log:   ~/.local/state/dotfiles/autostart.log
+EOF
+}
+
+die() { printf 'autostart: %s\n' "$*" >&2; exit 1; }
+info() { printf ':: %s\n' "$*"; }
+ok() { printf 'ok %s\n' "$*"; }
+warn() { printf 'warning: %s\n' "$*" >&2; }
+
+valid_name() {
+    [[ $1 =~ ^[A-Za-z0-9_.-]+$ ]]
+}
+
+valid_command() {
+    [[ -n $1 && $1 != *$'\t'* && $1 != *$'\n'* && $1 != *$'\r'* ]]
+}
+
+# Fills ENTRIES=("enabled<TAB>name<TAB>command") from the state file, or from
+# the defaults when the file does not exist yet.
+load_entries() {
+    local line enabled name cmd
+    ENTRIES=()
+
+    if [[ -r $STATE_FILE ]]; then
+        while IFS=$'\t' read -r enabled name cmd; do
+            [[ -z $enabled || $enabled == \#* ]] && continue
+            if [[ $enabled != 0 && $enabled != 1 ]] || ! valid_name "$name" \
+                || ! valid_command "$cmd"; then
+                warn "ignoring malformed line in $STATE_FILE: $enabled $name $cmd"
+                continue
+            fi
+            ENTRIES+=("$(printf '%s\t%s\t%s' "$enabled" "$name" "$cmd")")
+        done <"$STATE_FILE"
+        return 0
+    fi
+
+    for line in "${DEFAULTS[@]}"; do
+        name="${line%%|*}"
+        cmd="${line#*|}"
+        ENTRIES+=("$(printf '1\t%s\t%s' "$name" "$cmd")")
+    done
+}
+
+save_entries() {
+    local tmp
+
+    if ((DRY_RUN)); then
+        info "[dry-run] would write $STATE_FILE"
+        return 0
+    fi
+
+    mkdir -p -- "$STATE_DIR"
+    tmp="$(mktemp)"
+    {
+        printf '# Managed by autostart.sh: <enabled>\t<name>\t<command>\n'
+        printf '%s\n' "${ENTRIES[@]}"
+    } >"$tmp"
+    chmod 0644 "$tmp"
+    mv -f -- "$tmp" "$STATE_FILE"
+}
+
+entry_index() {
+    local wanted="$1" i enabled name
+    for i in "${!ENTRIES[@]}"; do
+        IFS=$'\t' read -r enabled name _ <<<"${ENTRIES[$i]}"
+        if [[ $name == "$wanted" ]]; then
+            printf '%s' "$i"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Sets ENTRY_INDEX instead of printing it, so die() runs in this shell.
+require_entry() {
+    ENTRY_INDEX="$(entry_index "$1")" || die "unknown entry: $1 (see list)"
+}
+
+set_enabled() {
+    local name="$1" value="$2" enabled _cmd
+    load_entries
+    require_entry "$name"
+    IFS=$'\t' read -r _ name _cmd <<<"${ENTRIES[$ENTRY_INDEX]}"
+
+    if ((DRY_RUN)); then
+        info "[dry-run] would set $name enabled=$value"
+        return 0
+    fi
+
+    ENTRIES[ENTRY_INDEX]="$(printf '%s\t%s\t%s' "$value" "$name" "$_cmd")"
+    save_entries
+    if [[ $value == 1 ]]; then
+        ok "$name will start at the next login"
+    else
+        ok "$name will not start at the next login"
+    fi
+}
+
+show_list() {
+    local line enabled name cmd state
+    load_entries
+
+    if ((${#ENTRIES[@]} == 0)); then
+        printf 'no autostart entries\n'
+        return 0
+    fi
+
+    for line in "${ENTRIES[@]}"; do
+        IFS=$'\t' read -r enabled name cmd <<<"$line"
+        if [[ $enabled == 1 ]]; then state='[x]'; else state='[ ]'; fi
+        printf '%s %-20s %s\n' "$state" "$name" "$cmd"
+    done
+}
+
+show_status() {
+    local line enabled name _cmd on=0 off=0
+    load_entries
+
+    for line in "${ENTRIES[@]}"; do
+        IFS=$'\t' read -r enabled name _cmd <<<"$line"
+        if [[ $enabled == 1 ]]; then on=$((on + 1)); else off=$((off + 1)); fi
+    done
+
+    printf 'state: %s%s\n' "$STATE_FILE" \
+        "$([[ -r $STATE_FILE ]] && echo '' || echo ' (defaults, not written yet)')"
+    printf 'log:   %s\n' "$LOG_FILE"
+    printf 'entries: %d enabled, %d disabled\n' "$on" "$off"
+}
+
+add_entry() {
+    local name="$1" cmd="$2" line enabled
+
+    valid_name "$name" || die "invalid name: $name (use letters, digits, . _ -)"
+    valid_command "$cmd" || die "the command must be non-empty and single-line"
+    load_entries
+
+    if entry_index "$name" >/dev/null; then
+        die "an entry named $name already exists (remove it first)"
+    fi
+
+    if ((DRY_RUN)); then
+        info "[dry-run] would add $name: $cmd"
+        return 0
+    fi
+
+    ENTRIES+=("$(printf '1\t%s\t%s' "$name" "$cmd")")
+    save_entries
+    ok "added $name"
+}
+
+remove_entry() {
+    local name="$1" i
+    local -a kept=()
+    require_entry "$name"
+
+    if ((DRY_RUN)); then
+        info "[dry-run] would remove $name"
+        return 0
+    fi
+
+    for i in "${!ENTRIES[@]}"; do
+        ((i == ENTRY_INDEX)) && continue
+        kept+=("${ENTRIES[$i]}")
+    done
+    ENTRIES=("${kept[@]}")
+    save_entries
+    ok "removed $name"
+}
+
+reset_entries() {
+    local line name cmd
+    ENTRIES=()
+    for line in "${DEFAULTS[@]}"; do
+        name="${line%%|*}"
+        cmd="${line#*|}"
+        ENTRIES+=("$(printf '1\t%s\t%s' "$name" "$cmd")")
+    done
+
+    if ((DRY_RUN)); then
+        info "[dry-run] would reset $STATE_FILE to ${#DEFAULTS[@]} entries"
+        return 0
+    fi
+    save_entries
+    ok "restored the default autostart list"
+}
+
+launch() {
+    local name="$1" cmd="$2"
+
+    info "start $name: $cmd"
+    if command -v setsid >/dev/null 2>&1; then
+        setsid sh -c "$cmd" >>"$LOG_FILE" 2>&1 &
+    else
+        sh -c "$cmd" >>"$LOG_FILE" 2>&1 &
+    fi
+}
+
+run_entries() {
+    local line enabled name cmd started=0 failed=0
+
+    load_entries
+    if ((${#ENTRIES[@]} == 0)); then
+        info "no autostart entries"
+        return 0
+    fi
+
+    # With no state file yet, seed it so the defaults are visible in `list`
+    # and can be disabled later.
+    if [[ ! -r $STATE_FILE ]]; then
+        save_entries
+    fi
+
+    if ((DRY_RUN)); then
+        for line in "${ENTRIES[@]}"; do
+            IFS=$'\t' read -r enabled name cmd <<<"$line"
+            [[ $enabled == 1 ]] || continue
+            info "[dry-run] would start $name: $cmd"
+            started=$((started + 1))
+        done
+        info "[dry-run] $started enabled entries"
+        return 0
+    fi
+
+    mkdir -p -- "$STATE_DIR"
+    printf '=== autostart %s ===\n' "$(date '+%F %T')" >>"$LOG_FILE"
+    for line in "${ENTRIES[@]}"; do
+        IFS=$'\t' read -r enabled name cmd <<<"$line"
+        [[ $enabled == 1 ]] || continue
+        launch "$name" "$cmd" || failed=$((failed + 1))
+        started=$((started + 1))
+    done
+
+    ok "started $started enabled entries (log: $LOG_FILE)"
+    ((failed == 0)) || warn "$failed entries could not be started"
+}
+
+# Interactive single-choice toggle loop.
+choose_line() {
+    local title="$1"
+    shift
+    local items=("$@")
+
+    if command -v rofi >/dev/null 2>&1 \
+        && [[ -n ${WAYLAND_DISPLAY:-} || -n ${DISPLAY:-} ]]; then
+        printf '%s\n' "${items[@]}" | rofi -dmenu -i -p "$title" 2>/dev/null
+        return
+    fi
+    if command -v gum >/dev/null 2>&1; then
+        printf '%s\n' "${items[@]}" | gum choose --header "$title"
+        return
+    fi
+    if command -v whiptail >/dev/null 2>&1; then
+        whiptail --title "$title" --menu "Toggle an entry" 0 0 0 \
+            "${items[@]}" 3>&1 1>&2 2>&3
+        return
+    fi
+    if command -v dialog >/dev/null 2>&1; then
+        dialog --title "$title" --menu "Toggle an entry" 0 0 0 \
+            "${items[@]}" 3>&1 1>&2 2>&3
+        return
+    fi
+    [[ -t 0 ]] || die "pick needs a terminal or rofi/gum/whiptail/dialog"
+
+    local i choice
+    local -a menu=()
+    for i in "${!items[@]}"; do
+        menu+=("$((i + 1))" "${items[$i]}")
+    done
+    printf '%s\n' "${menu[@]}" >&2
+    printf 'Toggle which entry (empty to close): '
+    read -r choice || return 1
+    [[ -n $choice ]] || return 1
+    [[ $choice =~ ^[0-9]+$ ]] || return 1
+    printf '%s\n' "${items[$((choice - 1))]}"
+}
+
+pick_entries() {
+    local line enabled name _cmd labels=() choice chosen state
+
+    load_entries
+    while true; do
+        labels=()
+        for line in "${ENTRIES[@]}"; do
+            IFS=$'\t' read -r enabled name _cmd <<<"$line"
+            if [[ $enabled == 1 ]]; then state='[x]'; else state='[ ]'; fi
+            labels+=("$state $name")
+        done
+
+        choice="$(choose_line "Autostart (pick to toggle)" "${labels[@]}")" || return 0
+        [[ -n $choice ]] || return 0
+        chosen="${choice#\[?\] }"
+
+        if ! index="$(entry_index "$chosen")"; then
+            warn "unknown selection: $chosen"
+            continue
+        fi
+        IFS=$'\t' read -r enabled _ _ <<<"${ENTRIES[$index]}"
+
+        if [[ $enabled == 1 ]]; then
+            set_enabled "$chosen" 0
+        else
+            set_enabled "$chosen" 1
+        fi
+        load_entries
+    done
+}
+
+while (($#)); do
+    case "$1" in
+        list|status|run|reset|pick)
+            [[ -z $COMMAND ]] || die "only one command is allowed"
+            COMMAND="$1"
+            ;;
+        enable|disable|toggle|remove)
+            [[ -z $COMMAND ]] || die "only one command is allowed"
+            COMMAND="$1"
+            [[ -n ${2:-} ]] || die "$1 needs an entry name"
+            NAME="$2"
+            shift
+            ;;
+        add)
+            [[ -z $COMMAND ]] || die "only one command is allowed"
+            COMMAND="add"
+            [[ -n ${2:-} && -n ${3:-} ]] || die "add needs a name and a command"
+            NAME="$2"
+            CMD="$3"
+            shift 2
+            ;;
+        --dry-run) DRY_RUN=1 ;;
+        -h|--help) usage; exit 0 ;;
+        *) die "unknown option: $1 (see --help)" ;;
+    esac
+    shift
+done
+
+case "$COMMAND" in
+    list)        show_list ;;
+    status)      show_status ;;
+    enable)      set_enabled "$NAME" 1 ;;
+    disable)     set_enabled "$NAME" 0 ;;
+    toggle)
+        load_entries
+        toggle_index="$(entry_index "$NAME")" || die "unknown entry: $NAME (see list)"
+        IFS=$'\t' read -r enabled _ _ <<<"${ENTRIES[$toggle_index]}"
+        if [[ $enabled == 1 ]]; then set_enabled "$NAME" 0; else set_enabled "$NAME" 1; fi
+        ;;
+    add)         add_entry "$NAME" "$CMD" ;;
+    remove)      load_entries; remove_entry "$NAME" ;;
+    reset)       reset_entries ;;
+    run)         run_entries ;;
+    pick)        pick_entries ;;
+    "")          usage >&2; exit 2 ;;
+esac

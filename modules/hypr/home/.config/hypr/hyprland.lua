@@ -59,25 +59,9 @@ local mainMod     = "SUPER"
 
 
 hl.on("hyprland.start", function()
-    hl.exec_cmd("uwsm app -- waybar")                                       -- === Status bar        ===
-    hl.exec_cmd("uwsm app -- dunst")                                        -- === Notify daemon     ===
-    hl.exec_cmd("uwsm app -- awww-daemon")                                  -- === Walpaper          ===
-    hl.exec_cmd("uwsm app -- /usr/lib/hyprpolkitagent/hyprpolkitagent")     -- === GUI sudo          ===
-    hl.exec_cmd("uwsm app -- wl-paste --type text --watch cliphist store")  -- === Clipboard         ===
-    hl.exec_cmd("uwsm app -- wl-paste --type image --watch cliphist store") -- === Clipboard         ===
-    hl.exec_cmd("uwsm app -- wl-clip-persist --clipboard regular")          -- === Clipboard         ===
-    hl.exec_cmd("uwsm app -- hyprland-per-window-layout")                   -- === Layout per window ===
-    hl.exec_cmd("uwsm app -- kbuildsycoca6 --noincremental")                -- === FUCK dolphin      ===
-    hl.exec_cmd("uwsm app -- /opt/KopiaUI/kopia-ui")                        -- === Snapshots         ===
-    hl.exec_cmd("uwsm app -- ~/.local/bin/clip-to-vm.sh")                   -- ===                   ===
-    hl.exec_cmd("monitor-profiles.sh watch")                                -- === Dock hotplug      ===
-    hl.exec_cmd("uwsm app -- hypridle")                                     -- === Idle/lock (opt)   ===
-
-
-    hl.exec_cmd("uwsm app -- vesktop")                                      -- === Vesktop           ===
-    hl.exec_cmd("uwsm app -- obsidian")                                     -- === Obsidian          ===
-    hl.exec_cmd("uwsm app -- firefox")                                      -- === Firefox           ===
-    hl.exec_cmd("uwsm app -- steam -silent")                                -- === Steam             ===
+    -- Starts the entries enabled in ~/.local/state/dotfiles/autostart.tsv.
+    -- Manage them with: autostart.sh list|enable|disable|pick
+    hl.exec_cmd("command -v autostart.sh >/dev/null && autostart.sh run")
 end)
 
 
@@ -219,6 +203,9 @@ hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd("binds-cheatsheet.sh --rofi")
 hl.bind(mainMod .. " + SHIFT + G", hl.dsp.exec_cmd("gamemode.sh toggle"))
 -- monitor-profiles is optional; re-applies the dock layout on demand.
 hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("monitor-profiles.sh apply"))
+
+-- autostart is optional; toggles login applications in a small menu.
+hl.bind(mainMod .. " + SHIFT + A", hl.dsp.exec_cmd("autostart.sh pick"))
 
 -- Lid switch: disable the internal panel only when another monitor is active,
 -- otherwise suspend. Opening the lid always restores the internal panel.
