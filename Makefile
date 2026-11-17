@@ -6,7 +6,7 @@ SYNC_TARGET ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor dns-check hooks restore sync-status sync-diff sync-pull sync-packages theme-menu binds gamemode monitor-profiles lid idle autostart bootstrap audit lint check
+.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor dns-check hooks restore sync-status sync-diff sync-pull sync-packages theme-menu binds gamemode monitor-profiles lid idle autostart bootstrap pkg-sync audit lint check
 
 help:
 	@printf '%s\n' \
@@ -25,6 +25,7 @@ help:
 	  '  make idle        apply|set|configure|watch|status via ACTION= (PROFILE=)' \
 	  '  make autostart   list|enable|disable|toggle|add|remove|run (NAME= CMD=)' \
 	  '  make bootstrap   first-run checks and install (DRY_RUN=1, YES=1)' \
+	  '  make pkg-sync    compare package lists (ACTION=check|pull, DRY_RUN=1)' \
 	  '  make wallpaper   store a wallpaper path and apply it' \
 	  '  make kernel      detect the CPU level and install a kernel' \
 	  '  make doctor      read-only system and config health check' \
@@ -131,6 +132,11 @@ autostart:
 	@./modules/autostart/home/.local/bin/autostart.sh \
 	    $(if $(ACTION),$(ACTION),list) $(if $(NAME),$(NAME),) $(if $(CMD),$(CMD),) \
 	    $(if $(filter 1,$(DRY_RUN)),--dry-run,)
+
+pkg-sync:
+	@./scripts/pkg-sync.sh \
+	    $(if $(ACTION),$(ACTION),status) $(if $(filter 1,$(DRY_RUN)),--dry-run,) \
+	    $(if $(filter 1,$(YES)),--yes,)
 
 bootstrap:
 	@./bootstrap.sh \

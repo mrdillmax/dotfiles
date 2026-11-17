@@ -23,6 +23,8 @@ system_file_map() {
             wait-iface/wait-iface.sh)        printf '%s\t%s\t%s\n' "$src" "/usr/local/bin/wait-iface.sh" "0755" ;;
             zram/zram-generator.conf)        printf '%s\t%s\t%s\n' "$src" "/etc/systemd/zram-generator.conf" "0644" ;;
             cpupower/cpupower)               printf '%s\t%s\t%s\n' "$src" "/etc/default/cpupower" "0644" ;;
+            pkg-sync/dotfiles-pkg-sync-mark.sh) printf '%s\t%s\t%s\n' "$src" "/usr/local/bin/dotfiles-pkg-sync-mark.sh" "0755" ;;
+            pacman/hooks/*)                  printf '%s\t%s\t%s\n' "$src" "/etc/pacman.d/hooks/${rel#pacman/hooks/}" "0644" ;;
             networkmanager/dns.conf)         printf '%s\t%s\t%s\n' "$src" "/etc/NetworkManager/conf.d/dns.conf" "0644" ;;
             networkmanager/rc-manager.conf)  printf '%s\t%s\t%s\n' "$src" "/etc/NetworkManager/conf.d/rc-manager.conf" "0644" ;;
             systemd/*)                       printf '%s\t%s\t%s\n' "$src" "/etc/systemd/system/${rel#systemd/}" "0644" ;;

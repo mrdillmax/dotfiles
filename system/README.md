@@ -26,6 +26,8 @@ The installer never starts or restarts a service and never runs
 | `unbound/unbound.conf` | `/etc/unbound/unbound.conf` | |
 | `wait-iface/wait-iface.sh` | `/usr/local/bin/wait-iface.sh` | generic NIC detection |
 | `systemd/...` | `/etc/systemd/system/...` | |
+| `pacman/hooks/dotfiles-pkg-sync.hook` | `/etc/pacman.d/hooks/dotfiles-pkg-sync.hook` | marks package changes for a later review |
+| `pkg-sync/dotfiles-pkg-sync-mark.sh` | `/usr/local/bin/dotfiles-pkg-sync-mark.sh` | writes `/var/lib/dotfiles/pkg-sync.stamp` |
 | `grub/default-grub` | `/etc/default/grub` | extra critical confirmation |
 | `mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` | extra critical confirmation |
 | `modprobe/*` | `/etc/modprobe.d/*` | |
