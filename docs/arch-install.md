@@ -241,7 +241,7 @@ and the suite inside an `archlinux:latest` container.
 Never commit:
 
 - `pihole.toml`, DNS/API secrets
-- rclone, RustDesk, OpenCode, Omniroute configs
+- rclone, RustDesk and OpenCode configs
 - `.env`, SSH/GPG keys
 - the whole `personal/` directory
 - cursor theme archives and wallpapers

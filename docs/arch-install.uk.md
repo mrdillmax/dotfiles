@@ -244,7 +244,7 @@ restore і sync додатково перевіряють, що живі фай�
 Ніколи не комітьте:
 
 - `pihole.toml`, DNS/API-секрети
-- конфіги rclone, RustDesk, OpenCode, Omniroute
+- конфіги rclone, RustDesk та OpenCode
 - `.env`, SSH/GPG-ключі
 - весь каталог `personal/`
 - архіви тем курсора й шпалери

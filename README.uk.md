@@ -25,8 +25,8 @@
 - `grub`, `mkinitcpio` і autologin getty вимагають додаткового явного
   підтвердження. Інсталятор ніколи не запускає `grub-mkconfig` чи `mkinitcpio`.
 - Сервіси не запускаються й не перезапускаються автоматично.
-- Секрети виключені з git: `pihole.toml`, конфіги rclone/rustdesk/opencode/
-  omniroute, `.env`, ключі та весь каталог `personal/`.
+- Секрети виключені з git: `pihole.toml`, конфіги rclone, RustDesk та OpenCode,
+  `.env`, ключі та весь каталог `personal/`.
 - Згенеровані matugen-файли виключені; комітяться лише шаблони й
   `matugen/config.toml`.
 
@@ -169,7 +169,6 @@ GPU-профіль — через `lspci`/`systemd-detect-virt`. Обидва м
 | `theming` | GTK/Qt/KDE налаштування і symlink-и adw-gtk3 |
 | `cursor` | тема/розмір курсора в uwsm, GTK3/4, Qt, xsettingsd і Hyprland |
 | `scripts` | допоміжні скрипти в `~/.local/bin` |
-| `systemd-user` | rclone sync, бекап omniroute, сервіс invite-site |
 | `apps` | btop, micro, spicetify, vesktop, Firefox chrome, dolphinrc |
 | `workspaces-split` | воркспейси на монітор; пропонується лише за 2+ моніторів |
 | `mouse-sensitivity` | інтерактивний тюнер і overlay для input |

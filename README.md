@@ -25,8 +25,8 @@ Install guide: [docs/arch-install.md](docs/arch-install.md).
 - `grub`, `mkinitcpio` and getty autologin require an extra explicit
   confirmation. The installer never runs `grub-mkconfig` or `mkinitcpio`.
 - No service is started or restarted automatically.
-- Secrets are excluded from git: `pihole.toml`, rclone/rustdesk/opencode/
-  omniroute configs, `.env`, keys and the whole `personal/` directory.
+- Secrets are excluded from git: `pihole.toml`, rclone, RustDesk and OpenCode
+  configs, `.env`, keys and the whole `personal/` directory.
 - Generated matugen output is excluded; only templates and
   `matugen/config.toml` are tracked.
 
@@ -170,7 +170,6 @@ it, a plain numbered prompt is used.
 | `theming` | GTK/Qt/KDE settings and the adw-gtk3 symlinks |
 | `cursor` | cursor theme/size rendered into uwsm, GTK3/4, Qt, xsettingsd and Hyprland |
 | `scripts` | helper scripts in `~/.local/bin` |
-| `systemd-user` | rclone sync, omniroute backup and invite-site units |
 | `apps` | btop, micro, spicetify, vesktop, Firefox chrome, dolphinrc |
 | `workspaces-split` | per-monitor workspace slots; offered only with 2+ monitors |
 | `mouse-sensitivity` | interactive pointer tuner and the input overlay |

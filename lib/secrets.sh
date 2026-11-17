@@ -84,7 +84,6 @@ check_forbidden_paths() {
         .config/rclone/rclone.conf \
         .config/rustdesk \
         .config/opencode \
-        .config/omniroute \
         personal/mimeapps.list; do
         if [[ -e $root/$rel ]]; then
             # An ignored file may live in the working tree without being part
@@ -109,7 +108,7 @@ is_forbidden_path() {
     local base="${path##*/}"
 
     case "$path" in
-        personal/*|*/.config/opencode/*|*/.config/omniroute/*|*/.config/rustdesk/*)
+        personal/*|*/.config/opencode/*|*/.config/rustdesk/*)
             return 0
             ;;
     esac
