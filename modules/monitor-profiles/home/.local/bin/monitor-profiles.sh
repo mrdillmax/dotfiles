@@ -66,6 +66,13 @@ lua_escape() {
 
 notify() {
     local message="$1"
+
+    # A dry run must not pop up desktop notifications either.
+    if ((DRY_RUN)); then
+        info "[dry-run] $message"
+        return 0
+    fi
+
     if command -v notify-send >/dev/null 2>&1; then
         notify-send -a monitor-profiles -i video-display "Monitor profile" "$message" \
             >/dev/null 2>&1 || true

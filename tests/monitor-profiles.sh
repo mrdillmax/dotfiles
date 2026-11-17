@@ -44,9 +44,16 @@ esac
 EOF
     chmod 0755 "$base/bin/hyprctl"
 
+    cat >"$base/bin/notify-send" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$MON_NOTIFY_LOG"
+EOF
+    chmod 0755 "$base/bin/notify-send"
+
     printf 'DOCK_LAYOUT=right\n' >"$base/home/.config/hypr/monitor-profiles.conf"
     : >"$base/monitors.json"
     : >"$base/eval.log"
+    : >"$base/notify.log"
 
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$base" "$base/home" "$base/state" "$base/monitors.json" "$base/eval.log" "$base/bin"
@@ -78,6 +85,7 @@ run_mp() {
     env HOME="$home" XDG_STATE_HOME="$state" XDG_CONFIG_HOME="$home/.config" \
         PATH="$bin:$PATH" HYPRLAND_INSTANCE_SIGNATURE=test \
         MON_JSON="$json" MON_LOG="$log" \
+        MON_NOTIFY_LOG="${MON_NOTIFY_LOG:-$base/notify.log}" \
         bash "$SCRIPT" "$@"
 }
 
@@ -150,8 +158,9 @@ fi
 # 7. Ask changes nothing and explains why.
 set_layout "$live_conf" ask
 ask_out="$(run_mp "$home" "$state" "$json" "$log" "$bin" apply --dry-run)"
-if grep -q 'DOCK_LAYOUT=ask' <<<"$ask_out" && ! grep -q 'hyprctl eval' <<<"$ask_out"; then
-    pass "ask leaves the layout untouched"
+if grep -q 'DOCK_LAYOUT=ask' <<<"$ask_out" && ! grep -q 'hyprctl eval' <<<"$ask_out" \
+    && [[ ! -s $base/notify.log ]]; then
+    pass "ask leaves the layout untouched without notifying in a dry-run"
 else
     fail "ask still changed the monitors"
     printf '%s\n' "$ask_out"
