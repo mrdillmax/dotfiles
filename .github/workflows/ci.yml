@@ -26,20 +26,7 @@ jobs:
 
       - name: Run the test suite
         shell: bash
-        run: |
-          set -uo pipefail
-          status=0
-          shopt -s nullglob
-          tests=(tests/*.sh)
-          if ((${#tests[@]} == 0)); then
-            printf 'no tests found\n' >&2
-            exit 1
-          fi
-          for test in "${tests[@]}"; do
-            printf '\n== %s ==\n' "$test"
-            bash "$test" || status=1
-          done
-          exit "$status"
+        run: ./tests/run.sh
 
       - name: Read-only doctor snapshot
         if: always()
