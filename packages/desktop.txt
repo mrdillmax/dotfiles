@@ -2,7 +2,6 @@
 ark
 audacity
 ayugram-desktop-bin
-craft-anything-bin
 cpu-x
 darktable
 dolphin

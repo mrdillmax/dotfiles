@@ -1,6 +1,5 @@
 ayugram-desktop-bin
 cachyos-ananicy-rules-git
-craft-anything-bin
 cuda-12.9
 dupeguru
 easyeda-pro-bin
@@ -27,7 +26,6 @@ notepadnext-bin
 nvidia-580xx-dkms
 nvidia-580xx-settings
 nvidia-580xx-utils
-omniroute-bin
 onlinefix-linux-launcher-bin
 opencl-nvidia-580xx
 pdfcraft-bin
