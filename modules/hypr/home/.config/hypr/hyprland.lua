@@ -70,6 +70,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("uwsm app -- kbuildsycoca6 --noincremental")                -- === FUCK dolphin      ===
     hl.exec_cmd("uwsm app -- /opt/KopiaUI/kopia-ui")                        -- === Snapshots         ===
     hl.exec_cmd("uwsm app -- ~/.local/bin/clip-to-vm.sh")                   -- ===                   ===
+    hl.exec_cmd("monitor-profiles.sh watch")                                -- === Dock hotplug      ===
 
 
     hl.exec_cmd("uwsm app -- vesktop")                                      -- === Vesktop           ===
@@ -215,6 +216,8 @@ hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("theme-menu.sh"))
 hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd("binds-cheatsheet.sh --rofi"))
 -- gamemode is optional; toggles animations, blur, shadows and rounding.
 hl.bind(mainMod .. " + SHIFT + G", hl.dsp.exec_cmd("gamemode.sh toggle"))
+-- monitor-profiles is optional; re-applies the dock layout on demand.
+hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("monitor-profiles.sh apply"))
 
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd('uwsm app -- sh -c "cliphist list | rofi -dmenu | cliphist decode | wl-copy"'), { dont_inhibit = true })
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd(powermenu))

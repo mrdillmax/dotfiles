@@ -25,6 +25,8 @@ DO_PACKAGES=1
 DO_SYSTEM=0
 DO_MOUSE=0
 DO_MONITORS=0
+DO_DOCK=0
+DOCK_LAYOUT_ARG=""
 DO_CURSOR=0
 DO_KERNEL=0
 LIST_ONLY=0
@@ -55,6 +57,8 @@ source "$DOTFILES_DIR/lib/common.sh"
 source "$DOTFILES_DIR/lib/tui.sh"
 # shellcheck source=lib/monitors.sh
 source "$DOTFILES_DIR/lib/monitors.sh"
+# shellcheck source=lib/dock.sh
+source "$DOTFILES_DIR/lib/dock.sh"
 # shellcheck source=lib/packages.sh
 source "$DOTFILES_DIR/lib/packages.sh"
 # shellcheck source=lib/system.sh
@@ -82,6 +86,7 @@ Modes:
   --host desktop|laptop override host detection
   --gpu PROFILE         nvidia|amd|intel|hybrid|vm|software
   --monitors            reconfigure monitor layout and exit
+  --dock-layout LAYOUT  store right|left|mirror|ask for external monitors
   --mouse               run the mouse/touchpad tuner
   --cursor              install/configure the cursor theme and exit
   --cursor-archive PATH install a cursor theme from a local archive (not committed)
@@ -123,6 +128,7 @@ while (($#)); do
         --host)       HOST_ARG="${2:?missing value for --host}"; shift ;;
         --gpu)        GPU_ARG="${2:?missing value for --gpu}"; shift ;;
         --monitors)   DO_MONITORS=1 ;;
+        --dock-layout) DO_DOCK=1; DOCK_LAYOUT_ARG="${2:?missing value for --dock-layout}"; shift ;;
         --mouse)      DO_MOUSE=1 ;;
         --cursor)     DO_CURSOR=1 ;;
         --cursor-archive) CURSOR_ARCHIVE_ARG="${2:?missing value for --cursor-archive}"; DO_CURSOR=1; shift ;;
@@ -265,8 +271,14 @@ if (( DO_MOUSE )); then
     exec bash "$DOTFILES_DIR/modules/mouse-sensitivity/home/.local/bin/mouse-tune.sh" --repo "$DOTFILES_DIR"
 fi
 
+if (( DO_DOCK )); then
+    write_dock_layout "$DOCK_LAYOUT_ARG"
+    exit $?
+fi
+
 if (( DO_MONITORS )); then
     configure_monitors
+    configure_dock_layout
     exit 0
 fi
 
