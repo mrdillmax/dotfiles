@@ -1,0 +1,62 @@
+name: Bug report or feature suggestion
+description: Report a problem with the dotfiles or propose a change
+title: "[Issue]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Run `./install.sh --doctor` and paste the full output below. Remove
+        hostnames, usernames, IP addresses or other private data first.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type
+      options:
+        - Bug report
+        - Feature suggestion
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or proposal
+      description: What happened, or what should change?
+    validations:
+      required: true
+
+  - type: input
+    id: hyprland
+    attributes:
+      label: Hyprland version
+      description: Output of `hyprctl version`.
+      placeholder: Hyprland 0.57.2
+    validations:
+      required: true
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution
+      placeholder: Arch Linux
+    validations:
+      required: true
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU and driver
+      description: GPU model, driver and the selected profile.
+      placeholder: NVIDIA 580xx, nvidia profile
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: ./install.sh --doctor output
+      description: Paste the full command output.
+      render: shell
+    validations:
+      required: true
