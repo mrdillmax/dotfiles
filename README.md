@@ -13,8 +13,7 @@ machine-specific values and links the rest into `$HOME`.
 - **Checks:** shell test suite under `tests/`, run in CI on an Arch container
 
 Ukrainian documentation: [README.uk.md](README.uk.md).  
-Install guide: [docs/arch-install.md](docs/arch-install.md).  
-Read-only findings and pending fixes: [AUDIT.md](AUDIT.md).
+Install guide: [docs/arch-install.md](docs/arch-install.md).
 
 ## Safety model
 
@@ -103,8 +102,7 @@ forwarded to `install.sh`.
 ├── personal/                  private files, gitignored
 ├── docs/                      Arch install guide (EN/UK)
 ├── Makefile
-├── README.md / README.uk.md
-└── AUDIT.md
+└── README.md / README.uk.md
 ```
 
 ## Installer

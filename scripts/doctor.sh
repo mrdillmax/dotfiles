@@ -132,7 +132,7 @@ csv_escape() {
 # ---------------------------------------------------------------- repository --
 
 section "Repository"
-for path in install.sh Makefile README.md README.uk.md AUDIT.md \
+for path in install.sh Makefile README.md README.uk.md \
             lib/common.sh lib/secrets.sh hooks/pre-commit; do
     if [[ -e $DOTFILES_DIR/$path ]]; then
         ok "present: $path"

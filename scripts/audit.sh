@@ -36,7 +36,7 @@ has() { command -v "$1" >/dev/null 2>&1; }
 
 section "Repository"
 
-for path in install.sh Makefile README.md README.uk.md AUDIT.md lib/common.sh; do
+for path in install.sh Makefile README.md README.uk.md lib/common.sh; do
     if [[ -e $DOTFILES_DIR/$path ]]; then
         pass "present: $path"
     else
@@ -117,9 +117,9 @@ section "Monitor portability"
 monitor_hits="$(grep -rnE 'HDMI-A-[0-9]|DP-[0-9]|eDP-[0-9]|HEADLESS-[0-9]' \
     "$DOTFILES_DIR" \
     --exclude-dir=.git \
+    --exclude-dir=personal \
     --exclude-dir=tests \
     --exclude=monitors.conf.sh \
-    --exclude=AUDIT.md \
     --exclude=README.md \
     --exclude=README.uk.md 2>/dev/null || true)"
 if [[ -z $monitor_hits ]]; then
@@ -139,6 +139,7 @@ section "Hardcoded paths"
 home_hits="$(grep -rnP '(?<![A-Za-z0-9._/-])/home/[A-Za-z0-9._-]+/' \
     "$DOTFILES_DIR" \
     --exclude-dir=.git \
+    --exclude-dir=personal \
     --exclude-dir=tests \
     --exclude='*.md' \
     --exclude=.gitignore 2>/dev/null || true)"
@@ -257,11 +258,6 @@ if any_dkms_installed; then
 else
     note "NVIDIA DKMS not installed; header pairing is not required"
 fi
-
-section "Ownership notes"
-note "workspaces-split: switch_ws.sh works in the owner's setup and is verified; do not change its behaviour."
-note "GTK4 imports resolved through symlinks are expected, not a bug."
-note "This audit is read-only. Fixes are applied separately, after explicit permission."
 
 printf '\n%sSummary:%s %d passed, %d warnings, %d failures\n' \
     "$C_BOLD" "$C_RESET" "$PASS" "$WARN" "$FAIL"

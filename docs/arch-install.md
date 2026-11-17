@@ -262,4 +262,4 @@ that was ever stored in a tracked file.
 - The lid handler and monitor profiles are covered by synthetic tests only.
   Verify them on the real laptop/dock with `--dry-run` first.
 - Live configuration is never modified without an explicit installer step.
-- Unmerged `.pacnew` files and other live drift are listed in `AUDIT.md`.
+- `make audit` lists unmerged `.pacnew` files and other live drift.

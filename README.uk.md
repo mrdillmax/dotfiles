@@ -13,8 +13,7 @@
 - **Перевірки:** набір shell-тестів у `tests/`, запускається в CI на Arch-контейнері
 
 Англійська документація: [README.md](README.md).  
-Посібник зі встановлення: [docs/arch-install.uk.md](docs/arch-install.uk.md).  
-Результати аудиту та відкладені виправлення: [AUDIT.md](AUDIT.md).
+Посібник зі встановлення: [docs/arch-install.uk.md](docs/arch-install.uk.md).
 
 ## Безпека
 
@@ -103,8 +102,7 @@ Bootstrap встановлює лише те, що потрібно інстал
 ├── personal/                  приватні файли, gitignored
 ├── docs/                      посібник зі встановлення Arch (EN/UK)
 ├── Makefile
-├── README.md / README.uk.md
-└── AUDIT.md
+└── README.md / README.uk.md
 ```
 
 ## Інсталятор
