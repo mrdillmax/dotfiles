@@ -6,7 +6,7 @@ SYNC_TARGET ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor dns-check hooks restore sync-status sync-diff sync-pull sync-packages theme-menu binds gamemode monitor-profiles lid audit lint check
+.PHONY: help install all dry-run monitors mouse theme wallpaper kernel doctor dns-check hooks restore sync-status sync-diff sync-pull sync-packages theme-menu binds gamemode monitor-profiles lid idle audit lint check
 
 help:
 	@printf '%s\n' \
@@ -22,6 +22,7 @@ help:
 	  '  make gamemode    on|off|toggle|status via ACTION= (DRY_RUN=1)' \
 	  '  make monitor-profiles apply|watch|status via ACTION= (DRY_RUN=1)' \
 	  '  make lid         closed|open|status via ACTION= (DRY_RUN=1)' \
+	  '  make idle        apply|set|configure|watch|status via ACTION= (PROFILE=)' \
 	  '  make wallpaper   store a wallpaper path and apply it' \
 	  '  make kernel      detect the CPU level and install a kernel' \
 	  '  make doctor      read-only system and config health check' \
@@ -118,6 +119,11 @@ monitor-profiles:
 lid:
 	@./modules/lid/home/.local/bin/lid-handler.sh \
 	    $(if $(ACTION),$(ACTION),status) $(if $(filter 1,$(DRY_RUN)),--dry-run,)
+
+idle:
+	@./modules/idle/home/.local/bin/idle-tune.sh \
+	    $(if $(ACTION),$(ACTION),status) $(if $(PROFILE),--profile $(PROFILE),) \
+	    $(if $(filter 1,$(DRY_RUN)),--dry-run,)
 
 lint:
 	@find . -path ./.git -prune -o -type f -name '*.sh' -print0 \
