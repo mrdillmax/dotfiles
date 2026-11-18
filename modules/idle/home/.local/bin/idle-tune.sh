@@ -16,6 +16,7 @@
 #   idle-tune.sh configure
 #   idle-tune.sh watch
 #   idle-tune.sh status
+#   idle-tune.sh enable|disable|toggle|run
 set -uo pipefail
 
 REAL_HOME="${HOME:?HOME is not set}"
@@ -32,6 +33,7 @@ AC_DIM=300
 AC_LOCK=600
 AC_OFF=660
 AC_SUSPEND=1800
+ENABLED=1
 
 DRY_RUN=0
 COMMAND=""
@@ -41,14 +43,18 @@ declare -A CLI_OVERRIDE=()
 
 usage() {
     cat <<'EOF'
-Usage: idle-tune.sh <apply|set|configure|watch|status> [options]
+Usage: idle-tune.sh <apply|set|configure|watch|status|enable|disable|toggle|run> [options]
 
 Commands:
   apply       render ~/.config/hypr/hypridle.conf and reload hypridle
   set         change values, save them, then apply
   configure   interactive prompts for all eight values
   watch       apply when AC/battery state changes (checks every 30s)
-  status      show stored values and the detected power source
+  status      show stored values, enabled state and the power source
+  enable      allow hypridle to run and start it now
+  disable     stop hypridle and keep it off at login
+  toggle      switch the enabled state
+  run         start hypridle only when enabled (used by autostart)
 
 Options:
   --profile auto|battery|ac   profile for apply (default: auto)
@@ -79,7 +85,7 @@ load_state() {
         [[ -z $key || $key == \#* ]] && continue
         case "$key" in
             BATTERY_DIM|BATTERY_LOCK|BATTERY_OFF|BATTERY_SUSPEND|\
-            AC_DIM|AC_LOCK|AC_OFF|AC_SUSPEND)
+            AC_DIM|AC_LOCK|AC_OFF|AC_SUSPEND|ENABLED)
                 # Values given on the command line win over the stored state.
                 if [[ -n ${CLI_OVERRIDE[$key]:-} ]]; then
                     continue
@@ -115,6 +121,7 @@ write_state() {
         printf 'AC_LOCK=%s\n' "$AC_LOCK"
         printf 'AC_OFF=%s\n' "$AC_OFF"
         printf 'AC_SUSPEND=%s\n' "$AC_SUSPEND"
+        printf 'ENABLED=%s\n' "$ENABLED"
     } >"$tmp"
     chmod 0600 "$tmp"
     mv -f -- "$tmp" "$STATE_FILE"
@@ -329,6 +336,7 @@ show_status() {
     power="$(detect_power)"
 
     printf 'power: %s\n' "$power"
+    printf 'enabled: %s\n' "$ENABLED"
     printf 'state: %s\n' "$STATE_FILE"
     stored_profile=""
     if [[ -r $CONFIG ]]; then
@@ -343,6 +351,49 @@ show_status() {
         "$BATTERY_DIM" "$BATTERY_LOCK" "$BATTERY_OFF" "$BATTERY_SUSPEND"
     printf 'ac:      dim=%s lock=%s off=%s suspend=%s\n' \
         "$AC_DIM" "$AC_LOCK" "$AC_OFF" "$AC_SUSPEND"
+}
+
+is_running() {
+    pgrep -x hypridle >/dev/null 2>&1
+}
+
+set_enabled() {
+    local value="$1"
+
+    load_state
+    ENABLED="$value"
+    write_state
+    if [[ $value == 1 ]]; then
+        if is_running; then
+            ok "hypridle is already running"
+        elif ((DRY_RUN)); then
+            info "[dry-run] would start hypridle"
+        elif command -v hypridle >/dev/null 2>&1; then
+            setsid hypridle >/dev/null 2>&1 &
+            ok "hypridle started"
+        else
+            warn "hypridle is not installed"
+        fi
+    else
+        if ((DRY_RUN)); then
+            info "[dry-run] would stop hypridle"
+        elif is_running; then
+            pkill -x hypridle 2>/dev/null || true
+            ok "hypridle stopped"
+        else
+            ok "hypridle is already stopped"
+        fi
+    fi
+}
+
+run_autostart() {
+    load_state
+    if [[ $ENABLED != 1 ]]; then
+        info "idle is disabled; not starting hypridle"
+        return 0
+    fi
+    command -v hypridle >/dev/null 2>&1 || die "hypridle is not installed"
+    exec hypridle
 }
 
 watch_power() {
@@ -365,7 +416,7 @@ watch_power() {
 
 while (($#)); do
     case "$1" in
-        apply|set|configure|watch|status)
+        apply|set|configure|watch|status|enable|disable|toggle|run)
             [[ -z $COMMAND ]] || die "only one command is allowed"
             COMMAND="$1"
             ;;
@@ -391,6 +442,18 @@ done
 load_state
 
 case "$COMMAND" in
+    enable)
+        set_enabled 1
+        ;;
+    disable)
+        set_enabled 0
+        ;;
+    toggle)
+        if [[ $ENABLED == 1 ]]; then set_enabled 0; else set_enabled 1; fi
+        ;;
+    run)
+        run_autostart
+        ;;
     apply)
         apply_config "$PROFILE"
         ;;

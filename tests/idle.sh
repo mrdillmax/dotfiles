@@ -26,6 +26,7 @@ state="$base/state"
 config="$base/config"
 bin="$base/bin"
 pkill_log="$base/pkill.log"
+hypridle_marker="$base/hypridle.started"
 
 mkdir -p "$home" "$state" "$config" "$bin"
 : >"$pkill_log"
@@ -35,7 +36,16 @@ cat >"$bin/pkill" <<'EOF'
 printf '%s\n' "$*" >>"$IDLE_PKILL_LOG"
 exit 0
 EOF
-chmod 0755 "$bin/pkill"
+cat >"$bin/pgrep" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+
+cat >"$bin/hypridle" <<'EOF'
+#!/usr/bin/env bash
+: >"$HYPRIDLE_MARKER"
+EOF
+chmod 0755 "$bin/pkill" "$bin/pgrep" "$bin/hypridle"
 
 state_file="$state/dotfiles/idle.conf"
 hypridle_conf="$config/hypr/hypridle.conf"
@@ -43,7 +53,7 @@ hypridle_conf="$config/hypr/hypridle.conf"
 run_idle() {
     env HOME="$home" XDG_STATE_HOME="$state" XDG_CONFIG_HOME="$config" \
         PATH="$bin:$PATH" IDLE_POWER="${IDLE_POWER:-battery}" \
-        IDLE_PKILL_LOG="$pkill_log" \
+        IDLE_PKILL_LOG="$pkill_log" HYPRIDLE_MARKER="$hypridle_marker" \
         bash "$SCRIPT" "$@"
 }
 
@@ -68,8 +78,34 @@ if grep -qx 'power: battery' <<<"$status_out"; then
 else
     fail "power detection is wrong"
 fi
+if grep -qx 'enabled: 1' <<<"$status_out"; then
+    pass "idle is enabled by default"
+else
+    fail "the enabled state is missing"
+fi
+
+# 2b. Disable and re-enable idle.
+run_idle disable >/dev/null
+if grep -qx 'ENABLED=0' "$state_file"; then
+    pass "disable persists the off state"
+else
+    fail "disable did not persist the off state"
+fi
+if run_idle run | grep -q 'idle is disabled'; then
+    pass "autostart run respects the disabled state"
+else
+    fail "autostart run ignored the disabled state"
+fi
+run_idle enable >/dev/null
+sleep 0.2
+if grep -qx 'ENABLED=1' "$state_file" && [[ -e $hypridle_marker ]]; then
+    pass "enable restores the state and starts hypridle"
+else
+    fail "enable did not start hypridle"
+fi
 
 # 3. Dry-run writes nothing.
+rm -f "$state_file"
 dry_out="$(run_idle apply --profile battery --dry-run)"
 if grep -q 'profile=battery dim=150 lock=300 off=330 suspend=900' <<<"$dry_out" \
     && [[ ! -e $hypridle_conf && ! -e $state_file ]] \

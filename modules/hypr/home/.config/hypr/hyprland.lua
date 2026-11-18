@@ -204,6 +204,8 @@ hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("theme-menu.sh"))
 hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd("binds-cheatsheet.sh --rofi"))
 -- gamemode is optional; toggles animations, blur, shadows and rounding.
 hl.bind(mainMod .. " + SHIFT + G", hl.dsp.exec_cmd("gamemode.sh toggle"))
+-- idle is optional; this does nothing when the module is not installed.
+hl.bind(mainMod .. " + SHIFT + I", hl.dsp.exec_cmd("idle-tune.sh toggle"))
 -- monitor-profiles is optional; re-applies the dock layout on demand.
 hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("monitor-profiles.sh apply"))
 

@@ -32,7 +32,7 @@ DEFAULTS=(
     "kbuildsycoca|uwsm app -- kbuildsycoca6 --noincremental"
     "kopia-ui|uwsm app -- /opt/KopiaUI/kopia-ui"
     "monitor-profiles|monitor-profiles.sh watch"
-    "hypridle|uwsm app -- hypridle"
+    "hypridle|uwsm app -- idle-tune.sh run"
     "vesktop|uwsm app -- vesktop"
     "obsidian|uwsm app -- obsidian"
     "firefox|uwsm app -- firefox"
