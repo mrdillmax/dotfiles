@@ -10,6 +10,11 @@
 #   hyprctl eval 'hl.device({ name = "...", sensitivity = -0.3 })'
 set -euo pipefail
 
+# Float conversion and output in printf follow the user locale. Under a
+# comma-decimal locale bash rejects "-0.30" and prints "-0,30", which is not
+# valid Lua. Keep every number in this script locale-independent.
+export LC_NUMERIC=C
+
 DOTFILES_DIR="${DOTFILES_DIR:-}"
 HOST_OVERRIDE=""
 SHOW_ONLY=0
@@ -174,6 +179,11 @@ num_normalize() {
     awk -v v="$1" 'BEGIN { printf "%.2f", v }'
 }
 
+# A leading space leaves room for the sign of positive values.
+format_value() {
+    printf '% .2f' "$1"
+}
+
 # ----------------------------------------------------------------------- UI --
 
 choose() {
@@ -234,8 +244,8 @@ live_adjust() {
 
     while true; do
         if ((fine_mode)); then step="$fine"; else step="$rough"; fi
-        printf '\r\033[K  %s: %s% .2f%s   [step %s%s]\033[K' \
-            "$label" "$C_BOLD" "$value" "$C_RESET" "$step" \
+        printf '\r\033[K  %s: %s%s%s   [step %s%s]\033[K' \
+            "$label" "$C_BOLD" "$(format_value "$value")" "$C_RESET" "$step" \
             "$([[ $fine_mode == 1 ]] && echo ', fine')"
 
         IFS= read -rsn1 key || { printf '\n'; return 0; }
