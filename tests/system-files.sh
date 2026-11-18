@@ -88,7 +88,16 @@ else
     fail "grub component leaked other files"
 fi
 
-# 6. services selects the pacman hook helper, not boot or DNS files.
+# 6. ram selects only the page-cache sysctl file.
+ram_map="$(component_map ram amd)"
+if grep -q '/etc/sysctl.d/99-ram-cache.conf' <<<"$ram_map" \
+    && ! grep -q '/etc/default/grub' <<<"$ram_map"; then
+    pass "ram selects only the sysctl file"
+else
+    fail "ram component leaked other files"
+fi
+
+# 7. services selects the pacman hook helper, not boot or DNS files.
 services_map="$(component_map services amd)"
 if grep -q '/usr/local/bin/dotfiles-pkg-sync-mark.sh' <<<"$services_map" \
     && ! grep -q '/etc/default/grub' <<<"$services_map"; then

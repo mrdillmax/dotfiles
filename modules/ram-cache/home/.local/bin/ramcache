@@ -1,0 +1,239 @@
+#!/usr/bin/env bash
+# Optional RAM cache helper.
+#
+# Two mechanisms stay separate:
+#   - profile-sync-daemon moves browser profiles to tmpfs and syncs them back;
+#   - ramcache warms the page cache with vmtouch. Page cache is reclaimable and
+#     never holds the only copy of a file, so an unexpected power loss loses no
+#     game or application data.
+set -uo pipefail
+
+REAL_HOME="${HOME:?HOME is not set}"
+CONFIG="${XDG_CONFIG_HOME:-$REAL_HOME/.config}/dotfiles/ram-cache.conf"
+
+RAM_PERCENT=50
+WAIT_SECONDS=20
+USE_PSD=1
+CACHE_DIRS=()
+
+if [[ -r $CONFIG ]]; then
+    # shellcheck source=/dev/null
+    source "$CONFIG"
+fi
+
+die() { printf 'ramcache: %s\n' "$*" >&2; exit 1; }
+info() { printf ':: %s\n' "$*"; }
+warn() { printf 'warning: %s\n' "$*" >&2; }
+
+have() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+mem_kb() {
+    awk -v key="$1:" '$1 == key { print $2; exit }' /proc/meminfo
+}
+
+limit_bytes() {
+    local available total percent
+    available="$(mem_kb MemAvailable)"
+    total="$(mem_kb MemTotal)"
+    [[ -n $available && -n $total ]] || die "cannot read /proc/meminfo"
+    percent="$RAM_PERCENT"
+    if ! [[ $percent =~ ^[0-9]+$ ]] || ((percent < 1 || percent > 80)); then
+        warn "RAM_PERCENT=$RAM_PERCENT is invalid; using 50"
+        percent=50
+    fi
+    # Never take more than 80% of MemAvailable.
+    printf '%s' "$((available * 1024 * percent / 100))"
+}
+
+human_bytes() {
+    local bytes="$1"
+    if ((bytes >= 1073741824)); then
+        awk -v b="$bytes" 'BEGIN { printf "%.1f GiB", b / 1073741824 }'
+    elif ((bytes >= 1048576)); then
+        awk -v b="$bytes" 'BEGIN { printf "%.1f MiB", b / 1048576 }'
+    else
+        printf '%s KiB' "$((bytes / 1024))"
+    fi
+}
+
+warm_path() {
+    local path="$1" bytes limit
+    [[ -d $path ]] || { warn "not a directory: $path"; return 1; }
+    have vmtouch || die "vmtouch is not installed"
+    bytes="$(du -sb "$path" 2>/dev/null | cut -f1)"
+    [[ -n $bytes ]] || { warn "cannot measure: $path"; return 1; }
+    limit="$(limit_bytes)"
+    if ((bytes > limit)); then
+        warn "skip $path: $(human_bytes "$bytes") exceeds the $(human_bytes "$limit") limit"
+        return 1
+    fi
+    info "warming $(human_bytes "$bytes") from $path"
+    vmtouch -q -t "$path"
+}
+
+status() {
+    local available total limit
+    available="$(mem_kb MemAvailable)"
+    total="$(mem_kb MemTotal)"
+    limit="$(limit_bytes)"
+    printf 'RAM: %s total, %s available\n' \
+        "$(human_bytes "$((total * 1024))")" \
+        "$(human_bytes "$((available * 1024))")"
+    printf 'warm limit: %s (%s%% of MemAvailable)\n' \
+        "$(human_bytes "$limit")" "$RAM_PERCENT"
+    printf 'configured directories: %s\n' "${#CACHE_DIRS[@]}"
+    local dir
+    for dir in "${CACHE_DIRS[@]}"; do
+        printf '  %s\n' "$dir"
+    done
+
+    if have vmtouch; then
+        printf 'vmtouch: %s\n' "$(command -v vmtouch)"
+    else
+        printf 'vmtouch: missing\n'
+    fi
+
+    if ((USE_PSD)); then
+        if have systemctl && systemctl --user is-active psd.service >/dev/null 2>&1; then
+            printf 'browser cache: psd active'
+            if have psd; then
+                printf ' (%s)' "$(psd preview 2>/dev/null | awk '/profile size:/{print $3, $4; exit}')"
+            fi
+            printf '\n'
+        else
+            printf 'browser cache: psd inactive or not installed\n'
+        fi
+    else
+        printf 'browser cache: psd disabled in the config\n'
+    fi
+
+    if have systemctl && systemctl is-active preload.service >/dev/null 2>&1; then
+        printf 'preload: active\n'
+    else
+        printf 'preload: inactive or not installed\n'
+    fi
+}
+
+run_command() {
+    local -a dirs=()
+    local -a command=()
+    local wait_seconds="$WAIT_SECONDS"
+    local arg
+
+    while (($#)); do
+        case "$1" in
+            --dir)
+                [[ -n ${2:-} ]] || die "--dir needs a path"
+                dirs+=("$2")
+                shift 2
+                ;;
+            --percent)
+                [[ -n ${2:-} ]] || die "--percent needs a number"
+                RAM_PERCENT="$2"
+                shift 2
+                ;;
+            --wait)
+                [[ -n ${2:-} ]] || die "--wait needs seconds"
+                wait_seconds="$2"
+                shift 2
+                ;;
+            --no-wait)
+                wait_seconds=0
+                shift
+                ;;
+            --)
+                shift
+                command=("$@")
+                break
+                ;;
+            -*)
+                die "unknown option: $1"
+                ;;
+            *)
+                command=("$@")
+                break
+                ;;
+        esac
+    done
+
+    ((${#command[@]})) || die "no command given (use: ramcache run -- command)"
+
+    if ((${#dirs[@]} == 0)); then
+        case "$PWD" in
+            "$REAL_HOME"|"/") ;;
+            *) dirs=("$PWD") ;;
+        esac
+    fi
+
+    local warner=""
+    if ((${#dirs[@]})); then
+        (
+            sleep "$wait_seconds"
+            for arg in "${dirs[@]}"; do
+                warm_path "$arg" || true
+            done
+        ) &
+        warner=$!
+        trap '[[ -n ${warner:-} ]] && kill "$warner" 2>/dev/null || true' EXIT INT TERM
+    fi
+
+    "${command[@]}"
+    local rc=$?
+    if [[ -n $warner ]]; then
+        kill "$warner" 2>/dev/null || true
+        wait "$warner" 2>/dev/null || true
+        warner=""
+        trap - EXIT INT TERM
+    fi
+    return "$rc"
+}
+
+warm() {
+    local -a dirs=("$@")
+    local dir
+    if ((${#dirs[@]} == 0)); then
+        dirs=("${CACHE_DIRS[@]}")
+    fi
+    if ((${#dirs[@]} == 0)); then
+        die "no directories given; use ramcache warm PATH or set CACHE_DIRS"
+    fi
+    for dir in "${dirs[@]}"; do
+        warm_path "$dir" || true
+    done
+}
+
+usage() {
+    cat <<'EOF'
+Usage: ramcache <status|warm|run> [options]
+
+  status              show RAM, limits, configured directories and psd/preload
+  warm [PATH...]      load directories into the page cache now
+  run [options] -- CMD
+                      warm the current directory in the background, run CMD,
+                      and stop warming when CMD exits
+
+Options for run:
+  --dir PATH          directory to warm (repeatable)
+  --percent N         warm limit as a percentage of MemAvailable (1..80)
+  --wait N            seconds to wait before warming (default: 20)
+  --no-wait           warm immediately
+
+Browser profiles are handled by profile-sync-daemon. Page-cache warming never
+moves files, so it needs no sync-back and an unexpected power loss loses no
+data. Only unsynced tmpfs writes can be lost, which is why psd keeps crash
+recovery backups and syncs on suspend.
+
+Config: ~/.config/dotfiles/ram-cache.conf
+EOF
+}
+
+case "${1:-}" in
+    status) status ;;
+    warm)   shift; warm "$@" ;;
+    run)    shift; run_command "$@" ;;
+    -h|--help) usage ;;
+    "")     usage >&2; exit 2 ;;
+    *)      die "unknown command: $1 (see --help)" ;;
+esac
