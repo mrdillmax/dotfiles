@@ -39,11 +39,11 @@ cd ~/Projects/dotfiles
 
 make lint
 ./tests/run.sh        # тимчасовий HOME; живі файли не чіпаються
-make dry-run          # повний попередній перегляд, нічого не змінює
+./install.sh --dry-run --all   # повний попередній перегляд, нічого не змінює
 make doctor           # перевірка стану лише читанням
 ```
 
-`make dry-run` вибирає всі модулі й групи пакетів, але не торкається `/etc`.
+`./install.sh --dry-run --all` вибирає обовʼязкові модулі й типові пакети, але не торкається `/etc`.
 
 Якщо на машині бракує передумов (`base-devel`, `git`, `curl`), bootstrap
 встановить їх і запустить інсталятор:
@@ -66,7 +66,7 @@ Bootstrap ніколи не збирає AUR-хелпер; він лише по�
 
 ```bash
 ./install.sh --host desktop --gpu nvidia --modules hypr,uwsm,waybar,rofi,kitty,fish
-./install.sh --all --yes          # модулі + пакети, без /etc
+./install.sh --all --yes          # обовʼязкові модулі + типові пакети, без /etc
 ./install.sh --modules cursor --cursor-archive ~/Downloads/theme.7z
 ```
 
@@ -264,7 +264,7 @@ restore і sync додатково перевіряють, що живі фай�
 
 ## 10. Примітки
 
-- `--all` означає лише модулі + пакети; `/etc` потребує `--system`.
+- `--all` означає обовʼязкові модулі й типові пакети; опційні модулі не вибираються, а `/etc` потребує `--system`.
 - Кожен замінений файл зберігається в `~/.dotfiles-backup/<timestamp>/`.
 - Відновлення: `./install.sh --restore [date]` (або `make restore`) — показує
   diff, питає підтвердження й спершу бекапить поточний стан. Для `/etc`

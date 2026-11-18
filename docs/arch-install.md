@@ -39,11 +39,11 @@ cd ~/Projects/dotfiles
 
 make lint
 ./tests/run.sh        # temporary HOME; live files are never touched
-make dry-run          # full preview, changes nothing
+./install.sh --dry-run --all   # full preview, changes nothing
 make doctor           # read-only health check
 ```
 
-`make dry-run` selects every module and package group but never touches `/etc`.
+`./install.sh --dry-run --all` selects the required modules and default packages but never touches `/etc`.
 
 If the machine lacks the prerequisites (`base-devel`, `git`, `curl`), bootstrap
 can install them and then start the installer:
@@ -66,7 +66,7 @@ Useful non-interactive variants:
 
 ```bash
 ./install.sh --host desktop --gpu nvidia --modules hypr,uwsm,waybar,rofi,kitty,fish
-./install.sh --all --yes          # modules + packages, no /etc
+./install.sh --all --yes          # required modules + default packages, no /etc
 ./install.sh --modules cursor --cursor-archive ~/Downloads/theme.7z
 ```
 
@@ -261,7 +261,7 @@ that was ever stored in a tracked file.
 
 ## 10. Notes
 
-- `--all` means modules + packages only; `/etc` requires `--system`.
+- `--all` means required modules and default packages; optional modules are not selected, and `/etc` requires `--system`.
 - Every replaced file is backed up under `~/.dotfiles-backup/<timestamp>/`.
 - Restore with `./install.sh --restore [date]` (or `make restore`): it shows a
   diff, confirms, and backs up the current state first. `/etc` needs `--system`.
