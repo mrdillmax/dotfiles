@@ -74,6 +74,10 @@ input_path = '~/.config/matugen/templates/waybar.css'
 output_path = '~/.config/waybar/colors.css'
 post_hook = 'pkill -SIGUSR2 waybar'
 
+[templates.mpv]
+input_path = '~/.config/matugen/templates/mpv.conf'
+output_path = '~/.config/mpv/matugen.conf'
+
 [templates.rofi]
 input_path = '~/.config/matugen/templates/rofi.rasi'
 output_path = '~/.config/rofi/colors.rasi'
