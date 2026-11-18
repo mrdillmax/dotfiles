@@ -283,3 +283,4 @@ imagemagick	Media	pkg	yes	any	any	An image viewing/manipulation program
 img2pdf	Media	pkg	yes	any	any	Losslessly convert raster images to PDF
 jpegoptim	Media	pkg	no	any	any	Jpeg optimisation utility
 oxipng	Media	pkg	no	any	any	A lossless PNG compression optimiser
+pi-hole-web	Network	pkg	yes	any	any	Pi-hole web interface
