@@ -50,6 +50,18 @@ SYNC_TARGET=""
 IFACE_ARG=""
 AUTOLOGIN_USER_ARG=""
 KERNEL_LEVEL_ARG=""
+GROUPS_ARG=""
+APPS_ARG=""
+PACKAGES_ARG=""
+ONLY_PACKAGES=0
+DO_THEME=0
+DO_THEME_MENU=0
+AUTOSTART_ACTION=""
+GAMEMODE_ACTION=""
+IDLE_ACTION=""
+LID_ACTION=""
+SYSTEM_COMPONENTS_ARG=""
+HAS_ACTION=0
 
 # Load helpers before parsing so die() is available for bad options.
 # shellcheck source=lib/common.sh
@@ -72,20 +84,30 @@ source "$DOTFILES_DIR/lib/kernel.sh"
 source "$DOTFILES_DIR/lib/wallpaper.sh"
 # shellcheck source=lib/restore.sh
 source "$DOTFILES_DIR/lib/restore.sh"
+# shellcheck source=lib/theme.sh
+source "$DOTFILES_DIR/lib/theme.sh"
+# shellcheck source=lib/menu.sh
+source "$DOTFILES_DIR/lib/menu.sh"
 
 usage() {
     cat <<'EOF'
 Usage: ./install.sh [options]
 
-Modes:
-  (no options)          interactive install
+Without options (and with a terminal) the main menu opens. Every menu action
+has a flag below, so the same work can be scripted.
+
+Installation:
   --all                 select every module and package group
-  --dry-run             show what would happen, change nothing
-  --yes                 answer "yes" to confirmations
   --modules a,b,c       install only these modules
+  --groups a,b          install only these package groups (no .txt needed)
+  --apps a,b            add specific packages on top of the groups
+  --packages a,b        install exactly these packages (no app picker)
   --no-packages         skip package installation
+  --only-packages       install packages without touching configuration files
   --host desktop|laptop override host detection
   --gpu PROFILE         nvidia|amd|intel|hybrid|vm|software
+
+Settings:
   --monitors            reconfigure monitor layout and exit
   --dock-layout LAYOUT  store right|left|mirror|ask for external monitors
   --mouse               run the mouse/touchpad tuner
@@ -94,13 +116,27 @@ Modes:
   --cursor-theme NAME   cursor theme name (default: host cursor.conf)
   --cursor-size N       cursor size 16..128 (default: 24)
   --wallpaper PATH      store the wallpaper path and optionally apply it
-  --system              install opt-in /etc files (run with sudo)
+  --theme               regenerate colours from the current wallpaper (matugen)
+  --theme-menu          wallpaper/mode/scheme menu
+  --autostart ACTION    list|enable|disable|toggle|add|remove|reset|run|pick
+  --gamemode ACTION     on|off|toggle|status
+  --idle ACTION         apply|set|configure|watch|status
+  --lid ACTION          closed|open|status
+
+System (/etc, run the write actions with sudo):
+  --system              install opt-in /etc files one by one
+  --system-components a,b
+                        dns|zram|cpupower|services|pacman|grub
+                        (default: every component)
   --iface IFACE         network interface for Pi-hole (@IFACE@ rendering)
   --autologin-user USER user for the getty autologin drop-in (with --system)
+
+Kernel:
   --kernel              detect the CPU level and install a matching kernel
   --kernel-level LEVEL  override the kernel level: v1, v2, v3 or v4
                         (above-CPU levels require typing I UNDERSTAND)
-  --hooks               install the repository pre-commit hook and exit
+
+Maintenance:
   --doctor              read-only health check and exit (never needs sudo)
   --json                machine-readable output (use with --doctor/--dns-check)
   --dns-check           read-only DNS chain check and exit
@@ -109,45 +145,63 @@ Modes:
   --sync COMMAND [target]
                         status|diff|pull to copy live changes back, or
                         packages to compare package lists
+  --hooks               install the repository pre-commit hook and exit
+
+Other:
+  --dry-run             show what would happen, change nothing
+  --yes, -y             answer "yes" to confirmations
   --list                list modules, GPU profiles and package groups
   -h, --help            this help
 
 Examples:
   ./install.sh --dry-run --all
   ./install.sh --modules hypr,waybar,rofi --gpu nvidia
-  sudo ./install.sh --system
+  ./install.sh --only-packages --groups base,desktop --apps foot
+  sudo ./install.sh --system --system-components dns
   ./install.sh --mouse
 EOF
 }
 
 while (($#)); do
     case "$1" in
-        --all)        ALL=1 ;;
+        --all)        ALL=1; HAS_ACTION=1 ;;
         --dry-run)    DRY_RUN=1 ;;
         --yes|-y)     ASSUME_YES=1 ;;
-        --no-packages) DO_PACKAGES=0 ;;
-        --modules)    MODULES_ARG="${2:?missing value for --modules}"; shift ;;
+        --no-packages) DO_PACKAGES=0; HAS_ACTION=1 ;;
+        --only-packages) ONLY_PACKAGES=1; HAS_ACTION=1 ;;
+        --modules)    MODULES_ARG="${2:?missing value for --modules}"; HAS_ACTION=1; shift ;;
+        --groups)     GROUPS_ARG="${2:?missing value for --groups}"; HAS_ACTION=1; shift ;;
+        --apps)       APPS_ARG="${2:?missing value for --apps}"; HAS_ACTION=1; shift ;;
+        --packages)   PACKAGES_ARG="${2:?missing value for --packages}"; HAS_ACTION=1; shift ;;
         --host)       HOST_ARG="${2:?missing value for --host}"; shift ;;
         --gpu)        GPU_ARG="${2:?missing value for --gpu}"; shift ;;
-        --monitors)   DO_MONITORS=1 ;;
-        --dock-layout) DO_DOCK=1; DOCK_LAYOUT_ARG="${2:?missing value for --dock-layout}"; shift ;;
-        --mouse)      DO_MOUSE=1 ;;
-        --cursor)     DO_CURSOR=1 ;;
-        --cursor-archive) CURSOR_ARCHIVE_ARG="${2:?missing value for --cursor-archive}"; DO_CURSOR=1; shift ;;
-        --cursor-theme)   CURSOR_THEME_ARG="${2:?missing value for --cursor-theme}"; DO_CURSOR=1; shift ;;
-        --cursor-size)    CURSOR_SIZE_ARG="${2:?missing value for --cursor-size}"; DO_CURSOR=1; shift ;;
-        --wallpaper)  WALLPAPER_ARG="${2:?missing value for --wallpaper}"; DO_WALLPAPER=1; shift ;;
-        --system)     DO_SYSTEM=1 ;;
+        --monitors)   DO_MONITORS=1; HAS_ACTION=1 ;;
+        --dock-layout) DO_DOCK=1; DOCK_LAYOUT_ARG="${2:?missing value for --dock-layout}"; HAS_ACTION=1; shift ;;
+        --mouse)      DO_MOUSE=1; HAS_ACTION=1 ;;
+        --cursor)     DO_CURSOR=1; HAS_ACTION=1 ;;
+        --cursor-archive) CURSOR_ARCHIVE_ARG="${2:?missing value for --cursor-archive}"; DO_CURSOR=1; HAS_ACTION=1; shift ;;
+        --cursor-theme)   CURSOR_THEME_ARG="${2:?missing value for --cursor-theme}"; DO_CURSOR=1; HAS_ACTION=1; shift ;;
+        --cursor-size)    CURSOR_SIZE_ARG="${2:?missing value for --cursor-size}"; DO_CURSOR=1; HAS_ACTION=1; shift ;;
+        --wallpaper)  WALLPAPER_ARG="${2:?missing value for --wallpaper}"; DO_WALLPAPER=1; HAS_ACTION=1; shift ;;
+        --theme)      DO_THEME=1; HAS_ACTION=1 ;;
+        --theme-menu) DO_THEME_MENU=1; HAS_ACTION=1 ;;
+        --autostart)  AUTOSTART_ACTION="${2:?missing value for --autostart}"; HAS_ACTION=1; shift ;;
+        --gamemode)   GAMEMODE_ACTION="${2:?missing value for --gamemode}"; HAS_ACTION=1; shift ;;
+        --idle)       IDLE_ACTION="${2:?missing value for --idle}"; HAS_ACTION=1; shift ;;
+        --lid)        LID_ACTION="${2:?missing value for --lid}"; HAS_ACTION=1; shift ;;
+        --system)     DO_SYSTEM=1; HAS_ACTION=1 ;;
+        --system-components) SYSTEM_COMPONENTS_ARG="${2:?missing value for --system-components}"; shift ;;
         --iface)      IFACE_ARG="${2:?missing value for --iface}"; shift ;;
         --autologin-user) AUTOLOGIN_USER_ARG="${2:?missing value for --autologin-user}"; shift ;;
-        --kernel)     DO_KERNEL=1 ;;
+        --kernel)     DO_KERNEL=1; HAS_ACTION=1 ;;
         --kernel-level) KERNEL_LEVEL_ARG="${2:?missing value for --kernel-level}"; shift ;;
-        --hooks)      DO_HOOKS=1 ;;
-        --doctor)     DO_DOCTOR=1 ;;
+        --hooks)      DO_HOOKS=1; HAS_ACTION=1 ;;
+        --doctor)     DO_DOCTOR=1; HAS_ACTION=1 ;;
         --json)       DO_JSON=1 ;;
-        --dns-check)  DO_DNS_CHECK=1 ;;
+        --dns-check)  DO_DNS_CHECK=1; HAS_ACTION=1 ;;
         --restore)
             DO_RESTORE=1
+            HAS_ACTION=1
             if [[ -n ${2:-} && ${2} != -* ]]; then
                 RESTORE_DATE="$2"
                 shift
@@ -155,6 +209,7 @@ while (($#)); do
             ;;
         --sync)
             DO_SYNC=1
+            HAS_ACTION=1
             SYNC_COMMAND="${2:?missing command for --sync}"
             shift
             if [[ -n ${2:-} && ${2} != -* ]]; then
@@ -162,7 +217,7 @@ while (($#)); do
                 shift
             fi
             ;;
-        --list)       LIST_ONLY=1 ;;
+        --list)       LIST_ONLY=1; HAS_ACTION=1 ;;
         -h|--help)    usage; exit 0 ;;
         *)            die "unknown option: $1 (see --help)" ;;
     esac
@@ -171,6 +226,24 @@ done
 
 if [[ -n $AUTOLOGIN_USER_ARG && $DO_SYSTEM -eq 0 ]]; then
     die "--autologin-user requires --system"
+fi
+if [[ -n $SYSTEM_COMPONENTS_ARG && $DO_SYSTEM -eq 0 ]]; then
+    die "--system-components requires --system"
+fi
+if (( ONLY_PACKAGES && !DO_PACKAGES )); then
+    die "--only-packages and --no-packages are mutually exclusive"
+fi
+if (( ONLY_PACKAGES )); then
+    DO_PACKAGES=1
+fi
+if [[ -n $SYSTEM_COMPONENTS_ARG ]]; then
+    IFS=',' read -r -a SYSTEM_COMPONENTS <<<"$SYSTEM_COMPONENTS_ARG"
+    for component in "${SYSTEM_COMPONENTS[@]}"; do
+        case "$component" in
+            dns|zram|cpupower|services|pacman|grub) ;;
+            *) die "unknown system component: $component (dns, zram, cpupower, services, pacman, grub)" ;;
+        esac
+    done
 fi
 
 REAL_HOME="$(real_home)"
@@ -236,6 +309,13 @@ if (( DO_JSON && !DO_DOCTOR && !DO_DNS_CHECK )); then
     die "--json requires --doctor or --dns-check"
 fi
 
+# No action flags and a terminal: open the main menu. Without a TTY the old
+# non-interactive flow below stays in charge.
+if menu_should_run; then
+    menu_main
+    exit 0
+fi
+
 if (( DO_DOCTOR )); then
     doctor_args=()
     (( DO_JSON )) && doctor_args+=(--json)
@@ -267,6 +347,41 @@ if (( DO_HOOKS )); then
     exec bash "$DOTFILES_DIR/scripts/install-hooks.sh" "${hook_args[@]}"
 fi
 
+if (( DO_THEME )); then
+    generate_theme
+    exit 0
+fi
+
+if (( DO_THEME_MENU )); then
+    theme_menu_args=()
+    (( DRY_RUN )) && theme_menu_args+=(--dry-run)
+    exec bash "$DOTFILES_DIR/modules/theme-menu/home/.local/bin/theme-menu.sh" "${theme_menu_args[@]}"
+fi
+
+if [[ -n $AUTOSTART_ACTION ]]; then
+    autostart_args=("$AUTOSTART_ACTION")
+    (( DRY_RUN )) && autostart_args+=(--dry-run)
+    exec bash "$DOTFILES_DIR/modules/autostart/home/.local/bin/autostart.sh" "${autostart_args[@]}"
+fi
+
+if [[ -n $GAMEMODE_ACTION ]]; then
+    gamemode_args=("$GAMEMODE_ACTION")
+    (( DRY_RUN )) && gamemode_args+=(--dry-run)
+    exec bash "$DOTFILES_DIR/modules/gamemode/home/.local/bin/gamemode.sh" "${gamemode_args[@]}"
+fi
+
+if [[ -n $IDLE_ACTION ]]; then
+    idle_args=("$IDLE_ACTION")
+    (( DRY_RUN )) && idle_args+=(--dry-run)
+    exec bash "$DOTFILES_DIR/modules/idle/home/.local/bin/idle-tune.sh" "${idle_args[@]}"
+fi
+
+if [[ -n $LID_ACTION ]]; then
+    lid_args=("$LID_ACTION")
+    (( DRY_RUN )) && lid_args+=(--dry-run)
+    exec bash "$DOTFILES_DIR/modules/lid/home/.local/bin/lid-handler.sh" "${lid_args[@]}"
+fi
+
 if (( DO_SYSTEM )); then
     kernel_report
     printf '\n'
@@ -295,6 +410,7 @@ if (( DO_CURSOR )) && [[ -z $MODULES_ARG ]]; then
 fi
 
 info "host: $HOST_NAME   gpu: $GPU_PROFILE   repo: $DOTFILES_DIR"
+menu_prerequisite_hint
 
 if [[ ! -d $DOTFILES_DIR/hosts/$HOST_NAME ]]; then
     die "unknown host profile: $HOST_NAME (expected hosts/desktop or hosts/laptop)"
@@ -555,35 +671,39 @@ enable_services() {
     done
 }
 
-select_modules
-if ((${#MODULES[@]} == 0)); then
-    die "no modules selected"
-fi
+if (( ONLY_PACKAGES )); then
+    info "packages only; configuration modules are skipped"
+else
+    select_modules
+    if ((${#MODULES[@]} == 0)); then
+        die "no modules selected"
+    fi
 
-# Resolve module dependencies (REQUIRES=... in module.conf).
-for name in "${MODULES[@]}"; do
-    load_module_conf "$DOTFILES_DIR/modules/$name/module.conf"
-    for req in "${REQUIRES[@]:-}"; do
-        [[ -n $req ]] || continue
-        if [[ " ${MODULES[*]} " != *" $req "* ]]; then
-            MODULES+=("$req")
+    # Resolve module dependencies (REQUIRES=... in module.conf).
+    for name in "${MODULES[@]}"; do
+        load_module_conf "$DOTFILES_DIR/modules/$name/module.conf"
+        for req in "${REQUIRES[@]:-}"; do
+            [[ -n $req ]] || continue
+            if [[ " ${MODULES[*]} " != *" $req "* ]]; then
+                MODULES+=("$req")
+            fi
+        done
+    done
+
+    # hypr is the base for workspace/mouse modules.
+    for name in workspaces-split mouse-sensitivity; do
+        if [[ " ${MODULES[*]} " == *" $name "* && " ${MODULES[*]} " != *" hypr "* ]]; then
+            MODULES+=(hypr)
         fi
     done
-done
 
-# hypr is the base for workspace/mouse modules.
-for name in workspaces-split mouse-sensitivity; do
-    if [[ " ${MODULES[*]} " == *" $name "* && " ${MODULES[*]} " != *" hypr "* ]]; then
-        MODULES+=(hypr)
-    fi
-done
-
-maybe_create_snapshot
-install_selected_modules
+    maybe_create_snapshot
+    install_selected_modules
+fi
 
 if (( DO_PACKAGES )); then
     select_categories
-    select_alternatives
+    select_apps
     install_packages
 fi
 
@@ -599,7 +719,7 @@ else
     info "backup: $BACKUP_DIR"
     info "log:    $LOG_FILE"
     printf '\nNext steps:\n'
-    printf '  make theme     # regenerate matugen colors\n'
-    printf '  make audit     # read-only configuration audit\n'
-    printf '  ./install.sh --mouse   # tune pointer sensitivity interactively\n'
+    printf '  ./install.sh            # main menu for anything else\n'
+    printf '  ./install.sh --theme    # regenerate matugen colours\n'
+    printf '  ./install.sh --doctor   # read-only health check\n'
 fi

@@ -55,5 +55,47 @@ else
     fail "the hybrid map is empty"
 fi
 
+# 5. --system-components narrows the map to one component.
+component_map() {
+    SYSTEM_COMPONENTS="$1" GPU_PROFILE="$2" DOTFILES_DIR="$ROOT" bash -c '
+        source "$DOTFILES_DIR/lib/system.sh"
+        IFS=, read -r -a SYSTEM_COMPONENTS <<<"$SYSTEM_COMPONENTS"
+        system_file_map
+    '
+}
+
+dns_map="$(component_map dns amd)"
+if grep -q '/etc/unbound/unbound.conf' <<<"$dns_map" \
+    && ! grep -q '/etc/systemd/zram-generator.conf' <<<"$dns_map"; then
+    pass "dns selects only DNS files"
+else
+    fail "dns component leaked other files"
+fi
+
+zram_map="$(component_map zram amd)"
+if grep -q '/etc/systemd/zram-generator.conf' <<<"$zram_map" \
+    && ! grep -q '/etc/unbound/unbound.conf' <<<"$zram_map"; then
+    pass "zram selects only zram files"
+else
+    fail "zram component leaked other files"
+fi
+
+grub_map="$(component_map grub nvidia)"
+if grep -q '/etc/default/grub' <<<"$grub_map" \
+    && ! grep -q '/etc/unbound/unbound.conf' <<<"$grub_map"; then
+    pass "grub selects only boot files"
+else
+    fail "grub component leaked other files"
+fi
+
+# 6. services selects the pacman hook helper, not boot or DNS files.
+services_map="$(component_map services amd)"
+if grep -q '/usr/local/bin/dotfiles-pkg-sync-mark.sh' <<<"$services_map" \
+    && ! grep -q '/etc/default/grub' <<<"$services_map"; then
+    pass "services selects only unit and hook files"
+else
+    fail "services component leaked other files"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

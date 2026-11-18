@@ -4,6 +4,9 @@
 _DOTFILES_TUI=1
 
 TUI_SELECTION=()
+TUI_SELECTION_INDEXES=()
+TUI_CHOICE=""
+TUI_CHOICE_INDEX=-1
 
 tui_has_gum()      { command -v gum >/dev/null 2>&1; }
 tui_has_whiptail() { command -v whiptail >/dev/null 2>&1; }
@@ -18,6 +21,42 @@ tui_dialog_tool() {
     fi
 }
 
+# Which backend will be used, for styling decisions.
+tui_backend() {
+    if tui_has_gum; then
+        printf 'gum'
+    elif [[ -n $(tui_dialog_tool) && -t 0 ]]; then
+        tui_dialog_tool
+    else
+        printf 'plain'
+    fi
+}
+
+tui_utf8() {
+    [[ $(locale charmap 2>/dev/null) == UTF-8 ]]
+}
+
+# Unicode symbols with an ASCII fallback for non-UTF-8 terminals.
+tui_ascii() {
+    [[ ${DOTFILES_ASCII:-0} == 1 ]] || ! tui_utf8
+}
+
+tui_symbol() {
+    local name="$1" ascii=0
+    tui_ascii && ascii=1
+    case "$name" in
+        star)
+            if (( ascii )); then printf '[*]'; else printf '★'; fi ;;
+        circle)
+            if (( ascii )); then printf '[ ]'; else printf '○'; fi ;;
+        check)
+            if (( ascii )); then printf '[i]'; else printf '✓'; fi ;;
+        unavailable)
+            if (( ascii )); then printf '[-]'; else printf '⊘'; fi ;;
+        *) printf '%s' "$name" ;;
+    esac
+}
+
 tui_header() {
     if tui_has_gum; then
         gum style --border normal --border-foreground 6 --padding "0 1" --margin "0 0" "$1"
@@ -25,6 +64,13 @@ tui_header() {
         printf '\n%s\n' "$1"
         printf '%*s\n' "${#1}" '' | tr ' ' '─'
     fi
+}
+
+tui_legend() {
+    printf '%s %s   %s %s   %s %s\n' \
+        "$(tui_symbol star)" "main (config in repo)" \
+        "$(tui_symbol circle)" "alternative (package only)" \
+        "$(tui_symbol check)" "installed"
 }
 
 tui_confirm() {
@@ -99,15 +145,25 @@ tui_input() {
     printf '%s\n' "${reply:-$default}"
 }
 
-tui_radio() {
-    local title="$1"
-    shift
+# Print the chosen index (0-based). A negative default means "no default".
+tui_radio_index() {
+    local title="$1" default="$2"
+    shift 2
     local items=("$@")
     local i
 
+    ((${#items[@]} == 0)) && return 1
+
     if tui_has_gum; then
-        printf '%s\n' "${items[@]}" | gum choose --header "$title"
-        return
+        local choice
+        choice="$(printf '%s\n' "${items[@]}" | gum choose --header "$title")" || return 1
+        for i in "${!items[@]}"; do
+            if [[ ${items[$i]} == "$choice" ]]; then
+                printf '%s\n' "$i"
+                return 0
+            fi
+        done
+        return 1
     fi
 
     local tool
@@ -115,15 +171,19 @@ tui_radio() {
     if [[ -n $tool && -t 0 ]]; then
         local args=() choice
         for i in "${!items[@]}"; do
-            args+=("$((i + 1))" "${items[$i]}")
+            args+=("$i" "${items[$i]}")
         done
-        if [[ $tool == whiptail ]]; then
-            choice="$(whiptail --title "$title" --menu "$title" 0 0 0 "${args[@]}" 3>&1 1>&2 2>&3)" || return 1
-        else
-            choice="$(dialog --title "$title" --menu "$title" 0 0 0 "${args[@]}" 3>&1 1>&2 2>&3)" || return 1
+        local default_args=()
+        if (( default >= 0 && default < ${#items[@]} )); then
+            default_args=(--default-item "$default")
         fi
-        if [[ $choice =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#items[@]})); then
-            printf '%s\n' "${items[$((choice - 1))]}"
+        if [[ $tool == whiptail ]]; then
+            choice="$(whiptail --title "$title" --menu "$title" 0 0 0 "${default_args[@]}" "${args[@]}" 3>&1 1>&2 2>&3)" || return 1
+        else
+            choice="$(dialog --title "$title" --menu "$title" 0 0 0 "${default_args[@]}" "${args[@]}" 3>&1 1>&2 2>&3)" || return 1
+        fi
+        if [[ $choice =~ ^[0-9]+$ ]] && ((choice < ${#items[@]})); then
+            printf '%s\n' "$choice"
             return 0
         fi
         return 1
@@ -139,29 +199,53 @@ tui_radio() {
         printf '  %2d) %s\n' "$((i + 1))" "${items[$i]}"
     done
     while true; do
-        printf 'Select 1-%d: ' "${#items[@]}"
+        if (( default >= 0 && default < ${#items[@]} )); then
+            printf 'Select 1-%d [%d]: ' "${#items[@]}" "$((default + 1))"
+        else
+            printf 'Select 1-%d: ' "${#items[@]}"
+        fi
         read -r choice || return 1
+        if [[ -z $choice ]] && (( default >= 0 && default < ${#items[@]} )); then
+            printf '%s\n' "$default"
+            return 0
+        fi
         if [[ $choice =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#items[@]})); then
-            printf '%s\n' "${items[$((choice - 1))]}"
+            printf '%s\n' "$((choice - 1))"
             return 0
         fi
         printf 'Invalid selection.\n'
     done
 }
 
-tui_checklist() {
+tui_radio() {
+    local title="$1"
+    shift
+    local items=("$@")
+    local index
+    index="$(tui_radio_index "$title" -1 "${items[@]}")" || return 1
+    printf '%s\n' "${items[$index]}"
+}
+
+# Fill TUI_SELECTION_INDEXES with the chosen 0-based indexes.
+tui_checklist_indexes() {
     local title="$1"
     shift
     local items=("$@")
     local i
-    TUI_SELECTION=()
+    TUI_SELECTION_INDEXES=()
 
     ((${#items[@]} == 0)) && return 0
 
     if tui_has_gum; then
         local line
         while IFS= read -r line; do
-            [[ -n $line ]] && TUI_SELECTION+=("$line")
+            [[ -n $line ]] || continue
+            for i in "${!items[@]}"; do
+                if [[ ${items[$i]} == "$line" ]]; then
+                    TUI_SELECTION_INDEXES+=("$i")
+                    break
+                fi
+            done
         done < <(printf '%s\n' "${items[@]}" | gum choose --no-limit --header "$title")
         return 0
     fi
@@ -171,7 +255,7 @@ tui_checklist() {
     if [[ -n $tool && -t 0 ]]; then
         local args=() selected tag
         for i in "${!items[@]}"; do
-            args+=("$((i + 1))" "${items[$i]}" "OFF")
+            args+=("$i" "${items[$i]}" "OFF")
         done
         if [[ $tool == whiptail ]]; then
             selected="$(whiptail --title "$title" --checklist "$title" 0 0 0 "${args[@]}" 3>&1 1>&2 2>&3)" || return 0
@@ -180,8 +264,8 @@ tui_checklist() {
         fi
         for tag in $selected; do
             tag="${tag//\"/}"
-            if [[ $tag =~ ^[0-9]+$ ]] && ((tag >= 1 && tag <= ${#items[@]})); then
-                TUI_SELECTION+=("${items[$((tag - 1))]}")
+            if [[ $tag =~ ^[0-9]+$ ]] && ((tag < ${#items[@]})); then
+                TUI_SELECTION_INDEXES+=("$tag")
             fi
         done
         return 0
@@ -200,7 +284,42 @@ tui_checklist() {
     read -r -a choice || true
     for i in "${choice[@]}"; do
         if [[ $i =~ ^[0-9]+$ ]] && ((i >= 1 && i <= ${#items[@]})); then
-            TUI_SELECTION+=("${items[$((i - 1))]}")
+            TUI_SELECTION_INDEXES+=("$((i - 1))")
         fi
     done
+}
+
+tui_checklist() {
+    local title="$1"
+    shift
+    local items=("$@")
+    local index
+    TUI_SELECTION=()
+
+    tui_checklist_indexes "$title" "${items[@]}"
+    for index in "${TUI_SELECTION_INDEXES[@]}"; do
+        TUI_SELECTION+=("${items[$index]}")
+    done
+}
+
+# A menu entry is "key|label|description". Sets TUI_CHOICE to the key.
+tui_menu() {
+    local title="$1"
+    shift
+    local entries=("$@")
+    local entry key label description
+    local -a keys=() labels=()
+
+    for entry in "${entries[@]}"; do
+        IFS='|' read -r key label description <<<"$entry"
+        keys+=("$key")
+        labels+=("$label — $description")
+    done
+
+    local index
+    index="$(tui_radio_index "$title" 0 "${labels[@]}")" || return 1
+    # shellcheck disable=SC2034 # read by callers (menu.sh, packages.sh)
+    TUI_CHOICE_INDEX="$index"
+    # shellcheck disable=SC2034 # read by callers
+    TUI_CHOICE="${keys[$index]}"
 }

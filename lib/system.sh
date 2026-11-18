@@ -7,12 +7,45 @@ _DOTFILES_SYSTEM=1
 # shellcheck source=lib/dns.sh
 source "$DOTFILES_DIR/lib/dns.sh"
 
+# Optional filter: --system-components dns,zram,... Empty means "everything".
+if [[ -z ${SYSTEM_COMPONENTS+x} ]]; then
+    SYSTEM_COMPONENTS=()
+fi
+
+system_component_all() {
+    ((${#SYSTEM_COMPONENTS[@]} == 0))
+}
+
+system_component_wanted() {
+    local component="$1" item
+    system_component_all && return 0
+    for item in "${SYSTEM_COMPONENTS[@]}"; do
+        [[ $item == "$component" ]] && return 0
+    done
+    return 1
+}
+
+system_rel_component() {
+    case "$1" in
+        unbound/*|pihole/*|networkmanager/*|wait-iface/*) printf 'dns' ;;
+        zram/*)                                           printf 'zram' ;;
+        cpupower/*)                                       printf 'cpupower' ;;
+        systemd/*|services/*|pkg-sync/*)                  printf 'services' ;;
+        grub/*|mkinitcpio/*|modprobe/*)                   printf 'grub' ;;
+        pacman/*|makepkg/*)                               printf 'pacman' ;;
+    esac
+}
+
 system_file_map() {
     local root="$DOTFILES_DIR/system"
-    local src rel
+    local src rel component
 
     while IFS= read -r src; do
         rel="${src#"$root"/}"
+        component="$(system_rel_component "$rel")"
+        if [[ -n $component ]] && ! system_component_wanted "$component"; then
+            continue
+        fi
         case "$rel" in
             README.md|*/README.md|services/services.conf|pacman/pacman.conf.preset|makepkg/makepkg.conf.preset)
                 continue
@@ -358,7 +391,7 @@ install_system_configs() {
 
     # Fail closed: if the resolver chain cannot be verified, leave every DNS
     # file alone but keep reviewing the rest of /etc.
-    if ! dns_chain_ok; then
+    if system_component_wanted dns && ! dns_chain_ok; then
         dns_ok=0
         warn "DNS chain is not healthy; only DNS files will be skipped."
         while IFS= read -r row; do
@@ -444,9 +477,13 @@ install_system_configs() {
     fi
 
     printf '\n'
-    merge_pacman_conf
-    merge_makepkg_conf
-    enable_system_services
+    if system_component_wanted pacman; then
+        merge_pacman_conf
+        merge_makepkg_conf
+    fi
+    if system_component_wanted services; then
+        enable_system_services
+    fi
 
     if (( DRY_RUN )); then
         return 0
@@ -455,15 +492,25 @@ install_system_configs() {
     printf '\n'
     info "Not run automatically (review and run manually):"
     printf '  sudo systemctl daemon-reload\n'
-    printf '  sudo systemctl start systemd-zram-setup@zram0.service   # zram\n'
-    printf '  sudo systemctl enable --now cpupower                    # CPU governor\n'
-    printf '  sudo systemctl restart NetworkManager                   # only after DNS safety check\n'
-    printf '  sudo systemctl enable --now irqbalance ananicy-cpp preload lactd\n'
-    printf '  sudo systemctl enable --now paccache.timer fstrim.timer\n'
-    printf '  sudo unbound-checkconf /etc/unbound/unbound.conf\n'
-    printf '  sudo grub-mkconfig -o /boot/grub/grub.cfg   # only if GRUB was changed\n'
-    printf '  sudo mkinitcpio -P                          # only if mkinitcpio was changed\n'
-    printf '  sudo pihole restartdns                      # only if Pi-hole DNS was changed\n'
+    if system_component_wanted zram; then
+        printf '  sudo systemctl start systemd-zram-setup@zram0.service   # zram\n'
+    fi
+    if system_component_wanted cpupower; then
+        printf '  sudo systemctl enable --now cpupower                    # CPU governor\n'
+    fi
+    if system_component_wanted dns; then
+        printf '  sudo systemctl restart NetworkManager                   # only after DNS safety check\n'
+        printf '  sudo unbound-checkconf /etc/unbound/unbound.conf\n'
+        printf '  sudo pihole restartdns                      # only if Pi-hole DNS was changed\n'
+    fi
+    if system_component_wanted services; then
+        printf '  sudo systemctl enable --now irqbalance ananicy-cpp preload lactd\n'
+        printf '  sudo systemctl enable --now paccache.timer fstrim.timer\n'
+    fi
+    if system_component_wanted grub; then
+        printf '  sudo grub-mkconfig -o /boot/grub/grub.cfg   # only if GRUB was changed\n'
+        printf '  sudo mkinitcpio -P                          # only if mkinitcpio was changed\n'
+    fi
 
     # Backups created as root should remain readable by the invoking user.
     if [[ -n ${SUDO_USER:-} && -d $BACKUP_DIR ]]; then
