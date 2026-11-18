@@ -56,6 +56,7 @@ PACKAGES_ARG=""
 ONLY_PACKAGES=0
 DO_THEME=0
 DO_THEME_MENU=0
+DO_SPICETIFY=0
 AUTOSTART_ACTION=""
 GAMEMODE_ACTION=""
 IDLE_ACTION=""
@@ -121,6 +122,7 @@ Settings:
   --wallpaper PATH      store the wallpaper path and optionally apply it
   --theme               regenerate colours from the current wallpaper (matugen)
   --theme-menu          wallpaper/mode/scheme menu
+  --spicetify           install the Spicetify CLI from the upstream script
   --autostart ACTION    list|enable|disable|toggle|add|remove|reset|run|pick
   --gamemode ACTION     on|off|toggle|status
   --idle ACTION         apply|set|configure|watch|status
@@ -192,6 +194,7 @@ while (($#)); do
         --wallpaper)  WALLPAPER_ARG="${2:?missing value for --wallpaper}"; DO_WALLPAPER=1; HAS_ACTION=1; shift ;;
         --theme)      DO_THEME=1; HAS_ACTION=1 ;;
         --theme-menu) DO_THEME_MENU=1; HAS_ACTION=1 ;;
+        --spicetify)  DO_SPICETIFY=1; HAS_ACTION=1 ;;
         --autostart)  AUTOSTART_ACTION="${2:?missing value for --autostart}"; HAS_ACTION=1; shift ;;
         --gamemode)   GAMEMODE_ACTION="${2:?missing value for --gamemode}"; HAS_ACTION=1; shift ;;
         --idle)       IDLE_ACTION="${2:?missing value for --idle}"; HAS_ACTION=1; shift ;;
@@ -417,6 +420,13 @@ if [[ -n $PKG_SYNC_ACTION ]]; then
     (( DRY_RUN )) && pkg_sync_args+=(--dry-run)
     (( ASSUME_YES )) && pkg_sync_args+=(--yes)
     exec bash "$DOTFILES_DIR/scripts/pkg-sync.sh" "${pkg_sync_args[@]}"
+fi
+
+if (( DO_SPICETIFY )); then
+    spicetify_args=()
+    (( DRY_RUN )) && spicetify_args+=(--dry-run)
+    (( ASSUME_YES )) && spicetify_args+=(--yes)
+    exec bash "$DOTFILES_DIR/scripts/install-spicetify.sh" "${spicetify_args[@]}"
 fi
 
 if (( DO_THEME )); then

@@ -13,6 +13,7 @@ declare -gA MENU_FLAG=(
     [modules]="--modules --no-packages"
     [apps]="--category --apps --packages --only-packages"
     [all]="--all"
+    [spicetify]="--spicetify"
     [monitors]="--monitors"
     [mouse]="--mouse"
     [cursor]="--cursor"
@@ -133,8 +134,9 @@ menu_items_for() {
             printf '%s\n' \
                 'profile|Host and GPU profile|detected values can be overridden' \
                 'modules|Configuration modules|link or render dotfiles into your home directory' \
-                'apps|Applications|choose package groups and alternative apps' \
-                'all|Everything|all modules and all package groups'
+                'apps|Applications|choose package categories and individual programs' \
+                'spicetify|Spicetify|install the CLI from the upstream script' \
+                'all|Everything|all modules and the default packages'
             ;;
         settings)
             printf '%s\n' \
@@ -359,6 +361,7 @@ menu_action() {
         modules)          menu_action_modules ;;
         apps)             menu_action_apps ;;
         all)              menu_run --all ;;
+        spicetify)        menu_run --spicetify ;;
         monitors)         menu_run --monitors ;;
         mouse)            menu_run --mouse ;;
         cursor)           menu_run --cursor ;;
