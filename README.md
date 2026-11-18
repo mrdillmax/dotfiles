@@ -216,9 +216,10 @@ installer keeps the previous non-interactive behaviour.
 Every menu entry maps to one of these flags. `tests/menu.sh` and
 `tests/help-flags.sh` fail when the menu and `--help` drift apart.
 
-`--all` means **required modules + default packages**, not `/etc`. Optional
-modules such as `idle`, `lid` and `ram-cache` are never selected by `--all`.
-System files are always opt-in through `--system`.
+`--all` means **modules + default packages**, not `/etc`. Every module is
+selected by default except `ram-cache` and `workspaces-split`; `lid` is skipped
+on desktops. `idle` installs its packages but starts disabled until you enable
+it. System files are always opt-in through `--system`.
 
 The installer detects the host type from `/sys/class/power_supply/BAT*` and the
 DMI chassis type, and the GPU profile from `lspci`/`systemd-detect-virt`. You
@@ -233,7 +234,7 @@ it, a plain numbered prompt is used.
 | `autostart` | login-application state manager (`autostart.sh`, `SUPER+SHIFT+A` picker) |
 | `binds-cheatsheet` | Hyprland keybind cheatsheet (plain, markdown, JSON, rofi) |
 | `gamemode` | toggle animations, blur, shadows and rounding for gaming |
-| `idle` | optional hypridle/hyprlock profiles; AC profile on desktops, battery/AC on laptops |
+| `idle` | hypridle/hyprlock profiles; AC on desktops, battery/AC on laptops; disabled until enabled |
 | `lid` | lid-switch safety handler (laptop only; requires idle for the lock screen) |
 | `monitor-profiles` | dock/external-display hotplug profiles |
 | `theme-menu` | rofi menu for wallpaper, matugen mode and colour scheme |
@@ -252,7 +253,7 @@ it, a plain numbered prompt is used.
 | `workspaces-split` | per-monitor workspace slots; offered only with 2+ monitors |
 | `mouse-sensitivity` | interactive pointer tuner and the input overlay |
 
-Spicetify CLI is installed with `./install.sh --spicetify`, which runs the upstream installer. It is not a pacman package.
+Spicetify CLI is a selected Music entry and is installed by the upstream script, not pacman. `./install.sh --spicetify` runs the same installer.
 
 ### Host profiles
 
@@ -279,8 +280,8 @@ variables must not leak into other sessions.
 
 ### NVIDIA driver generation
 
-The catalog keeps the 580xx stack as the default for the current desktop. Other
-cards need a different stack. Install one stack, never two.
+The Drivers category lists every stack and keeps them opt-in. Choose the one
+that matches the card. Install one stack, never two.
 
 | GPU generation | Driver |
 |----------------|--------|
@@ -404,12 +405,14 @@ originals and `off` always restores them.
 
 ### Idle and lock
 
-The optional `idle` module renders `~/.config/hypr/hypridle.conf` and installs
+The `idle` module renders `~/.config/hypr/hypridle.conf` and installs
 `hyprlock.conf`. It works on desktops and laptops; a desktop with no battery
-uses the AC profile. It is excluded from `--all`, so install it explicitly:
+uses the AC profile. The module is selected by default, but idle starts
+disabled so it does not surprise you at login:
 
 ```bash
 ./install.sh --modules idle
+./install.sh --idle enable                 # start hypridle and keep it on
 ./install.sh --idle status
 ~/.local/bin/idle-tune.sh apply --profile battery
 ./install.sh --idle configure              # prompts for all eight values
@@ -544,18 +547,19 @@ drop one package without editing a list.
 - • package: regular package
 - ✓ already installed
 
-`--all` installs rows with `default=yes`. The office and engineering suites,
-including EasyEDA, are default. `cuda`, `virtio-win`, `hypridle`, `hyprlock`,
-`profile-sync-daemon`, `vmtouch` and `preload` stay visible but opt-in.
+`--all` installs rows with `default=yes`. The office, engineering and CAD apps
+are visible but opt-in. `cuda`, `virtio-win`, `hypridle`, `hyprlock`,
+`profile-sync-daemon`, `vmtouch` and `preload` also stay visible but opt-in.
 
-Categories: System, Desktop, Hyprland, Audio, Network, Development, Gaming,
-Virtualization, Fonts, Drivers, Office, Engineering, Terminal, Launcher, Bar,
-Notifications, Browser, Files, Editor, Music, System Monitor, Session, Media.
+Categories: System, Desktop, Hyprland, Audio, Network, Development, Games,
+Virtualization, Fonts, Drivers, Terminal, Launcher, Bar, Notifications,
+Browser, Files, Editor, Music, System Monitor, Session, Media. Office, CAD and
+EasyEDA live in Desktop or Development.
 
 Non-interactive selection:
 
 ```bash
-./install.sh --only-packages --category Terminal,Office
+./install.sh --only-packages --category Terminal,Development
 ./install.sh --only-packages --category Terminal --apps foot
 ./install.sh --only-packages --packages foot,kitty
 ```

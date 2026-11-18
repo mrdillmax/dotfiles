@@ -216,8 +216,9 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 Кожен пункт меню відповідає одному з цих прапорців. `tests/menu.sh` і
 `tests/help-flags.sh` падають, якщо меню й `--help` розійдуться.
 
-`--all` означає **обовʼязкові модулі + типові пакети**, а не `/etc`. Опційні
-модулі `idle`, `lid` і `ram-cache` ніколи не вибираються через `--all`.
+`--all` означає **модулі + типові пакети**, а не `/etc`. Усі модулі вибрані
+типово, крім `ram-cache` і `workspaces-split`; `lid` пропускається на десктопі.
+`idle` ставить пакети, але стартує вимкненим, доки його не увімкнути.
 Системні файли завжди опційні й ставляться лише через `--system`.
 
 Інсталятор визначає тип хоста за `/sys/class/power_supply/BAT*` і DMI chassis
@@ -233,7 +234,7 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 | `autostart` | менеджер стану застосунків автозапуску (`autostart.sh`, вибір на `SUPER+SHIFT+A`) |
 | `binds-cheatsheet` | шпаргалка біндових клавіш Hyprland (plain, markdown, JSON, rofi) |
 | `gamemode` | вимкнення анімацій, blur, тіней і округлення для ігор |
-| `idle` | опційні профілі hypridle/hyprlock; AC на десктопі, батарея/AC на ноутбуці |
+| `idle` | профілі hypridle/hyprlock; AC на десктопі, батарея/AC на ноутбуці; вимкнений до увімкнення |
 | `lid` | обробник кришки (лише ноутбук; потребує idle для екрана блокування) |
 | `monitor-profiles` | профілі гарячого підключення док-станції/зовнішнього дисплея |
 | `theme-menu` | rofi-меню для шпалер, режиму matugen і схеми кольорів |
@@ -252,7 +253,7 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 | `workspaces-split` | слоти воркспейсів на монітор; лише коли є 2+ монітори |
 | `mouse-sensitivity` | інтерактивний тюнер вказівника й overlay вводу |
 
-Spicetify CLI ставиться через `./install.sh --spicetify`, який запускає upstream-інсталятор. Це не пакет pacman.
+Spicetify CLI — вибраний Music-пункт, який ставить upstream-скрипт, а не pacman. `./install.sh --spicetify` запускає той самий інсталятор.
 
 ### Профілі хоста
 
@@ -279,8 +280,8 @@ Spicetify CLI ставиться через `./install.sh --spicetify`, який
 
 ### Покоління драйвера NVIDIA
 
-Каталог типово тримає стек 580xx для поточного десктопа. Іншим картам потрібен
-інший стек. Став один стек, ніколи два.
+Категорія Drivers перелічує всі стеки й лишає їх опційними. Вибери той, що
+відповідає карті. Став один стек, ніколи два.
 
 | Покоління GPU | Драйвер |
 |---------------|---------|
@@ -406,12 +407,14 @@ DOCK_LAYOUT=right      # right|left|mirror|ask
 
 ### Idle і блокування
 
-Опційний модуль `idle` рендерить `~/.config/hypr/hypridle.conf` і ставить
+Модуль `idle` рендерить `~/.config/hypr/hypridle.conf` і ставить
 `hyprlock.conf`. Він працює на десктопі й ноутбуці; десктоп без батареї
-використовує AC-профіль. Модуль не входить у `--all`, тому ставиться явно:
+використовує AC-профіль. Модуль вибраний типово, але idle стартує вимкненим,
+щоб не спрацьовувати несподівано:
 
 ```bash
 ./install.sh --modules idle
+./install.sh --idle enable
 ```
 
 | Профіль | Dim | Lock | Екран off | Suspend |
@@ -550,18 +553,19 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 - • пакет: звичайний пакет
 - ✓ вже встановлено
 
-`--all` ставить рядки з `default=yes`. Офісний і engineering-набір, включно з
-EasyEDA, типові. `cuda`, `virtio-win`, `hypridle`, `hyprlock`,
-`profile-sync-daemon`, `vmtouch` і `preload` видимі, але опційні.
+`--all` ставить рядки з `default=yes`. Офісні, engineering- і CAD-програми
+видимі, але опційні. `cuda`, `virtio-win`, `hypridle`, `hyprlock`,
+`profile-sync-daemon`, `vmtouch` і `preload` також видимі, але опційні.
 
-Категорії: System, Desktop, Hyprland, Audio, Network, Development, Gaming,
-Virtualization, Fonts, Drivers, Office, Engineering, Terminal, Launcher, Bar,
-Notifications, Browser, Files, Editor, Music, System Monitor, Session, Media.
+Категорії: System, Desktop, Hyprland, Audio, Network, Development, Games,
+Virtualization, Fonts, Drivers, Terminal, Launcher, Bar, Notifications,
+Browser, Files, Editor, Music, System Monitor, Session, Media. Офіс, CAD і
+EasyEDA живуть у Desktop або Development.
 
 Вибір без інтерактиву:
 
 ```bash
-./install.sh --only-packages --category Terminal,Office
+./install.sh --only-packages --category Terminal,Development
 ./install.sh --only-packages --category Terminal --apps foot
 ./install.sh --only-packages --packages foot,kitty
 ```
