@@ -27,6 +27,7 @@ state="$base/state"
 bin="$base/bin"
 matugen_log="$base/matugen.log"
 awww_log="$base/awww.log"
+gsettings_log="$base/gsettings.log"
 wall="$base/wall.png"
 wall2="$base/wall2.jpg"
 
@@ -36,6 +37,7 @@ printf 'png\n' >"$wall"
 printf 'jpg\n' >"$wall2"
 : >"$matugen_log"
 : >"$awww_log"
+: >"$gsettings_log"
 
 cat >"$bin/matugen" <<'EOF'
 #!/usr/bin/env bash
@@ -46,12 +48,17 @@ cat >"$bin/awww" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"$AWWW_LOG"
 EOF
-chmod 0755 "$bin/matugen" "$bin/awww"
+
+cat >"$bin/gsettings" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$GSETTINGS_LOG"
+EOF
+chmod 0755 "$bin/matugen" "$bin/awww" "$bin/gsettings"
 
 run_theme() {
     env HOME="$home" XDG_STATE_HOME="$state" \
         PATH="$bin:$PATH" HYPRLAND_INSTANCE_SIGNATURE=test \
-        MATUGEN_LOG="$matugen_log" AWWW_LOG="$awww_log" \
+        MATUGEN_LOG="$matugen_log" AWWW_LOG="$awww_log" GSETTINGS_LOG="$gsettings_log" \
         bash "$SCRIPT" "$@"
 }
 
@@ -114,6 +121,13 @@ else
     fail "awww was not called correctly"
     cat "$awww_log"
 fi
+if grep -q 'color-scheme prefer-light' "$gsettings_log" \
+    && grep -q 'gtk-theme adw-gtk3' "$gsettings_log"; then
+    pass "--apply updates the portal color scheme and GTK theme"
+else
+    fail "portal color scheme was not updated"
+    cat "$gsettings_log"
+fi
 
 # 5. A partial update keeps the other stored values.
 run_theme --mode dark >/dev/null
@@ -129,6 +143,7 @@ fi
 # 6. --wallpaper-only applies without regenerating colors.
 : >"$matugen_log"
 : >"$awww_log"
+: >"$gsettings_log"
 run_theme --wallpaper "$wall2" --wallpaper-only >/dev/null
 if [[ ! -s $matugen_log ]] && grep -qx "img $wall2" "$awww_log"; then
     pass "--wallpaper-only skips matugen"
@@ -139,6 +154,7 @@ fi
 # 7. Dry-run changes nothing.
 : >"$matugen_log"
 : >"$awww_log"
+: >"$gsettings_log"
 before_state="$(cat "$state_file")"
 dry_out="$(run_theme --mode smart --apply --dry-run)"
 if grep -q '\[dry-run\] matugen' <<<"$dry_out" \

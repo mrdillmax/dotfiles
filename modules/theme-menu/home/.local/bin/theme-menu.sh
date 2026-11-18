@@ -202,6 +202,21 @@ apply_wallpaper() {
     ok "wallpaper applied: $WALLPAPER"
 }
 
+sync_color_scheme() {
+    local scheme gtk_theme
+    case "$MODE" in
+        light) scheme="prefer-light"; gtk_theme="adw-gtk3" ;;
+        *)     scheme="prefer-dark";  gtk_theme="adw-gtk3-dark" ;;
+    esac
+    if ((DRY_RUN)); then
+        info "[dry-run] gsettings color-scheme $scheme; gtk-theme $gtk_theme"
+        return 0
+    fi
+    has gsettings || return 0
+    gsettings set org.gnome.desktop.interface color-scheme "$scheme" 2>/dev/null || true
+    gsettings set org.gnome.desktop.interface gtk-theme "$gtk_theme" 2>/dev/null || true
+}
+
 apply_colors() {
     [[ -r $MATUGEN_CONFIG ]] || die "missing matugen config: $MATUGEN_CONFIG (install the matugen module)"
     has matugen || die "matugen is not installed"
@@ -215,6 +230,7 @@ apply_colors() {
     fi
 
     apply_wallpaper
+    sync_color_scheme
 }
 
 # ----------------------------------------------------------- interactive -----

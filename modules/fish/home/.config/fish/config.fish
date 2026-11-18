@@ -90,4 +90,5 @@ if status is-login; and string match -q '/dev/tty1' (tty); and test -z "$WAYLAND
     exec uwsm start hyprland-uwsm.desktop > /dev/null 2>&1
 end
 
+fish_add_path $HOME/.local/bin
 fish_add_path $HOME/.spicetify

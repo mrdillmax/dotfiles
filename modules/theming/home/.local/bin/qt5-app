@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Run a Qt5 application with the qt5ct palette. Qt6 applications keep qt6ct.
+export QT_QPA_PLATFORMTHEME=qt5ct
+exec "$@"

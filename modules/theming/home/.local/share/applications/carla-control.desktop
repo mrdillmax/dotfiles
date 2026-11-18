@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Carla Control
+Comment=Audio plugin host control
+Exec=qt5-app carla-control %u
+Icon=carla-control
+Terminal=false
+Categories=AudioVideo;X-AudioEditing;Qt;

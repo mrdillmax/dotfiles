@@ -274,3 +274,6 @@ imagemagick	Media	pkg	yes	any	any	An image viewing/manipulation program
 img2pdf	Media	pkg	yes	any	any	Losslessly convert raster images to PDF
 jpegoptim	Media	pkg	yes	any	any	Jpeg optimisation utility
 oxipng	Media	pkg	yes	any	any	A lossless PNG compression optimiser
+inter-font	Fonts	pkg	yes	any	any	A typeface specially designed for user interfaces
+adwaita-fonts	Fonts	pkg	yes	any	any	Adwaita Sans and Mono fonts
+ttf-roboto	Fonts	pkg	yes	any	any	Google's signature family of fonts

@@ -534,6 +534,90 @@ else
     skip "managed.tsv not found; divergence check skipped (installer has not run here)"
 fi
 
+section "Appearance"
+
+if has gsettings; then
+    scheme="$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || true)"
+    case "$scheme" in
+        "'prefer-dark'"|"'prefer-light'") ok "portal color scheme: $scheme" ;;
+        *) warn "portal color scheme is not set (got ${scheme:-empty})" ;;
+    esac
+    gtk4_theme="$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null || true)"
+    case "$gtk4_theme" in
+        "'adw-gtk3'"|"'adw-gtk3-dark'") ok "GTK theme: $gtk4_theme" ;;
+        *) warn "unexpected GTK theme: ${gtk4_theme:-empty}" ;;
+    esac
+else
+    skip "gsettings is not available"
+fi
+
+portal_conf="$REAL_HOME/.config/xdg-desktop-portal/portals.conf"
+if [[ -r $portal_conf ]]; then
+    if grep -q 'FileChooser=gtk' "$portal_conf" \
+        && grep -q 'ScreenCast=hyprland' "$portal_conf" \
+        && grep -q 'Settings=gtk' "$portal_conf"; then
+        ok "portal backends are explicit and non-conflicting"
+    else
+        warn "portals.conf does not pin Settings/FileChooser/ScreenCast"
+    fi
+else
+    warn "no user portals.conf; backend selection comes from the system defaults"
+fi
+
+if [[ -n ${QT_QPA_PLATFORMTHEME:-} ]]; then
+    ok "Qt platform theme: $QT_QPA_PLATFORMTHEME"
+else
+    warn "QT_QPA_PLATFORMTHEME is not set"
+fi
+
+if has fc-match; then
+    for family in "Inter" "JetBrainsMono Nerd Font"; do
+        matched="$(fc-match "$family" -f '%{family}' 2>/dev/null || true)"
+        if [[ $matched == *"$family"* ]]; then
+            ok "font available: $family"
+        else
+            warn "font missing or aliased: $family (matched: ${matched:-none})"
+        fi
+    done
+else
+    skip "fontconfig tools are not available"
+fi
+
+if [[ -r $REAL_HOME/.config/gtk-4.0/gtk.css ]]; then
+    if grep -q 'colors.css' "$REAL_HOME/.config/gtk-4.0/gtk.css"; then
+        ok "GTK4 user stylesheet imports matugen colors"
+    else
+        warn "GTK4 user stylesheet does not import colors.css"
+    fi
+else
+    warn "GTK4 user stylesheet is missing"
+fi
+
+section "RAM cache"
+
+if has ramcache; then
+    if ramcache status >/dev/null 2>&1; then
+        ok "ramcache configuration is readable"
+    else
+        warn "ramcache status failed"
+    fi
+    if has systemctl && systemctl --user is-active psd.service >/dev/null 2>&1; then
+        ok "profile-sync-daemon is active"
+    else
+        warn "profile-sync-daemon is not active"
+    fi
+    if has systemctl && systemctl is-active preload.service >/dev/null 2>&1; then
+        ok "preload is active"
+    else
+        warn "preload is not active"
+    fi
+    if [[ -r /proc/meminfo ]]; then
+        note "RAM: $(awk '/^MemTotal:/{printf "%.1f GiB total", $2/1048576}' /proc/meminfo)"
+    fi
+else
+    skip "ramcache is not installed (optional module)"
+fi
+
 # ------------------------------------------------------------------ output --
 
 if ((JSON)); then

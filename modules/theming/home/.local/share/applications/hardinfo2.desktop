@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Hardinfo2
+Comment=System information
+Exec=qt5-app hardinfo2
+Icon=hardinfo2
+Terminal=false
+Categories=System;Utility;

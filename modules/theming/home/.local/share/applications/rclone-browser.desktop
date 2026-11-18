@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Rclone Browser
+Comment=Browse rclone remotes
+Exec=qt5-app rclone-browser
+Icon=rclone-browser
+Terminal=false
+Categories=Network;

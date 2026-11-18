@@ -289,6 +289,32 @@ if [[ -r $DOTFILES_DIR/hosts/$HOST_NAME/control-center.conf ]]; then
     source "$DOTFILES_DIR/hosts/$HOST_NAME/control-center.conf"
 fi
 
+UI_FONT="Inter"
+UI_SIZE=11
+MONO_FONT="JetBrainsMono Nerd Font"
+MONO_SIZE=11
+ICON_THEME="breeze-dark"
+GTK_THEME_DARK="adw-gtk3-dark"
+GTK_THEME_LIGHT="adw-gtk3"
+if [[ -r $DOTFILES_DIR/hosts/$HOST_NAME/appearance.conf ]]; then
+    # shellcheck source=/dev/null
+    source "$DOTFILES_DIR/hosts/$HOST_NAME/appearance.conf"
+fi
+
+THEME_MODE=dark
+if [[ -r $STATE_DIR/theme.conf ]]; then
+    while IFS='=' read -r key value; do
+        [[ $key == mode ]] && THEME_MODE="$value"
+    done <"$STATE_DIR/theme.conf"
+fi
+GTK_THEME="$GTK_THEME_DARK"
+[[ $THEME_MODE == light ]] && GTK_THEME="$GTK_THEME_LIGHT"
+
+QT_UI_FONT5="$UI_FONT,$UI_SIZE,-1,5,50,0,0,0,0,0"
+QT_MONO_FONT5="$MONO_FONT,$MONO_SIZE,-1,5,50,0,0,0,0,0"
+QT_UI_FONT6="$UI_FONT,$UI_SIZE,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0"
+QT_MONO_FONT6="$MONO_FONT,$MONO_SIZE,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0"
+
 if (( DO_KERNEL )); then
     install_kernel
     exit 0
@@ -624,6 +650,16 @@ render_template() {
     content="${content//@CURSOR_THEME@/$CURSOR_THEME}"
     content="${content//@CURSOR_SIZE@/$CURSOR_SIZE}"
     content="${content//@CONTROL_CENTER_BIND@/$CONTROL_CENTER_BIND}"
+    content="${content//@UI_FONT@/$UI_FONT}"
+    content="${content//@UI_SIZE@/$UI_SIZE}"
+    content="${content//@MONO_FONT@/$MONO_FONT}"
+    content="${content//@MONO_SIZE@/$MONO_SIZE}"
+    content="${content//@ICON_THEME@/$ICON_THEME}"
+    content="${content//@GTK_THEME@/$GTK_THEME}"
+    content="${content//@QT_UI_FONT5@/$QT_UI_FONT5}"
+    content="${content//@QT_MONO_FONT5@/$QT_MONO_FONT5}"
+    content="${content//@QT_UI_FONT6@/$QT_UI_FONT6}"
+    content="${content//@QT_MONO_FONT6@/$QT_MONO_FONT6}"
 
     tmp="$(mktemp)"
     printf '%s\n' "$content" >"$tmp"
