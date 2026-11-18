@@ -26,7 +26,7 @@ else
 fi
 
 actions="$("$CC" --list-actions)"
-for action in Appearance Desktop Input Session System "Install and update"; do
+for action in Appearance Desktop Input Session Music System "Install and update"; do
     if grep -qx "$action" <<<"$actions"; then
         pass "action listed: $action"
     else

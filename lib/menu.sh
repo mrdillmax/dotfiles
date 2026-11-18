@@ -135,7 +135,6 @@ menu_items_for() {
                 'profile|Host and GPU profile|detected values can be overridden' \
                 'modules|Configuration modules|link or render dotfiles into your home directory' \
                 'apps|Applications|choose package categories and individual programs' \
-                'spicetify|Spicetify|install the CLI from the upstream script' \
                 'all|Everything|all modules and the default packages'
             ;;
         settings)

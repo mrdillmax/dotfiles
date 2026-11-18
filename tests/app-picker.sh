@@ -125,6 +125,13 @@ else
     pass "optional profile-sync-daemon is not a default"
 fi
 
+# 5b. Spicetify is a Music entry and stays opt-in.
+if catalog_lines | awk -F'\t' '$1 == "spicetify-cli" && $2 == "Music" && $4 == "no" { found = 1 } END { exit !found }'; then
+    pass "Spicetify is an opt-in Music entry"
+else
+    fail "Spicetify is not in Music or is selected by default"
+fi
+
 # 6. Alternatives stay visible but are not selected by default.
 alts="$(catalog_lines | awk -F'\t' '$2 == "Terminal" && $3 == "alt" { print $1 }')"
 check_contains "foot" "$alts" "terminal alternatives are listed"

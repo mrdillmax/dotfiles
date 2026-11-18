@@ -271,6 +271,7 @@ session_page() {
             "Idle — status" \
             "Idle — apply the current profile" \
             "Idle — configure timeouts" \
+            "Idle — enable or disable" \
             "Lid — status" \
             "Game mode — toggle" \
             "Game mode — status" \
@@ -288,6 +289,9 @@ session_page() {
             "Idle — configure"*)
                 require_helper idle-tune.sh && run_terminal "idle-tune.sh configure"
                 ;;
+            "Idle — enable"*)
+                require_helper idle-tune.sh && run_and_notify "Idle toggled" idle-tune.sh toggle
+                ;;
             "Lid — status")
                 require_helper lid-handler.sh && run_terminal "lid-handler.sh status"
                 ;;
@@ -296,6 +300,29 @@ session_page() {
                 ;;
             "Game mode — status")
                 require_helper gamemode.sh && run_terminal "gamemode.sh status"
+                ;;
+            Back|"") return 0 ;;
+        esac
+    done
+}
+
+music_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Spicetify — update" \
+            "Spicetify — backup and apply" \
+            "Spicetify — restore backup" \
+            "Back" | rofi_pick "Music")" || return 0
+        case "$choice" in
+            "Spicetify — update")
+                require_helper spicetify && run_terminal "spicetify update"
+                ;;
+            "Spicetify — backup"*)
+                require_helper spicetify && run_terminal "spicetify backup apply"
+                ;;
+            "Spicetify — restore"*)
+                require_helper spicetify && run_terminal "spicetify restore backup"
                 ;;
             Back|"") return 0 ;;
         esac
@@ -386,6 +413,7 @@ main_menu() {
             "Desktop — monitors and dock" \
             "Input — mouse and keybinds" \
             "Session — autostart, idle, game mode" \
+            "Music — Spicetify update and backups" \
             "System — doctor, DNS, packages, backups" \
             "Install and update — run install.sh" \
             "Close" | rofi_pick "Control Center")" || return 0
@@ -394,6 +422,7 @@ main_menu() {
             "Desktop"*) desktop_page ;;
             "Input"*) input_page ;;
             "Session"*) session_page ;;
+            "Music"*) music_page ;;
             "System"*) system_page ;;
             "Install"*) install_page ;;
             Close|"") return 0 ;;
@@ -411,7 +440,7 @@ stay in ./install.sh.
 EOF
         ;;
     --list-actions)
-        printf '%s\n' Appearance Desktop Input Session System "Install and update"
+        printf '%s\n' Appearance Desktop Input Session Music System "Install and update"
         ;;
     "")
         have rofi || die "rofi is not installed"

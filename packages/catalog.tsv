@@ -277,3 +277,10 @@ oxipng	Media	pkg	yes	any	any	A lossless PNG compression optimiser
 inter-font	Fonts	pkg	no	any	any	A typeface for user interfaces; installed by the theming module
 adwaita-fonts	Fonts	pkg	yes	any	any	Adwaita Sans and Mono fonts
 ttf-roboto	Fonts	pkg	yes	any	any	Google's signature family of fonts
+spicetify-cli	Music	pkg	no	any	any	Spicetify CLI installed by the upstream script
+nvidia-open	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA open kernel modules for the current kernel
+nvidia-open-lts	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA open kernel modules for linux-lts
+nvidia-open-dkms	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA open kernel modules for any kernel
+nvidia-470xx-dkms	Drivers	pkg	no	any	nvidia,hybrid	Legacy NVIDIA 470xx kernel modules (Kepler)
+nvidia-390xx-dkms	Drivers	pkg	no	any	nvidia,hybrid	Legacy NVIDIA 390xx kernel modules (Fermi)
+nvidia-340xx-dkms	Drivers	pkg	no	any	nvidia,hybrid	Legacy NVIDIA 340xx kernel modules (Tesla)

@@ -118,6 +118,8 @@ package_installed_map() {
     while IFS= read -r pkg; do
         [[ -n $pkg ]] && PACKAGE_INSTALLED["$pkg"]=1
     done < <(pacman -Qq 2>/dev/null || true)
+    # Spicetify is not a pacman package.
+    command -v spicetify >/dev/null 2>&1 && PACKAGE_INSTALLED[spicetify-cli]=1
 }
 
 app_installed() {
@@ -318,6 +320,21 @@ install_packages() {
         warn "package installation skipped"
         return 0
     fi
+
+    # Spicetify is installed by its upstream script, not by pacman or an AUR
+    # helper. Keep it in the catalog so it sits with the other Music apps.
+    local -a script_packages=() manager_packages=()
+    for pkg in "${missing[@]}"; do
+        case "$pkg" in
+            spicetify-cli) script_packages+=("$pkg") ;;
+            *)             manager_packages+=("$pkg") ;;
+        esac
+    done
+    if ((${#script_packages[@]})); then
+        run bash "$DOTFILES_DIR/scripts/install-spicetify.sh" --yes
+    fi
+    missing=("${manager_packages[@]}")
+    ((${#missing[@]})) || return 0
 
     case "$(package_manager)" in
         pacman)
