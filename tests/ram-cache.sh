@@ -114,7 +114,7 @@ fi
 
 # 6. The module is skipped on laptops and small-RAM hosts.
 if grep -q 'ram-cache skipped: laptop host or less than 16 GiB RAM' "$ROOT/install.sh" \
-    && grep -q 'idle|lid|ram-cache' "$ROOT/install.sh"; then
+    && grep -q 'ram-cache|workspaces-split' "$ROOT/install.sh"; then
     pass "ram-cache is optional and host-gated"
 else
     fail "ram-cache host gate is missing"

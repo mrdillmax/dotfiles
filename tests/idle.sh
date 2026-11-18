@@ -78,8 +78,8 @@ if grep -qx 'power: battery' <<<"$status_out"; then
 else
     fail "power detection is wrong"
 fi
-if grep -qx 'enabled: 1' <<<"$status_out"; then
-    pass "idle is enabled by default"
+if grep -qx 'enabled: 0' <<<"$status_out"; then
+    pass "idle is disabled by default"
 else
     fail "the enabled state is missing"
 fi

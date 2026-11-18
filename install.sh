@@ -404,7 +404,7 @@ select_modules() {
         count="${#PACKAGES[@]}"
         optional=0
         case "$name" in
-            idle|lid|ram-cache) optional=1 ;;
+            ram-cache|workspaces-split) optional=1 ;;
         esac
         label="$name — ${DESCRIPTION:-} (${count} pkgs)"
         ((optional)) && label+=" [optional]"
