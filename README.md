@@ -1,8 +1,11 @@
 # dotfiles
 
-Personal Arch Linux + Hyprland (Lua config) + uwsm dotfiles for a desktop and a
-laptop. The repository is the source of truth; the installer renders
-machine-specific values and links the rest into `$HOME`.
+Personal Arch Linux + Hyprland + uwsm dotfiles for a desktop and a laptop.
+These are personal dotfiles: run `./install.sh --dry-run` and read the output
+before you install anything.
+
+The repository is the source of truth. The installer renders machine-specific
+values and links the rest into `$HOME`.
 
 - **Compositor:** Hyprland 0.57 with the Lua configuration API
 - **Session:** uwsm
@@ -15,15 +18,52 @@ machine-specific values and links the rest into `$HOME`.
 Ukrainian documentation: [README.uk.md](README.uk.md).  
 Install guide: [docs/arch-install.md](docs/arch-install.md).
 
+## Contents
+
+- [Status](#status)
+- [Safety model](#safety-model)
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [Bootstrap a fresh machine](#bootstrap-a-fresh-machine)
+- [Repository layout](#repository-layout)
+- [Installer](#installer)
+- [Modules](#modules)
+- [Host profiles](#host-profiles)
+- [GPU profiles](#gpu-profiles)
+- [Monitors](#monitors)
+- [Desktop helpers](#desktop-helpers)
+- [Mouse and touchpad tuner](#mouse-and-touchpad-tuner)
+- [Application categories](#application-categories)
+- [Package drift](#package-drift)
+- [Kernel and CPU level](#kernel-and-cpu-level)
+- [Theming](#theming)
+- [System configuration (`--system`)](#system-configuration---system)
+- [Backups and restore](#backups-and-restore)
+- [Syncing live changes back](#syncing-live-changes-back)
+- [Checks, tests and CI](#checks-tests-and-ci)
+- [Secrets](#secrets)
+- [License](#license)
+
+## Status
+
+Tested on one desktop: Arch Linux, Hyprland 0.57, NVIDIA GPU. The laptop, AMD,
+Intel, hybrid, `vm` and `software` profiles, and the `lid`, `idle` and
+dock/monitor-profile logic, are covered only by synthetic tests. They have not
+been run on that hardware.
+
 ## Safety model
 
-- Live configuration files are never modified by this repository on their own.
-- The installer **backs up every file it replaces** to
+- The repository never edits live configuration files on its own.
+- The installer backs up every file it replaces to
   `~/.dotfiles-backup/<YYYY-MM-DD_HHMMSS>/` and writes a `manifest.tsv`.
 - `--dry-run` prints every action and changes nothing.
-- `/etc` files are installed **only** with `--system`, one file at a time.
-- `grub`, `mkinitcpio` and getty autologin require an extra explicit
-  confirmation. The installer never runs `grub-mkconfig` or `mkinitcpio`.
+- The installer writes `/etc` files only with `--system`, one file at a time.
+- GRUB, mkinitcpio and `modprobe/nvidia.conf` are installed only for the
+  `nvidia` and `hybrid` GPU profiles. GRUB and mkinitcpio need an extra
+  confirmation; other profiles keep their boot and initramfs configuration.
+- The default GRUB template does not disable CPU mitigations or the TPM. The
+  file contains a commented block that explains both options.
+- The installer never runs `grub-mkconfig` or `mkinitcpio`.
 - No service is started or restarted automatically.
 - Secrets are excluded from git: `pihole.toml`, rclone, RustDesk and OpenCode
   configs, `.env`, keys and the whole `personal/` directory.
@@ -77,10 +117,10 @@ make theme WALLPAPER=~/Pictures/wallpaper.jpg
 ```
 
 Bootstrap installs only the tools the installer needs (`base-devel`, `git`,
-`curl`), checks network reachability and reports a missing AUR helper — it
-never builds one. It then runs `install.sh` (with `--all --yes` when `--yes` is
-given) and finishes with a read-only `--doctor` pass. Everything after `--` is
-forwarded to `install.sh`.
+`curl`), checks network reachability and reports a missing AUR helper. It never
+builds an AUR helper. It then runs `install.sh` (with `--all --yes` when `--yes`
+is given) and finishes with a read-only `--doctor` pass. Everything after `--`
+is forwarded to `install.sh`.
 
 ## Repository layout
 
@@ -102,6 +142,7 @@ forwarded to `install.sh`.
 ├── personal/                  private files, gitignored
 ├── docs/                      Arch install guide (EN/UK)
 ├── Makefile
+├── LICENSE / THIRD_PARTY.md
 └── README.md / README.uk.md
 ```
 
@@ -127,6 +168,7 @@ forwarded to `install.sh`.
   --wallpaper PATH      store the wallpaper path and optionally apply it
   --system              install opt-in /etc files (run with sudo)
   --iface IFACE         network interface for Pi-hole (@IFACE@ rendering)
+  --autologin-user USER user for the getty autologin drop-in (with --system)
   --kernel              detect the CPU level and install a matching kernel
   --kernel-level LEVEL  override the kernel level: v1..v4
   --hooks               install the repository pre-commit hook and exit
@@ -144,8 +186,8 @@ forwarded to `install.sh`.
 opt-in through `--system`.
 
 The installer detects the host type from `/sys/class/power_supply/BAT*` and the
-DMI chassis type, and the GPU profile from `lspci`/`systemd-detect-virt`. Both
-can be overridden. With `gum`, selection is an interactive checklist; without
+DMI chassis type, and the GPU profile from `lspci`/`systemd-detect-virt`. You
+can override both. With `gum`, selection is an interactive checklist; without
 it, a plain numbered prompt is used.
 
 ### Modules
@@ -177,7 +219,7 @@ it, a plain numbered prompt is used.
 
 | Host | Detection | Specifics |
 |------|-----------|-----------|
-| `desktop` | no battery | NVIDIA profile, two-monitor preset available |
+| `desktop` | no battery | two-monitor example preset available |
 | `laptop` | battery present | battery, brightness, touchpad, lid/suspend, power-profiles-daemon, `eDP-*` |
 
 ### GPU profiles
@@ -191,9 +233,10 @@ it, a plain numbered prompt is used.
 | `vm` | no vendor variables; optional `AQ_NO_KMS_REQUIREMENT=1` |
 | `software` | `LIBGL_ALWAYS_SOFTWARE=1` |
 
-The selected profile is appended to `modules/uwsm/home/.config/uwsm/env.common`
-and rendered to `~/.config/uwsm/env`. `env-hyprland` is separate because
-`HYPR*`/`AQ_*` variables must not leak into other sessions.
+The selected profile is appended to
+`modules/uwsm/home/.config/uwsm/env.common` and rendered to
+`~/.config/uwsm/env`. `env-hyprland` is separate because `HYPR*`/`AQ_*`
+variables must not leak into other sessions.
 
 ## Monitors
 
@@ -214,7 +257,7 @@ still starts.
 1. single monitor;
 2. two or more monitors, choosing left-to-right order and positions;
 3. auto (`preferred`, automatic positions);
-4. the `dill-desktop` preset (`HDMI-A-2` left, `DP-1` right, both
+4. the `dill-desktop` example preset (`HDMI-A-2` left, `DP-1` right, both
    1920x1080@60, workspaces 1–10 and 11–20);
 5. manual editing of `hosts/<host>/monitors.conf.sh`.
 
@@ -225,7 +268,7 @@ The `workspaces-split` module is offered only when two or more monitors are
 detected. It installs `~/.config/hypr/switch_ws.sh`, which reads monitor names
 and workspace ranges from the generated `monitors.conf.sh` — nothing is
 hardcoded. Without the module, `SUPER+1..0` uses Hyprland's native workspace
-dispatchers. The `dill-desktop` example preset covers a two-monitor setup.
+dispatchers.
 
 ### Dock and hotplug profiles
 
@@ -252,13 +295,13 @@ Hyprland configuration files. Before applying it saves the current
 `hyprctl monitors -j` under `~/.local/state/dotfiles/monitor-profiles/`.
 `ask` never changes monitors.
 
-> **Not verified on real dock hardware.** Run `apply --dry-run` first and keep
-> the saved monitor snapshot. A first real run should be followed by
-> `./install.sh --restore` if the layout is wrong.
+> **Not verified on real dock hardware.** Run `apply` with `DRY_RUN=1` first and
+> keep the saved monitor snapshot. If the layout is wrong after a real run, use
+> `./install.sh --restore` to put the previous files back.
 
 ## Desktop helpers
 
-These small modules share one rule: state lives under
+These modules share one rule: state lives under
 `~/.local/state/dotfiles/`, never in the compositor config.
 
 ### Theme menu
@@ -344,9 +387,9 @@ make autostart ACTION=pick            # rofi/gum/whiptail/dialog/plain
 ```
 
 Entries live in `~/.local/state/dotfiles/autostart.tsv` and are seeded from the
-17 built-in applications on first use. `hyprland.lua` calls
-`autostart.sh run`; disabling an entry keeps it off at the next login without
-editing the Lua config. `SUPER+SHIFT+A` opens the picker.
+built-in applications on first use. `hyprland.lua` calls `autostart.sh run`;
+disabling an entry keeps it off at the next login without editing the Lua
+config. `SUPER+SHIFT+A` opens the picker.
 
 ## Mouse and touchpad tuner
 
@@ -376,11 +419,13 @@ What it can change live:
   `disable_while_typing`.
 
 Keys in the live slider: `←`/`→` or `-`/`+` change the value, `f` toggles the
-fine step, `r` resets to the session value, `Enter`/`q` finishes.
+fine step, `r` resets to the session value, `Enter`/`q` finishes. Values are
+parsed and printed with a dot regardless of the system locale, so the saved Lua
+file stays valid under a comma-decimal locale.
 
-> **Important:** there is no `scroll_factor` option for a mouse in older
-> Hyprland versions. The tuner offers it where `hyprctl getoption` reports it;
-> otherwise it is simply not shown.
+> **Important:** older Hyprland versions have no `scroll_factor` option for a
+> mouse. The tuner offers it where `hyprctl getoption` reports it; otherwise it
+> is not shown.
 
 Saving writes only to `hosts/<host>/input.lua` in the repository (or to
 `~/.config/hypr/input.lua` when no repository is found). It shows a unified
@@ -393,7 +438,7 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 
 so a missing file is safe.
 
-## Packages
+## Application categories
 
 Package groups live in `packages/<category>.txt`. The installer lets you pick
 groups, and marks alternatives as `[main, config]` (this repository contains
@@ -498,12 +543,17 @@ Run with root:
 
 ```bash
 sudo ./install.sh --system --iface eno1
+sudo ./install.sh --system --autologin-user "$USER"
 ```
 
 Only this mode writes `/etc`, one file at a time, after a backup. `@IFACE@` is
 rendered from `--iface`, then the default-route interface, then an interactive
 prompt. If none is available the file is skipped with an error; a fixed
 interface name is never substituted in universal templates.
+
+`@USER@` in the getty drop-in is rendered from `--autologin-user`, then
+`SUDO_USER`, then the invoking login, and finally an interactive prompt. The
+drop-in always needs a separate confirmation.
 
 Manifest:
 
@@ -518,26 +568,45 @@ Manifest:
 | `system/pihole/pihole.toml.example` | `/etc/pihole/pihole.toml` (only after review) |
 | `system/wait-iface/wait-iface.sh` | `/usr/local/bin/wait-iface.sh` |
 | `system/systemd/...` | `/etc/systemd/system/...` |
-| `system/grub/default-grub` | `/etc/default/grub` (extra confirmation) |
-| `system/mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` (extra confirmation) |
-| `system/modprobe/*` | `/etc/modprobe.d/*` |
+| `system/grub/default-grub` | `/etc/default/grub` (nvidia/hybrid only; extra confirmation) |
+| `system/mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` (nvidia/hybrid only; extra confirmation) |
+| `system/modprobe/nvidia.conf` | `/etc/modprobe.d/nvidia.conf` (nvidia/hybrid only) |
+| `system/modprobe/*` | `/etc/modprobe.d/*` (other modprobe files) |
+
+> **Pi-hole password reset.** `system/pihole/pihole.toml.example` is copied
+> over `/etc/pihole/pihole.toml` and has an empty `pwhash`. Installing it
+> **resets the Pi-hole admin password**. Run `pihole setpassword` afterwards.
+
+`pihole.toml` itself is excluded. The example also has empty `totp_secret` and
+`app_pwhash`, and sets `cli_pw = false`; review it and copy secrets yourself.
 
 `pacman.conf` and `makepkg.conf` are merged, not copied: the installer shows a
 diff, asks for confirmation and creates a backup. The merge is skipped with
 `--yes`. Optional services are enabled with `systemctl enable` only, never
 started or restarted.
 
+### NVIDIA boot files
+
+The GRUB, mkinitcpio and `modprobe/nvidia.conf` files are specific to the
+proprietary NVIDIA driver. The installer maps them only when the selected GPU
+profile is `nvidia` or `hybrid`. Other profiles do not touch `/etc/default/grub`,
+`/etc/mkinitcpio.conf` or `/etc/modprobe.d/nvidia.conf`.
+
+The default GRUB template does **not** include `mitigations=off` or
+`module_blacklist=tpm,tpm_tis,tpm_tis_core`. Both options are in a commented
+block with a warning: they weaken CPU vulnerability mitigations and break
+TPM-based measured boot or disk unlocking. Add them only if you accept that
+tradeoff.
+
+The installer never runs `grub-mkconfig` or `mkinitcpio -P`; it prints the
+commands to review manually. Kernel work belongs to `./install.sh --kernel`;
+`--system` only reports CPU/kernel drift.
+
 UFW is documentation only. The repository does not change firewall state or
 rules; see `system/ufw/README.md` for general guidance.
 
 Not managed by this repository: `/etc/fstab`, NetworkManager connection
-profiles, snapper configuration. The installer never runs `grub-mkconfig` or
-`mkinitcpio -P`; it prints the commands to review manually. Kernel work belongs
-to `./install.sh --kernel`; `--system` only reports CPU/kernel drift.
-
-`pihole.toml` itself is excluded. The example has empty `pwhash`,
-`totp_secret`, `app_pwhash` and `cli_pw = false`; review it and copy secrets
-yourself.
+profiles, snapper configuration.
 
 ## Backups and restore
 
@@ -622,17 +691,15 @@ that a backup is created. `tests/run.sh [pattern] [-v] [--list]` runs one or all
 files and never runs itself. CI (`.github/workflows/ci.yml`) runs `make lint`
 and the suite in an `archlinux:latest` container.
 
-## Secrets that must be rotated
+## Secrets
 
-The following were visible during the migration work and should be considered
-compromised; rotate them manually:
+The repository does not contain credentials. Excluded from git: `pihole.toml`,
+rclone, RustDesk and OpenCode configs, `.env` files, SSH and GPG keys, and the
+whole `personal/` directory. Committed `.example` files contain placeholders
+only.
 
-- OpenCode API key/password;
-- rclone token (`~/.config/rclone/rclone.conf`);
-- RustDesk credentials.
-
-They are intentionally not part of this repository. `.example` templates are the
-only placeholders that may be committed.
+If you copied this repository from a private working tree, rotate any token
+that was ever stored in a tracked file.
 
 ## License
 

@@ -181,10 +181,18 @@ headers.
 
 ```bash
 sudo ./install.sh --system --iface eno1
+sudo ./install.sh --system --autologin-user "$USER"
 ```
 
 Only this mode writes `/etc`, one file at a time, with a backup. It never runs
 `grub-mkconfig`, `mkinitcpio -P`, and never starts or restarts a service.
+
+`--autologin-user` fills the getty drop-in. Without the flag the installer uses
+`SUDO_USER`, then the invoking login, and prompts as a last resort.
+
+`pihole.toml.example` is copied over `/etc/pihole/pihole.toml` and has an empty
+password hash, so it resets the Pi-hole admin password. Run
+`pihole setpassword` after installation.
 
 What is included:
 

@@ -182,11 +182,19 @@ sudo grub-mkconfig -o /boot/grub/grub.cfg   # лише GRUB
 
 ```bash
 sudo ./install.sh --system --iface eno1
+sudo ./install.sh --system --autologin-user "$USER"
 ```
 
 Лише цей режим пише в `/etc`, по одному файлу, з резервною копією. Він не
 виконує `grub-mkconfig`, `mkinitcpio -P` і не запускає та не перезапускає
 сервіси.
+
+`--autologin-user` заповнює getty drop-in. Без прапорця інсталятор бере
+`SUDO_USER`, далі логін, що викликав команду, і врешті питає вручну.
+
+`pihole.toml.example` копіюється поверх `/etc/pihole/pihole.toml` і має
+порожній хеш пароля, тож скидає пароль адміністратора Pi-hole. Після
+встановлення виконайте `pihole setpassword`.
 
 Що входить:
 
