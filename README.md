@@ -277,6 +277,26 @@ The selected profile is appended to
 `~/.config/uwsm/env`. `env-hyprland` is separate because `HYPR*`/`AQ_*`
 variables must not leak into other sessions.
 
+### NVIDIA driver generation
+
+The catalog keeps the 580xx stack as the default for the current desktop. Other
+cards need a different stack. Install one stack, never two.
+
+| GPU generation | Driver |
+|----------------|--------|
+| Blackwell (GBXXX) and newer | `nvidia-open`, `nvidia-open-lts` or `nvidia-open-dkms` |
+| Ada Lovelace, Ampere, Turing | `nvidia-open*` recommended; `nvidia-580xx-dkms` proprietary also supported |
+| Volta (NV140/GV100), Pascal (NV130/GPXXX), Maxwell (NV110/GMXXX) | `nvidia-580xx-dkms` (legacy, supported) |
+| Kepler (NVE0/GKXXX) | `nvidia-470xx-dkms` |
+| Fermi (NVC0/GF1XX) | `nvidia-390xx-dkms` |
+| Tesla (NV50/G80-90-GT2XX) | `nvidia-340xx-dkms` |
+| Curie (NV40/G70) and older | no longer packaged |
+
+The `nvidia` and `hybrid` GPU profiles only select the environment. The driver
+package itself comes from the Drivers category, so a Pascal or Maxwell machine
+keeps `nvidia-580xx-dkms` while a Turing or newer machine can select an
+`nvidia-open` variant.
+
 ## Monitors
 
 The single source of truth is `hosts/<host>/monitors.conf.sh`. The installer
@@ -394,7 +414,11 @@ uses the AC profile. It is excluded from `--all`, so install it explicitly:
 ~/.local/bin/idle-tune.sh apply --profile battery
 ./install.sh --idle configure              # prompts for all eight values
 ./install.sh --idle watch                  # re-apply on AC/battery changes
+./install.sh --idle toggle                 # enable or disable idle
 ```
+
+`SUPER + SHIFT + I` toggles idle from the session. A disabled idle is remembered
+in `idle.conf`, so autostart does not start `hypridle` at the next login.
 
 | Profile | Dim | Lock | Screen off | Suspend |
 |---------|-----|------|------------|---------|
@@ -450,6 +474,7 @@ Press `SUPER + Space` or launch **Control Center** from rofi. Pages cover:
 - **Desktop**: monitor status, saved layout, dock preference
 - **Input**: mouse/touchpad tuner, searchable keybind cheatsheet
 - **Session**: autostart, idle, lid, game mode
+- **Music**: Spicetify update, backup/apply and restore
 - **System**: doctor, DNS check, package drift, sync and restore
 - **Install and update**: opens `install.sh` in kitty
 

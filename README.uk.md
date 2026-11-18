@@ -277,6 +277,25 @@ Spicetify CLI ставиться через `./install.sh --spicetify`, який
 `~/.config/uwsm/env`. `env-hyprland` окремий, бо `HYPR*`/`AQ_*` не мають
 потрапляти в інші сесії.
 
+### Покоління драйвера NVIDIA
+
+Каталог типово тримає стек 580xx для поточного десктопа. Іншим картам потрібен
+інший стек. Став один стек, ніколи два.
+
+| Покоління GPU | Драйвер |
+|---------------|---------|
+| Blackwell (GBXXX) і новіші | `nvidia-open`, `nvidia-open-lts` або `nvidia-open-dkms` |
+| Ada Lovelace, Ampere, Turing | рекомендовано `nvidia-open*`; пропрієтарний `nvidia-580xx-dkms` також підтримується |
+| Volta (NV140/GV100), Pascal (NV130/GPXXX), Maxwell (NV110/GMXXX) | `nvidia-580xx-dkms` (legacy, підтримується) |
+| Kepler (NVE0/GKXXX) | `nvidia-470xx-dkms` |
+| Fermi (NVC0/GF1XX) | `nvidia-390xx-dkms` |
+| Tesla (NV50/G80-90-GT2XX) | `nvidia-340xx-dkms` |
+| Curie (NV40/G70) і старіші | більше не пакуються |
+
+Профілі `nvidia` і `hybrid` вибирають лише середовище. Сам пакет драйвера
+береться з категорії Drivers, тож Pascal або Maxwell лишає `nvidia-580xx-dkms`,
+а Turing або новіший може вибрати варіант `nvidia-open`.
+
 ## Монітори
 
 Єдине джерело істини — `hosts/<host>/monitors.conf.sh`. Інсталятор рендерить з
@@ -409,8 +428,11 @@ DOCK_LAYOUT=right      # right|left|mirror|ask
 ~/.local/bin/idle-tune.sh apply --profile battery
 ./install.sh --idle configure              # запитує всі вісім значень
 ./install.sh --idle watch                  # перезастосувати при зміні AC/батареї
+./install.sh --idle toggle                 # увімкнути або вимкнути idle
 ```
 
+`SUPER + SHIFT + I` перемикає idle у сесії. Вимкнений стан зберігається в
+`idle.conf`, тож autostart не запускає `hypridle` під час наступного входу.
 Попередній `hypridle.conf` бекапиться перед заміною. Модуль `lid` лишається
 лише для ноутбука й залежить від `idle` для спільного екрана блокування.
 
@@ -459,6 +481,7 @@ dotfiles-control-center
 - **Робочий стіл**: статус моніторів, збережена розкладка, док-профіль
 - **Ввід**: тюнер мишки/тачпада, шпаргалка біндів
 - **Сесія**: автозапуск, idle, кришка, game mode
+- **Музика**: Spicetify update, backup/apply і restore
 - **Система**: doctor, DNS, дрейф пакетів, sync і restore
 - **Встановлення й оновлення**: відкриває `install.sh` у kitty
 
