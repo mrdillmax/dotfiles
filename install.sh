@@ -546,6 +546,14 @@ select_modules() {
         name="$(basename "$dir")"
         [[ -r $dir/module.conf ]] || continue
         [[ $name == lid && ${HOST_NAME:-} != laptop ]] && continue
+        if [[ $name == ram-cache ]]; then
+            local mem_gib
+            mem_gib="$(awk '/^MemTotal:/{print int($2 / 1048576)}' /proc/meminfo 2>/dev/null || printf '0')"
+            if [[ ${HOST_NAME:-} == laptop ]] || (( mem_gib < 16 )); then
+                info "ram-cache skipped: laptop host or less than 16 GiB RAM"
+                continue
+            fi
+        fi
         if [[ $name == workspaces-split ]] && (( monitors < 2 )); then
             continue
         fi

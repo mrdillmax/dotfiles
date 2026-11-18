@@ -112,7 +112,15 @@ else
     fail "a missing directory was not reported"
 fi
 
-# 6. The module installs an optional psd config with suspend sync.
+# 6. The module is skipped on laptops and small-RAM hosts.
+if grep -q 'ram-cache skipped: laptop host or less than 16 GiB RAM' "$ROOT/install.sh" \
+    && grep -q 'idle|lid|ram-cache' "$ROOT/install.sh"; then
+    pass "ram-cache is optional and host-gated"
+else
+    fail "ram-cache host gate is missing"
+fi
+
+# 7. The module installs an optional psd config with suspend sync.
 if grep -q 'USE_SUSPSYNC="yes"' "$ROOT/modules/ram-cache/home/.config/psd/psd.conf" \
     && grep -q 'OPTIONAL\|PACKAGES=(vmtouch profile-sync-daemon preload)' "$ROOT/modules/ram-cache/module.conf"; then
     pass "psd config and optional module metadata are present"
