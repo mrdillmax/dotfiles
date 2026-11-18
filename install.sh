@@ -496,20 +496,30 @@ monitor_count() {
 }
 
 select_modules() {
-    local available=() labels=() dir name desc count
-    local monitors
+    local required=() labels=() required_labels=()
+    local dir name desc count monitors optional label
     monitors="$(monitor_count)"
 
     for dir in "$DOTFILES_DIR"/modules/*/; do
         name="$(basename "$dir")"
         [[ -r $dir/module.conf ]] || continue
+        [[ $name == lid && ${HOST_NAME:-} != laptop ]] && continue
         if [[ $name == workspaces-split ]] && (( monitors < 2 )); then
             continue
         fi
         load_module_conf "$dir/module.conf"
         count="${#PACKAGES[@]}"
-        labels+=("$name — ${DESCRIPTION:-} (${count} pkgs)")
-        available+=("$name")
+        optional=0
+        case "$name" in
+            idle|lid|ram-cache) optional=1 ;;
+        esac
+        label="$name — ${DESCRIPTION:-} (${count} pkgs)"
+        ((optional)) && label+=" [optional]"
+        labels+=("$label")
+        if ((!optional)); then
+            required+=("$name")
+            required_labels+=("$label")
+        fi
     done
 
     if [[ -n $MODULES_ARG ]]; then
@@ -518,18 +528,19 @@ select_modules() {
     fi
 
     if (( ALL )); then
-        MODULES=("${available[@]}")
+        MODULES=("${required[@]}")
         return 0
     fi
 
     if (( !ASSUME_YES )) && [[ -t 0 ]]; then
+        TUI_CHECKED_ITEMS=("${required_labels[@]}")
         tui_checklist "Modules to install" "${labels[@]}"
         local line
         for line in "${TUI_SELECTION[@]}"; do
             MODULES+=("${line%% — *}")
         done
     else
-        MODULES=("${available[@]}")
+        MODULES=("${required[@]}")
     fi
 }
 

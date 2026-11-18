@@ -92,16 +92,18 @@ fi
 
 # 3. Availability rules follow the detected profile.
 MENU_HOST=desktop MENU_GPU=amd
-check_nonempty "$(menu_unavailable_reason idle-status)" "idle is unavailable on a desktop"
+check_empty "$(menu_unavailable_reason idle-status)" "idle is available on a desktop"
+check_nonempty "$(menu_unavailable_reason lid-status)" "lid is unavailable on a desktop"
 check_nonempty "$(menu_unavailable_reason system-grub)" "GRUB is unavailable without NVIDIA"
 
 MENU_HOST=laptop MENU_GPU=nvidia
 check_empty "$(menu_unavailable_reason idle-status)" "idle is available on a laptop"
+check_empty "$(menu_unavailable_reason lid-status)" "lid is available on a laptop"
 check_empty "$(menu_unavailable_reason system-grub)" "GRUB is available with NVIDIA"
 
 # 4. Unavailable entries are rendered with a reason, available ones do not.
 MENU_HOST=desktop
-label="$(menu_decorate 'idle-status|Status|show the profile')"
+label="$(menu_decorate 'lid-status|Status|show the behaviour')"
 if grep -q 'unavailable: laptop host only' <<<"$label"; then
     pass "unavailable entries carry a reason"
 else

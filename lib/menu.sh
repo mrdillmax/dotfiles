@@ -78,7 +78,7 @@ menu_prerequisite_hint() {    local -a missing=()
 # Empty output means the action is available; otherwise the reason is printed.
 menu_unavailable_reason() {
     case "$1" in
-        idle|lid|idle-*|lid-*)
+        lid|lid-*)
             [[ ${MENU_HOST:-${HOST_NAME:-}} == laptop ]] || printf 'laptop host only'
             ;;
         system-grub)
