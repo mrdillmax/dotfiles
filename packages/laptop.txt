@@ -1,3 +1,0 @@
-# Laptop-only session tools: lid handling, idle and lock.
-hypridle
-hyprlock

@@ -5,6 +5,7 @@ _DOTFILES_TUI=1
 
 TUI_SELECTION=()
 TUI_SELECTION_INDEXES=()
+TUI_CHECKED_ITEMS=()
 TUI_CHOICE=""
 TUI_CHOICE_INDEX=-1
 
@@ -49,6 +50,8 @@ tui_symbol() {
             if (( ascii )); then printf '[*]'; else printf '★'; fi ;;
         circle)
             if (( ascii )); then printf '[ ]'; else printf '○'; fi ;;
+        dot)
+            if (( ascii )); then printf '[p]'; else printf '•'; fi ;;
         check)
             if (( ascii )); then printf '[i]'; else printf '✓'; fi ;;
         unavailable)
@@ -226,18 +229,39 @@ tui_radio() {
     printf '%s\n' "${items[$index]}"
 }
 
-# Fill TUI_SELECTION_INDEXES with the chosen 0-based indexes.
+# Fill TUI_SELECTION_INDEXES with the chosen 0-based indexes. Items listed in
+# TUI_CHECKED_ITEMS start selected.
 tui_checklist_indexes() {
     local title="$1"
     shift
     local items=("$@")
-    local i
+    local i checked
     TUI_SELECTION_INDEXES=()
 
     ((${#items[@]} == 0)) && return 0
 
     if tui_has_gum; then
         local line
+        local -a selected=()
+
+        for checked in "${TUI_CHECKED_ITEMS[@]}"; do
+            for i in "${!items[@]}"; do
+                if [[ ${items[$i]} == "$checked" ]]; then
+                    selected+=("$i")
+                    break
+                fi
+            done
+        done
+
+        local -a args=(--no-limit --header "$title")
+        if ((${#selected[@]})); then
+            local list=""
+            for i in "${selected[@]}"; do
+                list+="${items[$i]},"
+            done
+            args+=(--selected "${list%,}")
+        fi
+
         while IFS= read -r line; do
             [[ -n $line ]] || continue
             for i in "${!items[@]}"; do
@@ -246,16 +270,20 @@ tui_checklist_indexes() {
                     break
                 fi
             done
-        done < <(printf '%s\n' "${items[@]}" | gum choose --no-limit --header "$title")
+        done < <(printf '%s\n' "${items[@]}" | gum choose "${args[@]}")
         return 0
     fi
 
     local tool
     tool="$(tui_dialog_tool)"
     if [[ -n $tool && -t 0 ]]; then
-        local args=() selected tag
+        local args=() selected tag state
         for i in "${!items[@]}"; do
-            args+=("$i" "${items[$i]}" "OFF")
+            state="OFF"
+            for checked in "${TUI_CHECKED_ITEMS[@]}"; do
+                [[ ${items[$i]} == "$checked" ]] && state="ON" && break
+            done
+            args+=("$i" "${items[$i]}" "$state")
         done
         if [[ $tool == whiptail ]]; then
             selected="$(whiptail --title "$title" --checklist "$title" 0 0 0 "${args[@]}" 3>&1 1>&2 2>&3)" || return 0
@@ -275,13 +303,28 @@ tui_checklist_indexes() {
         return 0
     fi
 
-    local -a choice=()
+    local -a choice=() defaults=()
     printf '\n%s\n' "$title"
     for i in "${!items[@]}"; do
         printf '  %2d) %s\n' "$((i + 1))" "${items[$i]}"
     done
-    printf 'Numbers separated by spaces (empty = none): '
+    for i in "${!items[@]}"; do
+        for checked in "${TUI_CHECKED_ITEMS[@]}"; do
+            [[ ${items[$i]} == "$checked" ]] && defaults+=("$((i + 1))")
+        done
+    done
+    if ((${#defaults[@]})); then
+        printf 'Numbers separated by spaces (empty = keep %s): ' "${defaults[*]}"
+    else
+        printf 'Numbers separated by spaces (empty = none): '
+    fi
     read -r -a choice || true
+    if ((${#choice[@]} == 0)) && ((${#defaults[@]})); then
+        for i in "${defaults[@]}"; do
+            TUI_SELECTION_INDEXES+=("$((i - 1))")
+        done
+        return 0
+    fi
     for i in "${choice[@]}"; do
         if [[ $i =~ ^[0-9]+$ ]] && ((i >= 1 && i <= ${#items[@]})); then
             TUI_SELECTION_INDEXES+=("$((i - 1))")

@@ -8,7 +8,7 @@
 #   status [module]   list files where the live copy differs from the repo
 #   diff   [module]   show unified diffs for those files
 #   pull   [module]   write the live content back (diff + confirm + secret scan)
-#   packages          compare installed explicit packages with packages/*.txt
+#   packages          compare installed explicit packages with packages/catalog.tsv
 #
 # A pre-pull copy of every repository file is stored under
 # ~/.local/state/dotfiles/sync-backup/<timestamp>/ and listed in manifest.tsv.
@@ -59,7 +59,7 @@ Commands:
   status [module]   list files where the live copy differs from the repository
   diff   [module]   show unified diffs for those files
   pull   [module]   write live content back into the repository
-  packages          compare installed explicit packages with packages/*.txt
+  packages          compare installed explicit packages with packages/catalog.tsv
 
 Target:
   all (default) or a module name from modules/ (hypr, waybar, theming, ...)
@@ -441,29 +441,30 @@ pull_changes() {
 # --------------------------------------------------------------- packages ----
 
 sync_packages() {
-    local file line pkg
-    local -A listed_all=() listed_main=()
+    local catalog="$DOTFILES_DIR/packages/catalog.tsv"
+    local local_catalog="$DOTFILES_DIR/packages/local.tsv"
+    local file line pkg _category _role default host _gpu _description
+    local -A listed_all=() listed_required=()
     local -a installed=() missing_repo=() missing_system=()
-    local main_count=0 all_count=0
+    local all_count=0 required_count=0
 
-    while IFS= read -r file; do
-        while IFS= read -r line; do
-            [[ -z $line || $line == \#* ]] && continue
-            if [[ ${file##*/} == alternatives.txt ]]; then
-                pkg="${line%%$'\t'*}"
-                pkg="${pkg%%[[:space:]]*}"
-            else
-                pkg="${line%%[[:space:]]*}"
-            fi
-            [[ -n $pkg ]] || continue
+    if [[ ! -r $catalog ]]; then
+        warn "packages/catalog.tsv is missing; package comparison skipped"
+        return 0
+    fi
+
+    for file in "$catalog" "$local_catalog"; do
+        [[ -r $file ]] || continue
+        while IFS=$'\t' read -r pkg _category _role default host _gpu _description; do
+            [[ -z $pkg || $pkg == \#* ]] && continue
             listed_all["$pkg"]=1
             all_count=$((all_count + 1))
-            if [[ ${file##*/} != alternatives.txt ]]; then
-                listed_main["$pkg"]=1
-                main_count=$((main_count + 1))
+            if [[ $default == yes && ( $host == any || $host == "${PKG_SYNC_HOST:-desktop}" ) ]]; then
+                listed_required["$pkg"]=1
+                required_count=$((required_count + 1))
             fi
         done <"$file"
-    done < <(find "$DOTFILES_DIR/packages" -maxdepth 1 -type f -name '*.txt' | sort)
+    done
 
     if ! command -v pacman >/dev/null 2>&1; then
         warn "pacman is not available; package comparison skipped"
@@ -475,24 +476,24 @@ sync_packages() {
     for pkg in "${installed[@]}"; do
         [[ -n ${listed_all[$pkg]:-} ]] || missing_repo+=("$pkg")
     done
-    for pkg in "${!listed_main[@]}"; do
+    for pkg in "${!listed_required[@]}"; do
         if ! pacman -Qq "$pkg" >/dev/null 2>&1; then
             missing_system+=("$pkg")
         fi
     done
 
-    printf 'Packages: %d installed explicit, %d listed (%d main + %d alternatives)\n' \
-        "${#installed[@]}" "$all_count" "$main_count" "$((all_count - main_count))"
+    printf 'Packages: %d installed explicit, %d listed (%d required, %d optional)\n' \
+        "${#installed[@]}" "$all_count" "$required_count" "$((all_count - required_count))"
 
     if ((${#missing_repo[@]})); then
-        printf '\nInstalled but not listed in packages/*.txt (%d):\n' "${#missing_repo[@]}"
+        printf '\nInstalled but not listed in packages/catalog.tsv (%d):\n' "${#missing_repo[@]}"
         printf '  %s\n' "${missing_repo[@]}"
     else
-        printf '\nOK installed packages are all listed in packages/*.txt\n'
+        printf '\nOK installed packages are all listed in packages/catalog.tsv\n'
     fi
 
     if ((${#missing_system[@]})); then
-        printf '\nListed in packages/*.txt but not installed (%d):\n' "${#missing_system[@]}"
+        printf '\nRequired in packages/catalog.tsv but not installed (%d):\n' "${#missing_system[@]}"
         printf '  %s\n' "${missing_system[@]}"
     fi
 

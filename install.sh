@@ -50,7 +50,7 @@ SYNC_TARGET=""
 IFACE_ARG=""
 AUTOLOGIN_USER_ARG=""
 KERNEL_LEVEL_ARG=""
-GROUPS_ARG=""
+CATEGORY_ARG=""
 APPS_ARG=""
 PACKAGES_ARG=""
 ONLY_PACKAGES=0
@@ -100,10 +100,10 @@ Without options (and with a terminal) the main menu opens. Every menu action
 has a flag below, so the same work can be scripted.
 
 Installation:
-  --all                 select every module and package group
+  --all                 select every module and the default packages
   --modules a,b,c       install only these modules
-  --groups a,b          install only these package groups (no .txt needed)
-  --apps a,b            add specific packages on top of the groups
+  --category a,b        install only these package categories
+  --apps a,b            add specific packages on top of the categories
   --packages a,b        install exactly these packages (no app picker)
   --no-packages         skip package installation
   --only-packages       install packages without touching configuration files
@@ -157,13 +157,13 @@ Maintenance:
 Other:
   --dry-run             show what would happen, change nothing
   --yes, -y             answer "yes" to confirmations
-  --list                list modules, GPU profiles and package groups
+  --list                list modules, GPU profiles and package categories
   -h, --help            this help
 
 Examples:
   ./install.sh --dry-run --all
   ./install.sh --modules hypr,waybar,rofi --gpu nvidia
-  ./install.sh --only-packages --groups base,desktop --apps foot
+  ./install.sh --only-packages --category Terminal,Office --apps foot
   sudo ./install.sh --system --system-components dns
   ./install.sh --mouse
 EOF
@@ -177,7 +177,7 @@ while (($#)); do
         --no-packages) DO_PACKAGES=0; HAS_ACTION=1 ;;
         --only-packages) ONLY_PACKAGES=1; HAS_ACTION=1 ;;
         --modules)    MODULES_ARG="${2:?missing value for --modules}"; HAS_ACTION=1; shift ;;
-        --groups)     GROUPS_ARG="${2:?missing value for --groups}"; HAS_ACTION=1; shift ;;
+        --category)   CATEGORY_ARG="${2:?missing value for --category}"; HAS_ACTION=1; shift ;;
         --apps)       APPS_ARG="${2:?missing value for --apps}"; HAS_ACTION=1; shift ;;
         --packages)   PACKAGES_ARG="${2:?missing value for --packages}"; HAS_ACTION=1; shift ;;
         --host)       HOST_ARG="${2:?missing value for --host}"; shift ;;
@@ -309,12 +309,11 @@ list_all() {
     for dir in "$DOTFILES_DIR"/profiles/gpu/*/; do
         printf '  %s\n' "$(basename "$dir")"
     done
-    printf '\nPackage groups:\n'
-    local files=() file
-    mapfile -t files < <(category_files)
-    for file in "${files[@]}"; do
-        printf '  %-20s %s packages\n' "$file" "$(category_count "$file")"
-    done
+    printf '\nPackage categories:\n'
+    local category
+    while IFS= read -r category; do
+        printf '  %-20s %s packages\n' "$category" "$(catalog_category_count "$category")"
+    done < <(catalog_categories)
 }
 
 if (( LIST_ONLY )); then

@@ -47,10 +47,12 @@ EOF
     printf 'generated-colors\n' \
         >"$repo/modules/hypr/home/.config/hypr/colors.lua"
 
-    printf '%s\trepo_base\n' 'alpha' >"$repo/packages/base.txt"
-    printf '%s\n' 'beta' >>"$repo/packages/base.txt"
-    printf '%s\n' '# comment' >>"$repo/packages/base.txt"
-    printf 'gamma\tcategory\talt\tnote\n' >"$repo/packages/alternatives.txt"
+    cat >"$repo/packages/catalog.tsv" <<'EOF'
+# package	category	role	default	host	gpu	description
+alpha	System	pkg	yes	any	any	alpha package
+beta	System	pkg	yes	any	any	beta package
+gamma	Terminal	alt	no	any	any	gamma package
+EOF
 
     printf '%s\n' "$repo"$'\t'"$home"$'\t'"$state"
 }

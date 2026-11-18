@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Application picker: labels, symbols, installed marks and package collection.
+# Package catalog: category labels, symbols, defaults and exact selections.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -31,9 +31,11 @@ export DOTFILES_DIR="$ROOT"
 export DRY_RUN=1
 export ASSUME_YES=0
 export ALL=0
-export GROUPS_ARG=""
+export CATEGORY_ARG=""
 export APPS_ARG=""
 export PACKAGES_ARG=""
+export HOST_NAME=desktop
+export GPU_PROFILE=nvidia
 SELECTED_CATEGORIES=()
 SELECTED_APPLICATIONS=()
 
@@ -56,116 +58,120 @@ export DOTFILES_PLAIN=1
 
 # 1. ASCII fallback symbols.
 export DOTFILES_ASCII=1
-main_label="$(app_label main kitty 0)"
-alt_label="$(app_label alt foot 0)"
-installed_label="$(app_label main kitty 1)"
+main_label="$(app_label main kitty 0 'terminal')"
+alt_label="$(app_label alt foot 0 'terminal')"
+pkg_label="$(app_label pkg btop 0 'monitor')"
+installed_label="$(app_label main kitty 1 'terminal')"
 check_prefix "[*] kitty" "$main_label" "ASCII main label uses [*]"
 check_prefix "[ ] foot" "$alt_label" "ASCII alternative label uses [ ]"
+check_prefix "[p] btop" "$pkg_label" "ASCII package label uses [p]"
 check_contains "[i]" "$installed_label" "ASCII installed mark uses [i]"
 
 # 2. Unicode symbols when the locale is UTF-8.
 export DOTFILES_ASCII=0
 locale() { printf 'UTF-8\n'; }
-main_label="$(app_label main kitty 0)"
-alt_label="$(app_label alt foot 0)"
-installed_label="$(app_label main kitty 1)"
+main_label="$(app_label main kitty 0 'terminal')"
+alt_label="$(app_label alt foot 0 'terminal')"
+pkg_label="$(app_label pkg btop 0 'monitor')"
+installed_label="$(app_label main kitty 1 'terminal')"
 check_prefix "★ kitty" "$main_label" "Unicode main label uses a star"
 check_prefix "○ foot" "$alt_label" "Unicode alternative label uses a circle"
+check_prefix "• btop" "$pkg_label" "Unicode package label uses a dot"
 check_contains "✓" "$installed_label" "Unicode installed mark uses a check"
 
-# 3. Legend explains all three marks.
+# 3. Legend explains the marks.
 export DOTFILES_ASCII=1
 legend="$(tui_legend)"
 check_contains "[*] main" "$legend" "ASCII legend names the main mark"
 check_contains "[ ] alternative" "$legend" "ASCII legend names the alternative mark"
 check_contains "[i] installed" "$legend" "ASCII legend names the installed mark"
 
-# 4. Human-readable category names.
-check_prefix "Terminal" "$(app_category_label terminal)" "terminal category has a label"
-check_prefix "File manager" "$(app_category_label file-manager)" "file manager category has a label"
-
-# 5. The main application is listed first in every category.
-first_ok=1
-for category in "${APP_CATEGORY_ORDER[@]}"; do
-    first_role="$(awk -F'\t' -v c="$category" '$1 !~ /^#/ && $2 == c { print $3; exit }' "$APP_REGISTRY")"
-    if [[ $first_role != main ]]; then
-        first_ok=0
-        printf '  %s starts with role=%s\n' "$category" "$first_role"
-    fi
-done
-if ((first_ok)); then
-    pass "every category starts with its main application"
+# 4. The catalog has the expected categories and no duplicate rows.
+category_list="$(catalog_categories)"
+check_contains "Terminal" "$category_list" "catalog has the Terminal category"
+check_contains "Office" "$category_list" "catalog has the Office category"
+check_contains "System" "$category_list" "catalog has the System category"
+duplicates="$(catalog_lines | cut -f1 | sort | uniq -d)"
+if [[ -z $duplicates ]]; then
+    pass "catalog has no duplicate packages"
 else
-    fail "a category does not start with its main application"
+    fail "catalog duplicates: $duplicates"
 fi
 
-# 6. The kernel pseudo-category is not part of the picker.
-kernel_in_picker=0
-for category in "${APP_CATEGORY_ORDER[@]}"; do
-    [[ $category == kernel ]] && kernel_in_picker=1
-done
-if ((kernel_in_picker == 0)); then
-    pass "kernel packages stay out of the app picker"
+# 5. Defaults follow the catalog flags.
+default_list="$(catalog_default_packages)"
+check_contains "kitty" "$default_list" "main terminal is a default"
+check_contains "firefox" "$default_list" "main browser is a default"
+check_contains "cadcraft-bin" "$default_list" "office and engineering are defaults"
+check_contains "easyeda-pro-bin" "$default_list" "easyeda is a default"
+if grep -qx 'hypridle' <<<"$default_list"; then
+    fail "optional hypridle is a default"
 else
-    fail "kernel is offered as an application category"
+    pass "optional hypridle is not a default"
+fi
+if grep -qx 'cuda-12.9' <<<"$default_list"; then
+    fail "optional cuda is a default"
+else
+    pass "optional cuda is not a default"
+fi
+if grep -qx 'virtio-win' <<<"$default_list"; then
+    fail "optional virtio-win is a default"
+else
+    pass "optional virtio-win is not a default"
+fi
+if grep -qx 'profile-sync-daemon' <<<"$default_list"; then
+    fail "optional profile-sync-daemon is a default"
+else
+    pass "optional profile-sync-daemon is not a default"
 fi
 
-# 7. --groups selects package groups without prompting.
-export GROUPS_ARG=base,desktop
+# 6. Alternatives stay visible but are not selected by default.
+alts="$(catalog_lines | awk -F'\t' '$2 == "Terminal" && $3 == "alt" { print $1 }')"
+check_contains "foot" "$alts" "terminal alternatives are listed"
+if grep -qx 'foot' <<<"$default_list"; then
+    fail "alternative foot is a default"
+else
+    pass "alternative foot is not a default"
+fi
+
+# 7. --category selects the category and its defaults without a terminal.
+export CATEGORY_ARG=Terminal
 SELECTED_CATEGORIES=()
+SELECTED_APPLICATIONS=()
 select_categories
-if [[ ${SELECTED_CATEGORIES[*]} == 'base.txt desktop.txt' ]]; then
-    pass "--groups selects base and desktop"
+select_apps
+if [[ ${SELECTED_CATEGORIES[*]} == Terminal ]] \
+    && [[ " ${SELECTED_APPLICATIONS[*]} " == *" kitty "* ]] \
+    && [[ " ${SELECTED_APPLICATIONS[*]} " != *" foot "* ]]; then
+    pass "--category selects the category defaults"
 else
-    fail "--groups produced: ${SELECTED_CATEGORIES[*]}"
+    fail "--category produced categories=${SELECTED_CATEGORIES[*]} apps=${SELECTED_APPLICATIONS[*]}"
 fi
+export CATEGORY_ARG=""
 
-# 8. Unknown groups fail loudly.
-export GROUPS_ARG=does-not-exist
+# 8. Unknown categories fail loudly.
+export CATEGORY_ARG=does-not-exist
 if (select_categories) >/dev/null 2>&1; then
-    fail "an unknown group was accepted"
+    fail "an unknown category was accepted"
 else
-    pass "an unknown group is rejected"
+    pass "an unknown category is rejected"
 fi
-export GROUPS_ARG=""
+export CATEGORY_ARG=""
 
-# 9. --apps fills the selection without prompting.
+# 9. --apps is an exact list and does not add defaults.
 export APPS_ARG=foot,alacritty
 SELECTED_APPLICATIONS=()
 select_apps
 if [[ ${SELECTED_APPLICATIONS[*]} == 'foot alacritty' ]]; then
-    pass "--apps selects the listed packages"
+    pass "--apps selects exactly the listed packages"
 else
     fail "--apps produced: ${SELECTED_APPLICATIONS[*]}"
 fi
 export APPS_ARG=""
 
-# 10. Non-interactive runs never block on the picker.
-# shellcheck disable=SC2016 # $0 is the repository path passed to bash -c
-if timeout 15 bash -c 'source "$0/lib/common.sh"; source "$0/lib/tui.sh"; source "$0/lib/packages.sh"; select_apps' "$ROOT" </dev/null; then
-    pass "the picker returns immediately without a TTY"
-else
-    fail "the picker failed or hung without a TTY"
-fi
-
-# 11. Duplicate apps are installed once.
-SELECTED_CATEGORIES=(base.txt)
-SELECTED_APPLICATIONS=(foot foot kitty)
-packages="$(collect_packages)"
-if [[ $(grep -cx 'foot' <<<"$packages") == 1 ]]; then
-    pass "duplicate packages are deduplicated"
-else
-    fail "packages were not deduplicated"
-fi
-if grep -qx 'kitty' <<<"$packages"; then
-    pass "main applications stay in the install list"
-else
-    fail "main application missing from the install list"
-fi
-
-# 12. --packages is an exact list and skips both pickers.
+# 10. --packages is an exact list and skips both pickers.
 export PACKAGES_ARG=foot,kitty
-SELECTED_CATEGORIES=(base.txt)
+SELECTED_CATEGORIES=(Terminal)
 SELECTED_APPLICATIONS=()
 select_categories
 select_apps
@@ -175,6 +181,28 @@ else
     fail "--packages produced categories=${SELECTED_CATEGORIES[*]} apps=${SELECTED_APPLICATIONS[*]}"
 fi
 export PACKAGES_ARG=""
+
+# 11. Non-interactive runs never block on the picker.
+# shellcheck disable=SC2016 # $0 is the repository path passed to bash -c
+if timeout 15 bash -c 'source "$0/lib/common.sh"; source "$0/lib/tui.sh"; source "$0/lib/packages.sh"; select_apps' "$ROOT" </dev/null; then
+    pass "the picker returns immediately without a TTY"
+else
+    fail "the picker failed or hung without a TTY"
+fi
+
+# 12. Duplicate selections become one package.
+SELECTED_APPLICATIONS=(foot foot kitty)
+selected="$(collect_packages)"
+if [[ $(grep -cx 'foot' <<<"$selected") == 1 ]]; then
+    pass "duplicate packages are deduplicated"
+else
+    fail "packages were not deduplicated"
+fi
+if grep -qx 'kitty' <<<"$selected"; then
+    pass "the selected package list is preserved"
+else
+    fail "the selected package is missing"
+fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

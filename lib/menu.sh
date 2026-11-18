@@ -11,7 +11,7 @@ MENU_GPU="${MENU_GPU:-}"
 declare -gA MENU_FLAG=(
     [profile]="--host --gpu"
     [modules]="--modules --no-packages"
-    [apps]="--groups --apps --packages --only-packages"
+    [apps]="--category --apps --packages --only-packages"
     [all]="--all"
     [monitors]="--monitors"
     [mouse]="--mouse"
@@ -210,7 +210,7 @@ menu_items_for() {
                 'sync-status|Status|files that differ from the repository' \
                 'sync-diff|Diff|unified diffs for those files' \
                 'sync-pull|Pull|copy live changes back after confirmation' \
-                'sync-packages|Packages|compare installed packages with packages/*.txt'
+                'sync-packages|Packages|compare installed packages with packages/catalog.tsv'
             ;;
         binds)
             printf '%s\n' \

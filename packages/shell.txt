@@ -1,3 +1,0 @@
-# Interactive shell and plugin manager.
-fish
-fisher
