@@ -114,7 +114,7 @@ make lid ACTION=status                 # поведінка кришки
 ```
 
 `idle` рендерить `~/.config/hypr/hypridle.conf` і бекапить попередній файл.
-`hypridle`/`hyprlock` постачаються з `packages/laptop.txt`, не з `base.txt`.
+`hypridle`/`hyprlock` — опційні пакети Session; idle і lock працюють і на десктопі.
 `autostart.sh` замінює статичний список автозапуску в `hyprland.lua`.
 
 ## 4. Монітори й введення
@@ -216,7 +216,7 @@ UFW — тільки документація. Репозиторій не зм�
 Цей самий режим встановлює pacman-hook, який після транзакції пакетів оновлює
 `/var/lib/dotfiles/pkg-sync.stamp`. Переглядайте дрейф пізніше через
 `make pkg-sync`; `make pkg-sync ACTION=pull YES=1` лише дописує відсутні
-пакети в `packages/extra-installed.txt`.
+пакети в `packages/local.tsv`.
 
 ## 7. Темізація
 

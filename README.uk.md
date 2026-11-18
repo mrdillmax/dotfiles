@@ -33,9 +33,11 @@
 - [GPU-профілі](#gpu-профілі)
 - [Монітори](#монітори)
 - [Помічники робочого столу](#помічники-робочого-столу)
+- [Control Center](#control-center)
 - [Тюнер мишки й тачпада](#тюнер-мишки-й-тачпада)
-- [Категорії застосунків](#категорії-застосунків)
+- [Каталог пакетів](#каталог-пакетів)
 - [Дрейф пакетів](#дрейф-пакетів)
+- [RAM-кеш](#ram-кеш)
 - [Ядро й рівень CPU](#ядро-й-рівень-cpu)
 - [Тема](#тема)
 - [Системні конфіги (`--system`)](#системні-конфіги---system)
@@ -48,9 +50,10 @@
 ## Статус
 
 Перевірено на одному десктопі: Arch Linux, Hyprland 0.57, GPU NVIDIA. Профілі
-laptop, AMD, Intel, hybrid, `vm` і `software`, а також логіка `lid`, `idle` та
+laptop, AMD, Intel, hybrid, `vm` і `software`, обробник `lid` та логіка
 dock/monitor-profiles покриті лише синтетичними тестами. На відповідному
-обладнанні їх не запускали.
+обладнанні їх не запускали. Idle і блокування екрана доступні й на десктопі та
+є опційними.
 
 ## Модель безпеки
 
@@ -76,10 +79,10 @@ dock/monitor-profiles покриті лише синтетичними тест�
 - Arch Linux (або Arch-based дистрибутив) з `pacman`
 - `git`, `jq`, `bash` 5.x
 - Необов'язково, але бажано: `gum` (TUI), `shellcheck` (lint), `yay`/`paru` (AUR)
-- Для ноутбучних інструментів: `hypridle`, `hyprlock` (обидва в `packages/laptop.txt`)
+- Для idle і блокування екрана: `hypridle`, `hyprlock` (опційні пакети Session; десктоп використовує AC-профіль)
 - Для профілів док-станції: `socat`
-- Для GPU-профілів: відповідні драйвери (`packages/nvidia.txt`,
-  Mesa для AMD/Intel тощо)
+- Для GPU-профілів: відповідні драйвери (категорія Drivers у
+  `packages/catalog.tsv`, Mesa для AMD/Intel тощо)
 
 ## Швидкий старт
 
@@ -150,7 +153,7 @@ Bootstrap ставить лише інструменти, потрібні ін�
 │   └── laptop/                дефолти батареї/яскравості/тачпада/кришки
 ├── modules/<name>/home/...    файли, які лінкуються або рендеряться в $HOME
 ├── system/                    опційні /etc файли (--system)
-├── packages/                  групи пакетів + реєстр альтернатив
+├── packages/                  каталог пакетів + локальні доповнення
 ├── scripts/                   audit, doctor, sync, pkg-sync, DNS-перевірка
 ├── tests/                     shell-тести + локальний run.sh
 ├── .github/workflows/ci.yml   lint + тести в Arch-контейнері
@@ -187,13 +190,13 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 Меню охоплює:
 
 - **Встановлення** — модулі конфігів, програми, профіль host/GPU
-- **Налаштування** — монітори, миша/тачпад, курсор, шпалери й тема,
-  автозапуск, простій/кришка (ноутбук), game mode, профілі моніторів,
-  шпаргалка біндових клавіш
 - **Система (/etc)** — DNS (Pi-hole/Unbound), zram, cpupower, сервіси,
-  pacman/makepkg, GRUB/mkinitcpio
+  pacman/makepkg, GRUB/mkinitcpio, sysctl для RAM-кешу
 - **Ядро** — звіт про рівень CPU і вибір ядра
 - **Обслуговування** — doctor, DNS-перевірка, restore, sync, дрейф пакетів, hooks
+
+Щоденні налаштування живуть у rofi Control Center, а не в цьому меню. Натисни
+`SUPER + Space` або відкрий **Control Center** з rofi.
 
 Пункти, які не працюють на цій машині, лишаються видимими, але сірими, з
 причиною (лише ноутбук, лише NVIDIA, немає `sudo`). Без термінала інсталятор
@@ -203,9 +206,9 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 
 | Область | Прапорці |
 |---------|----------|
-| Встановлення | `--all`, `--modules a,b`, `--groups a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu` |
+| Встановлення | `--all`, `--modules a,b`, `--category a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu`, `--spicetify` |
 | Налаштування | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
-| Система | `--system`, `--system-components a,b`, `--iface`, `--autologin-user` |
+| Система | `--system`, `--system-components a,b` (включно з `ram`), `--iface`, `--autologin-user` |
 | Ядро | `--kernel`, `--kernel-level v1..v4` |
 | Обслуговування | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
 | Загальні | `--dry-run`, `--yes`, `--list`, `--help` |
@@ -213,8 +216,9 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 Кожен пункт меню відповідає одному з цих прапорців. `tests/menu.sh` і
 `tests/help-flags.sh` падають, якщо меню й `--help` розійдуться.
 
-`--all` означає **модулі + пакети**, а не `/etc`. Системні файли завжди
-опційні й ставляться лише через `--system`.
+`--all` означає **обовʼязкові модулі + типові пакети**, а не `/etc`. Опційні
+модулі `idle`, `lid` і `ram-cache` ніколи не вибираються через `--all`.
+Системні файли завжди опційні й ставляться лише через `--system`.
 
 Інсталятор визначає тип хоста за `/sys/class/power_supply/BAT*` і DMI chassis
 type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва можна
@@ -229,8 +233,8 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 | `autostart` | менеджер стану застосунків автозапуску (`autostart.sh`, вибір на `SUPER+SHIFT+A`) |
 | `binds-cheatsheet` | шпаргалка біндових клавіш Hyprland (plain, markdown, JSON, rofi) |
 | `gamemode` | вимкнення анімацій, blur, тіней і округлення для ігор |
-| `idle` | профілі hypridle для батареї/AC і helper перезавантаження |
-| `lid` | обробник кришки ноутбука й hyprlock |
+| `idle` | опційні профілі hypridle/hyprlock; AC на десктопі, батарея/AC на ноутбуці |
+| `lid` | обробник кришки (лише ноутбук; потребує idle для екрана блокування) |
 | `monitor-profiles` | профілі гарячого підключення док-станції/зовнішнього дисплея |
 | `theme-menu` | rofi-меню для шпалер, режиму matugen і схеми кольорів |
 | `uwsm` | `~/.config/uwsm/env` (common + GPU-профіль) і `env-hyprland` |
@@ -240,11 +244,15 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 | `fish` | конфіг fish, аліаси й список плагінів tide |
 | `dunst` | демон сповіщень (кольори генерує matugen) |
 | `matugen` | шаблони й `config.toml` (без згенерованих кольорів) |
-| `theming` | налаштування GTK/Qt/KDE і symlink-и adw-gtk3 |
+| `theming` | єдиний вигляд GTK/Qt/KDE, шрифти, іконки й portal |
 | `cursor` | тема/розмір курсора в uwsm, GTK3/4, Qt, xsettingsd і Hyprland |
 | `apps` | btop, micro, spicetify, vesktop, Firefox chrome, dolphinrc |
+| `control-center` | rofi-хаб щоденних налаштувань (`SUPER + Space`) |
+| `ram-cache` | опційний прогрів page cache і tmpfs для профілю браузера |
 | `workspaces-split` | слоти воркспейсів на монітор; лише коли є 2+ монітори |
 | `mouse-sensitivity` | інтерактивний тюнер вказівника й overlay вводу |
+
+Spicetify CLI ставиться через `./install.sh --spicetify`, який запускає upstream-інсталятор. Це не пакет pacman.
 
 ### Профілі хоста
 
@@ -379,7 +387,13 @@ DOCK_LAYOUT=right      # right|left|mirror|ask
 
 ### Idle і блокування
 
-Модуль `idle` рендерить `~/.config/hypr/hypridle.conf` з двох профілів:
+Опційний модуль `idle` рендерить `~/.config/hypr/hypridle.conf` і ставить
+`hyprlock.conf`. Він працює на десктопі й ноутбуці; десктоп без батареї
+використовує AC-профіль. Модуль не входить у `--all`, тому ставиться явно:
+
+```bash
+./install.sh --modules idle
+```
 
 | Профіль | Dim | Lock | Екран off | Suspend |
 |---------|-----|------|-----------|---------|
@@ -397,8 +411,8 @@ DOCK_LAYOUT=right      # right|left|mirror|ask
 ./install.sh --idle watch                  # перезастосувати при зміні AC/батареї
 ```
 
-Попередній `hypridle.conf` бекапиться перед заміною. `hypridle` і `hyprlock`
-належать до ноутбучної групи пакетів, не до базової.
+Попередній `hypridle.conf` бекапиться перед заміною. Модуль `lid` лишається
+лише для ноутбука й залежить від `idle` для спільного екрана блокування.
 
 ### Кришка ноутбука
 
@@ -429,6 +443,31 @@ DOCK_LAYOUT=right      # right|left|mirror|ask
 використанні наповнюються вбудованими застосунками. `hyprland.lua` викликає
 `autostart.sh run`; вимкнений запис лишається вимкненим після наступного
 входу без редагування Lua-конфігу. `SUPER+SHIFT+A` відкриває вибір.
+
+## Control Center
+
+Щоденні налаштування живуть у rofi Control Center, а не в `install.sh`.
+
+```bash
+dotfiles-control-center
+```
+
+Натисни `SUPER + Space` або відкрий **Control Center** з rofi. Сторінки:
+
+- **Вигляд**: шпалери з мініатюрами magick, dark/light/smart, схеми matugen,
+  статус шрифтів, іконок і курсора
+- **Робочий стіл**: статус моніторів, збережена розкладка, док-профіль
+- **Ввід**: тюнер мишки/тачпада, шпаргалка біндів
+- **Сесія**: автозапуск, idle, кришка, game mode
+- **Система**: doctor, DNS, дрейф пакетів, sync і restore
+- **Встановлення й оновлення**: відкриває `install.sh` у kitty
+
+Меню використовує палітру matugen (`colors.rasi`), Inter і
+`JetBrainsMono Nerd Font`, без окремої теми. Воно викликає помічники напряму.
+`install.sh` лишається для встановлення, оновлення й рідкісних одноразових дій.
+
+Бінд живе в `hosts/<host>/control-center.conf` і рендериться в опційний
+`~/.config/hypr/control-center.lua`.
 
 ## Тюнер мишки й тачпада
 
@@ -476,94 +515,88 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 
 тож відсутній файл безпечний.
 
-## Категорії застосунків
+## Каталог пакетів
 
-Пікер групує застосунки за роллю. У кожній категорії спершу йде основна
-програма (конфіг є в репозиторії), далі аналоги лише як пакети:
+`packages/catalog.tsv` — джерело істини. Кожен рядок містить пакет, категорію,
+роль, прапорець default, host, список GPU і короткий опис. Інсталятор показує
+вкладки категорій і checklist усередині кожної, тож одну програму можна
+прибрати без редагування списків.
 
-- ★ основна — конфіг у репозиторії, вибрана попередньо
-- ○ аналог — лише пакет, без конфігу
+- ★ основна: конфіг у репозиторії, вибрана типово
+- ○ аналог: лише пакет, не вибраний типово
+- • пакет: звичайний пакет
 - ✓ вже встановлено
 
-| Категорія | Основна ★ | Аналоги ○ |
-|-----------|-----------|-----------|
-| Термінал | **kitty** | foot, alacritty, wezterm, ghostty |
-| Лаунчер | **rofi** | fuzzel, wofi, anyrun |
-| Бар | **waybar** | hyprpanel, ags |
-| Сповіщення | **dunst** | mako, swaync |
-| Браузер | **firefox** | chromium, brave-bin, librewolf |
-| Файловий менеджер | **dolphin** | nautilus, thunar, yazi |
-| Редактор | **micro** | neovim, kate |
-| Музика | **spotify-launcher** | amberol, elisa |
-| Системний монітор | **btop** | htop, bottom |
+`--all` ставить рядки з `default=yes`. Офісний і engineering-набір, включно з
+EasyEDA, типові. `cuda`, `virtio-win`, `hypridle`, `hyprlock`,
+`profile-sync-daemon`, `vmtouch` і `preload` видимі, але опційні.
 
-Аналог можна додати поряд з основною, але конфіг репозиторію завжди належить
-основній. Ядра не входять до цього пікера; для них є меню «Ядро» або
-`--kernel`.
+Категорії: System, Desktop, Hyprland, Audio, Network, Development, Gaming,
+Virtualization, Fonts, Drivers, Office, Engineering, Terminal, Launcher, Bar,
+Notifications, Browser, Files, Editor, Music, System Monitor, Session, Media.
 
 Вибір без інтерактиву:
 
 ```bash
-./install.sh --only-packages --groups base,desktop
-./install.sh --only-packages --groups base --apps foot
+./install.sh --only-packages --category Terminal,Office
+./install.sh --only-packages --category Terminal --apps foot
 ./install.sh --only-packages --packages foot,kitty
 ```
 
-Огляд груп:
-
-| Група | Вміст |
-|-------|-------|
-| `base.txt` | завантаження, сховище, CLI-інструменти, база без шрифтів |
-| `hyprland.txt` | композитор, портали, Wayland-утиліти, теми |
-| `shell.txt` | fish + fisher |
-| `audio.txt` | PipeWire, Carla, Guitarix, REAPER |
-| `desktop.txt` | щоденні GUI-застосунки |
-| `media.txt` | CLI-інструменти для зображень/мініатюр |
-| `dev.txt` | компілятори, SDK, редактори |
-| `network.txt` | NetworkManager, Pi-hole, Unbound, rclone, ZeroTier |
-| `virtualization.txt` | Docker, libvirt/QEMU, Steam, Wine, Waydroid |
-| `nvidia.txt` | стек NVIDIA 580xx і моніторинг |
-| `tuning.txt` | тюнінг CPU/IO й stress-інструменти |
-| `fonts.txt` | шрифти й підтримка української |
-| `laptop.txt` | hypridle, hyprlock (лише ноутбучні сесії) |
-| `aur.txt` | пакети лише з AUR |
-
-`install.sh --no-packages` повністю пропускає цей крок.
+`packages/local.tsv` зберігає пакети, додані через `pkg-sync pull`. Він є
+частиною каталогу, але не частиною типових наборів.
 
 ### Дрейф пакетів
 
 ```bash
 ./install.sh --pkg-sync status       # лише звіт
-./install.sh --pkg-sync check        # exit 1, коли списки розійшлися
+./install.sh --pkg-sync check        # exit 1, коли каталог розійшовся
 ./install.sh --pkg-sync pull --dry-run
-./install.sh --pkg-sync pull --yes   # дописати, ніколи не видаляти
+./install.sh --pkg-sync pull --yes   # дописати в local.tsv, ніколи не видаляти
 ```
 
-`pkg-sync` порівнює явно встановлені пакети з `packages/*.txt`. `pull` лише
-дописує встановлені, але не внесені пакети в
-`packages/extra-installed.txt`; він ніколи не видаляє запис і нічого не
-встановлює. Файли конкретного хоста порівнюються лише на відповідному хості.
+`pkg-sync` порівнює явно встановлені пакети з каталогом. Опційні рядки не
+вважаються відсутніми, але встановлений опційний пакет рахується як внесений.
+`pull` лише дописує встановлені, але не внесені пакети в `packages/local.tsv`;
+він ніколи не видаляє запис і нічого не встановлює. Рядки конкретного хоста
+порівнюються лише на відповідному хості.
 
 З `--system` репозиторій ставить pacman hook, який оновлює
 `/var/lib/dotfiles/pkg-sync.stamp` після кожної транзакції пакетів. `status`
 попереджає, коли штамп новіший за останній огляд, тож зміни пакетів можна
 розібрати пізніше, а не під час транзакції.
 
-### Ядро й рівень CPU
+### RAM-кеш
+
+Опційний модуль `ram-cache` призначений для десктопів із великим обсягом RAM.
+Він не входить у `--all` і не пропонується на ноутбуках або при малому обсязі
+памʼяті.
 
 ```bash
-./install.sh --kernel
+./install.sh --modules ram-cache
+ramcache status
+ramcache warm ~/Games/SomeGame
+ramcache run -- ~/Games/SomeGame/start.sh
 ```
 
-Інсталятор визначає рівень CPU x86-64 (`v1`..`v4`) і пропонує ядра на цьому
-рівні або нижче: `linux-lts` (fallback), `linux`, `linux-zen` і відповідний
-xanmod на десктопах. Ноутбуки трактуються консервативно. Рівень вище за CPU
-вимагає червоного попередження й введення `I UNDERSTAND`; неінтерактивний
-режим відмовляє. Запущене ядро й fallback-ядро ніколи не видаляються.
+`ramcache` рахує ліміт від `MemAvailable` (типово 50%, до 80%) і прогріває
+page cache через `vmtouch`. Page cache вивільняється системою і не містить
+єдиної копії даних, тому раптове вимкнення не втрачає файли ігор чи програм.
 
-NVIDIA DKMS завжди отримує відповідні headers. Інсталятор друкує команди
-`mkinitcpio`/`grub-mkconfig` і ніколи їх не запускає. `./install.sh --doctor`
-порівнює рівень CPU з рівнем встановленого ядра.
+Профілі браузера окремо обробляє `profile-sync-daemon`: переносить профіль у
+tmpfs, синхронізує при stop і suspend та зберігає crash-recovery бекапи.
+Ризикують лише несинхронізовані записи tmpfs після останнього resync.
+`preload` опційно кешує бінарники.
+
+Модуль ставить `~/.config/dotfiles/ram-cache.conf`,
+`~/.config/psd/psd.conf` і `~/.local/bin/ramcache`. Sysctl ставиться лише
+через:
+
+```bash
+sudo ./install.sh --system --system-components ram
+```
+
+Fstab, sudoers і NOPASSWD не змінюються.
 
 ## Тема
 
@@ -586,9 +619,26 @@ NVIDIA DKMS завжди отримує відповідні headers. Інста
 - Firefox `colors.css`
 
 Комітяться лише `matugen/config.toml` і шаблони в
-`modules/matugen/home/.config/matugen/templates/`. Записи GTK4 `gtk.css`,
-`gtk-dark.css` і `assets` — symlink-и на
-`/usr/share/themes/adw-gtk3-dark/gtk-4.0/`; модуль `theming` їх відтворює.
+`modules/matugen/home/.config/matugen/templates/`. Модуль `theming` рендерить
+GTK3/4, GTK2, xsettingsd, Qt5ct, Qt6ct і kdeglobals з
+`hosts/<host>/appearance.conf`. Шрифти — Inter і `JetBrainsMono Nerd Font`,
+іконки — `breeze-dark`, Qt використовує Fusion, Dolphin читає схему Matugen.
+GTK4 stylesheet явно імпортує `colors.css` і вибрану тему libadwaita.
+
+Portal закріплює Hyprland для screenshot/screencast і GTK для Settings та
+файлових діалогів. `theme-menu` і hook matugen разом оновлюють
+`org.freedesktop.appearance color-scheme` і GTK-тему. Програми, які не можуть
+автоматично слідувати палітрі, перелічені в розділі «Поза єдиною темою»:
+SMath, Steam/Wine та власний chrome Spotify, Obsidian і Vesktop.
+
+### Поза єдиною темою
+
+- SMath: застосунок Java/Mono з власним виглядом; палітри GTK і Qt не читає.
+- Steam і Wine: власні рендерери та ігрові UI.
+- Spotify, Obsidian і Vesktop: кольори з генерованого CSS, але внутрішній
+  chrome і шрифти належать застосунку. Після зміни режиму їх треба перезапустити.
+- `mpv`, `imv`, `swappy` і `fastfetch` поки не мають генерованого конфігу;
+  вони використовують палітру термінала або GTK-тему.
 
 ## Системні конфіги (`--system`)
 
@@ -621,6 +671,7 @@ Drop-in завжди потребує окремого підтвердженн�
 | `system/pihole/pihole.toml.example` | `/etc/pihole/pihole.toml` (лише після огляду) |
 | `system/wait-iface/wait-iface.sh` | `/usr/local/bin/wait-iface.sh` |
 | `system/systemd/...` | `/etc/systemd/system/...` |
+| `system/ram-cache/99-ram-cache.conf` | `/etc/sysctl.d/99-ram-cache.conf` (лише компонент ram) |
 | `system/grub/default-grub` | `/etc/default/grub` (лише nvidia/hybrid; додаткове підтвердження) |
 | `system/mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` (лише nvidia/hybrid; додаткове підтвердження) |
 | `system/modprobe/nvidia.conf` | `/etc/modprobe.d/nvidia.conf` (лише nvidia/hybrid) |
@@ -722,7 +773,7 @@ Pull зворотно рендерить `@HOME@`, `@FIREFOX_PROFILE_DIR@` і `@
 make lint       # bash -n + shellcheck
 make test       # shell-тести; тимчасовий HOME, живі файли не чіпаються
 make audit      # read-only аудит живої системи й репозиторію
-make doctor     # рівень CPU/ядра, курсор, шпалери, керовані symlink-и
+make doctor     # CPU/ядро, вигляд, RAM-кеш, курсор, шпалери, symlink-и
 make check      # lint + test + audit + doctor
 make hooks      # встановити pre-commit hook репозиторію
 ```
@@ -736,7 +787,9 @@ Makefile — інструмент розробника. Користувацьк
 файли `.pacnew`, секрети, згенеровані файли й рівень CPU проти встановленого
 ядра. Він нічого не редагує й не потребує root.
 
-`./install.sh --doctor` — та сама read-only перевірка з доступним `--json`;
+`./install.sh --doctor` — та сама read-only перевірка з доступним `--json`.
+Вона покриває portal color scheme, доступність шрифтів GTK/Qt, імпорт кольорів
+GTK4, portal-бекенди й опційний RAM-кеш (psd, preload, ramcache).
 `./install.sh --dns-check` перевіряє DNS-ланцюжок і попереджає, що конфігурації
 потрібна робоча пара Pi-hole/Unbound, перш ніж `--system` змінить файли
 резолвера.

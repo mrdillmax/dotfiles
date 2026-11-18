@@ -147,7 +147,7 @@ check_aur_helper() {
         ok "AUR helper found"
         return 0
     fi
-    warn "no AUR helper (paru/yay) found; packages from packages/aur.txt will be skipped"
+    warn "no AUR helper (paru/yay) found; AUR packages from the catalog will be skipped"
     warn "install one manually, then rerun the installer"
 }
 

@@ -114,7 +114,7 @@ make lid ACTION=status                 # lid-switch behaviour
 ```
 
 `idle` renders `~/.config/hypr/hypridle.conf` and backs up the previous file.
-`hypridle`/`hyprlock` come from `packages/laptop.txt`, not from `base.txt`.
+`hypridle`/`hyprlock` are optional Session packages; idle and lock also work on desktops.
 `autostart.sh` replaces the static login list in `hyprland.lua`.
 
 ## 4. Monitors and input
@@ -214,7 +214,7 @@ rules; see `system/ufw/README.md` for general guidance.
 The same mode installs a pacman hook that touches
 `/var/lib/dotfiles/pkg-sync.stamp` after a package transaction. Review package
 drift later with `make pkg-sync`; `make pkg-sync ACTION=pull YES=1` only
-appends missing packages to `packages/extra-installed.txt`.
+appends missing packages to `packages/local.tsv`.
 
 ## 7. Theming
 

@@ -33,9 +33,11 @@ Install guide: [docs/arch-install.md](docs/arch-install.md).
 - [GPU profiles](#gpu-profiles)
 - [Monitors](#monitors)
 - [Desktop helpers](#desktop-helpers)
+- [Control center](#control-center)
 - [Mouse and touchpad tuner](#mouse-and-touchpad-tuner)
-- [Application categories](#application-categories)
+- [Package catalog](#package-catalog)
 - [Package drift](#package-drift)
+- [RAM cache](#ram-cache)
 - [Kernel and CPU level](#kernel-and-cpu-level)
 - [Theming](#theming)
 - [System configuration (`--system`)](#system-configuration---system)
@@ -48,9 +50,10 @@ Install guide: [docs/arch-install.md](docs/arch-install.md).
 ## Status
 
 Tested on one desktop: Arch Linux, Hyprland 0.57, NVIDIA GPU. The laptop, AMD,
-Intel, hybrid, `vm` and `software` profiles, and the `lid`, `idle` and
-dock/monitor-profile logic, are covered only by synthetic tests. They have not
-been run on that hardware.
+Intel, hybrid, `vm` and `software` profiles, the `lid` handler and the
+dock/monitor-profile logic are covered only by synthetic tests. They have not
+been run on that hardware. Idle and screen locking are available on desktops
+and are optional.
 
 ## Safety model
 
@@ -76,10 +79,10 @@ been run on that hardware.
 - Arch Linux (or an Arch-based distribution) with `pacman`
 - `git`, `jq`, `bash` 5.x
 - Optional but recommended: `gum` (TUI), `shellcheck` (lint), `yay`/`paru` (AUR)
-- For the laptop tools: `hypridle`, `hyprlock` (both in `packages/laptop.txt`)
+- For idle and screen locking: `hypridle`, `hyprlock` (optional Session packages; desktops use the AC profile)
 - For dock hotplug profiles: `socat`
-- For GPU profiles: the matching driver packages (`packages/nvidia.txt`,
-  Mesa for AMD/Intel, etc.)
+- For GPU profiles: the matching driver packages (the Drivers category in
+  `packages/catalog.tsv`, Mesa for AMD/Intel, etc.)
 
 ## Quick start
 
@@ -150,7 +153,7 @@ is forwarded to `install.sh`.
 │   └── laptop/                battery/brightness/touchpad/lid defaults
 ├── modules/<name>/home/...    files linked or rendered into $HOME
 ├── system/                    opt-in /etc files (--system)
-├── packages/                  package groups + alternatives registry
+├── packages/                  package catalog + local additions
 ├── scripts/                   audit, doctor, sync, pkg-sync, DNS check
 ├── tests/                     shell tests + run.sh local runner
 ├── .github/workflows/ci.yml   lint + tests on an Arch container
@@ -187,12 +190,13 @@ the rest of the installer dependencies exist, so it uses only bash and no
 The menu covers:
 
 - **Installation** — configuration modules, applications, host/GPU profile
-- **Settings** — monitors, mouse/touchpad, cursor, wallpaper/theme, autostart,
-  idle/lid (laptop), game mode, monitor profiles, keybind cheatsheet
 - **System (/etc)** — DNS (Pi-hole/Unbound), zram, cpupower, services,
-  pacman/makepkg, GRUB/mkinitcpio
+  pacman/makepkg, GRUB/mkinitcpio, RAM cache sysctl
 - **Kernel** — CPU-level report and kernel selection
 - **Maintenance** — doctor, DNS check, restore, sync, package drift, hooks
+
+Daily settings live in the rofi control center, not in this menu. Press
+`SUPER + Space` or launch **Control Center** from rofi.
 
 Entries that cannot work on this machine stay visible but greyed, with the
 reason (laptop-only, NVIDIA-only, missing `sudo`). Without a terminal the
@@ -202,9 +206,9 @@ installer keeps the previous non-interactive behaviour.
 
 | Area | Flags |
 |------|-------|
-| Installation | `--all`, `--modules a,b`, `--groups a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu` |
+| Installation | `--all`, `--modules a,b`, `--category a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu`, `--spicetify` |
 | Settings | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
-| System | `--system`, `--system-components a,b`, `--iface`, `--autologin-user` |
+| System | `--system`, `--system-components a,b` (includes `ram`), `--iface`, `--autologin-user` |
 | Kernel | `--kernel`, `--kernel-level v1..v4` |
 | Maintenance | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
 | General | `--dry-run`, `--yes`, `--list`, `--help` |
@@ -212,8 +216,9 @@ installer keeps the previous non-interactive behaviour.
 Every menu entry maps to one of these flags. `tests/menu.sh` and
 `tests/help-flags.sh` fail when the menu and `--help` drift apart.
 
-`--all` means **modules + packages**, not `/etc`. System files are always
-opt-in through `--system`.
+`--all` means **required modules + default packages**, not `/etc`. Optional
+modules such as `idle`, `lid` and `ram-cache` are never selected by `--all`.
+System files are always opt-in through `--system`.
 
 The installer detects the host type from `/sys/class/power_supply/BAT*` and the
 DMI chassis type, and the GPU profile from `lspci`/`systemd-detect-virt`. You
@@ -228,8 +233,8 @@ it, a plain numbered prompt is used.
 | `autostart` | login-application state manager (`autostart.sh`, `SUPER+SHIFT+A` picker) |
 | `binds-cheatsheet` | Hyprland keybind cheatsheet (plain, markdown, JSON, rofi) |
 | `gamemode` | toggle animations, blur, shadows and rounding for gaming |
-| `idle` | hypridle battery/AC profiles and reload helper |
-| `lid` | lid-switch safety handler and hyprlock |
+| `idle` | optional hypridle/hyprlock profiles; AC profile on desktops, battery/AC on laptops |
+| `lid` | lid-switch safety handler (laptop only; requires idle for the lock screen) |
 | `monitor-profiles` | dock/external-display hotplug profiles |
 | `theme-menu` | rofi menu for wallpaper, matugen mode and colour scheme |
 | `uwsm` | `~/.config/uwsm/env` (common + GPU profile) and `env-hyprland` |
@@ -239,11 +244,15 @@ it, a plain numbered prompt is used.
 | `fish` | fish config, aliases and tide plugin list |
 | `dunst` | notification daemon (colors generated by matugen) |
 | `matugen` | templates and `config.toml` (no generated colors) |
-| `theming` | GTK/Qt/KDE settings and the adw-gtk3 symlinks |
+| `theming` | unified GTK/Qt/KDE appearance, fonts, icons and portal settings |
 | `cursor` | cursor theme/size rendered into uwsm, GTK3/4, Qt, xsettingsd and Hyprland |
 | `apps` | btop, micro, spicetify, vesktop, Firefox chrome, dolphinrc |
+| `control-center` | rofi daily settings hub (`SUPER + Space`) |
+| `ram-cache` | optional page-cache warming and browser-profile tmpfs |
 | `workspaces-split` | per-monitor workspace slots; offered only with 2+ monitors |
 | `mouse-sensitivity` | interactive pointer tuner and the input overlay |
+
+Spicetify CLI is installed with `./install.sh --spicetify`, which runs the upstream installer. It is not a pacman package.
 
 ### Host profiles
 
@@ -375,7 +384,17 @@ originals and `off` always restores them.
 
 ### Idle and lock
 
-The `idle` module renders `~/.config/hypr/hypridle.conf` from two profiles:
+The optional `idle` module renders `~/.config/hypr/hypridle.conf` and installs
+`hyprlock.conf`. It works on desktops and laptops; a desktop with no battery
+uses the AC profile. It is excluded from `--all`, so install it explicitly:
+
+```bash
+./install.sh --modules idle
+./install.sh --idle status
+~/.local/bin/idle-tune.sh apply --profile battery
+./install.sh --idle configure              # prompts for all eight values
+./install.sh --idle watch                  # re-apply on AC/battery changes
+```
 
 | Profile | Dim | Lock | Screen off | Suspend |
 |---------|-----|------|------------|---------|
@@ -383,17 +402,9 @@ The `idle` module renders `~/.config/hypr/hypridle.conf` from two profiles:
 | AC | 300 | 600 | 660 | 1800 |
 
 `0` disables a stage; enabled stages must satisfy `dim < lock <= off < suspend`.
-Settings live in `~/.local/state/dotfiles/idle.conf`.
-
-```bash
-./install.sh --idle status
-~/.local/bin/idle-tune.sh apply --profile battery
-./install.sh --idle configure              # prompts for all eight values
-./install.sh --idle watch                  # re-apply on AC/battery changes
-```
-
-The previous `hypridle.conf` is backed up before it is replaced. `hypridle` and
-`hyprlock` belong to the laptop package group, not to the base group.
+Settings live in `~/.local/state/dotfiles/idle.conf`. The previous
+`hypridle.conf` is backed up before it is replaced. The `lid` module is laptop
+only and depends on `idle` for the shared lock screen.
 
 ### Lid switch
 
@@ -423,6 +434,32 @@ Entries live in `~/.local/state/dotfiles/autostart.tsv` and are seeded from the
 built-in applications on first use. `hyprland.lua` calls `autostart.sh run`;
 disabling an entry keeps it off at the next login without editing the Lua
 config. `SUPER+SHIFT+A` opens the picker.
+
+## Control center
+
+Daily settings live in the rofi control center, not in `install.sh`.
+
+```bash
+dotfiles-control-center
+```
+
+Press `SUPER + Space` or launch **Control Center** from rofi. Pages cover:
+
+- **Appearance**: wallpapers with magick thumbnails, dark/light/smart mode,
+  matugen colour schemes, fonts/icons/cursor status
+- **Desktop**: monitor status, saved layout, dock preference
+- **Input**: mouse/touchpad tuner, searchable keybind cheatsheet
+- **Session**: autostart, idle, lid, game mode
+- **System**: doctor, DNS check, package drift, sync and restore
+- **Install and update**: opens `install.sh` in kitty
+
+The menu uses the matugen palette (`colors.rasi`), Inter and
+`JetBrainsMono Nerd Font`, with no separate theme to keep in sync. It calls the
+feature helpers directly. `install.sh` stays for installing, updating and rare
+one-shot actions.
+
+The bind is stored in `hosts/<host>/control-center.conf` and rendered into the
+optional `~/.config/hypr/control-center.lua`.
 
 ## Mouse and touchpad tuner
 
@@ -470,95 +507,88 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 
 so a missing file is safe.
 
-## Application categories
+## Package catalog
 
-The picker groups applications by role. Each category starts with its main
-application (this repository contains the config), followed by package-only
-alternatives:
+`packages/catalog.tsv` is the source of truth. Each row carries the package,
+category, role, default flag, host, GPU list and a short description. The
+installer shows category tabs and a checklist inside each category, so you can
+drop one package without editing a list.
 
-- ★ main — config in this repo, preselected
-- ○ alternative — package only, no config
+- ★ main: config in this repo, selected by default
+- ○ alternative: package only, not selected by default
+- • package: regular package
 - ✓ already installed
 
-| Category | Main ★ | Alternatives ○ |
-|----------|--------|----------------|
-| Terminal | **kitty** | foot, alacritty, wezterm, ghostty |
-| Launcher | **rofi** | fuzzel, wofi, anyrun |
-| Status bar | **waybar** | hyprpanel, ags |
-| Notifications | **dunst** | mako, swaync |
-| Browser | **firefox** | chromium, brave-bin, librewolf |
-| File manager | **dolphin** | nautilus, thunar, yazi |
-| Editor | **micro** | neovim, kate |
-| Music | **spotify-launcher** | amberol, elisa |
-| System monitor | **btop** | htop, bottom |
+`--all` installs rows with `default=yes`. The office and engineering suites,
+including EasyEDA, are default. `cuda`, `virtio-win`, `hypridle`, `hyprlock`,
+`profile-sync-daemon`, `vmtouch` and `preload` stay visible but opt-in.
 
-An alternative can be added next to the main application, but the repository
-config always belongs to the main one. Kernels are not part of this picker;
-use the Kernel menu or `--kernel`.
+Categories: System, Desktop, Hyprland, Audio, Network, Development, Gaming,
+Virtualization, Fonts, Drivers, Office, Engineering, Terminal, Launcher, Bar,
+Notifications, Browser, Files, Editor, Music, System Monitor, Session, Media.
 
 Non-interactive selection:
 
 ```bash
-./install.sh --only-packages --groups base,desktop
-./install.sh --only-packages --groups base --apps foot
+./install.sh --only-packages --category Terminal,Office
+./install.sh --only-packages --category Terminal --apps foot
 ./install.sh --only-packages --packages foot,kitty
 ```
 
-Group overview:
-
-| Group | Contents |
-|-------|----------|
-| `base.txt` | boot, storage, CLI tools, fonts-independent basics |
-| `hyprland.txt` | compositor, portals, Wayland utilities, theming |
-| `shell.txt` | fish + fisher |
-| `audio.txt` | PipeWire, Carla, Guitarix, REAPER |
-| `desktop.txt` | everyday GUI applications |
-| `media.txt` | image/thumbnail CLI tools |
-| `dev.txt` | compilers, SDKs, editors |
-| `network.txt` | NetworkManager, Pi-hole, Unbound, rclone, ZeroTier |
-| `virtualization.txt` | Docker, libvirt/QEMU, Steam, Wine, Waydroid |
-| `nvidia.txt` | NVIDIA 580xx stack and monitoring |
-| `tuning.txt` | CPU/IO tuning and stress tools |
-| `fonts.txt` | fonts and Ukrainian language support |
-| `laptop.txt` | hypridle, hyprlock (laptop sessions only) |
-| `aur.txt` | AUR-only packages |
-
-`install.sh --no-packages` skips this step entirely.
+`packages/local.tsv` holds packages added by `pkg-sync pull`. It is part of the
+catalog but not part of the curated defaults.
 
 ### Package drift
 
 ```bash
 ./install.sh --pkg-sync status       # report only
-./install.sh --pkg-sync check        # exit 1 when lists drift
+./install.sh --pkg-sync check        # exit 1 when the catalog drifts
 ./install.sh --pkg-sync pull --dry-run
-./install.sh --pkg-sync pull --yes   # append, never remove
+./install.sh --pkg-sync pull --yes   # append to local.tsv, never remove
 ```
 
-`pkg-sync` compares explicitly installed packages with `packages/*.txt`.
-`pull` only appends installed-but-unlisted packages to
-`packages/extra-installed.txt`; it never removes an entry and never installs
-anything. Host-specific files are compared only on the matching host.
+`pkg-sync` compares explicitly installed packages with the catalog. Optional
+rows are not reported as missing, but an installed optional package counts as
+listed. `pull` only appends installed-but-unlisted packages to
+`packages/local.tsv`; it never removes an entry and never installs anything.
+Host-specific rows are compared only on the matching host.
 
 With `--system`, the repository installs a pacman hook that touches
 `/var/lib/dotfiles/pkg-sync.stamp` after every package transaction. `status`
 warns when the stamp is newer than the last review, so package changes can be
 triaged later instead of during the transaction.
 
-### Kernel and CPU level
+### RAM cache
+
+The optional `ram-cache` module is for desktops with plenty of RAM. It is
+excluded from `--all` and does not appear on laptops or small-RAM hosts.
 
 ```bash
-./install.sh --kernel
+./install.sh --modules ram-cache
+ramcache status
+ramcache warm ~/Games/SomeGame
+ramcache run -- ~/Games/SomeGame/start.sh
 ```
 
-The installer detects the CPU x86-64 level (`v1`..`v4`) and offers kernels at
-or below it: `linux-lts` (fallback), `linux`, `linux-zen`, and a matching
-xanmod level on desktops. Laptops are treated conservatively. An above-CPU
-level requires a red warning and typing `I UNDERSTAND`; non-interactive mode
-refuses it. The running kernel and the fallback kernel are never removed.
+`ramcache` computes its limit from `MemAvailable` (50% by default, configurable
+up to 80%) and uses `vmtouch` to warm the page cache. Page cache is reclaimable
+and holds no unique data, so an unexpected power loss loses no game or
+application files.
 
-NVIDIA DKMS always gets matching headers. The installer prints
-`mkinitcpio`/`grub-mkconfig` commands and never runs them.
-`./install.sh --doctor` compares the CPU level with the installed kernel level.
+Browser profiles are handled separately by `profile-sync-daemon`: it moves the
+profile to tmpfs, syncs on stop and on suspend, and keeps crash-recovery
+backups. Unsynced tmpfs writes since the last resync are the only data at risk.
+`preload` is optional and caches frequently used binaries.
+
+The module installs `~/.config/dotfiles/ram-cache.conf`,
+`~/.config/psd/psd.conf` and `~/.local/bin/ramcache`. The sysctl file is
+installed only with:
+
+```bash
+sudo ./install.sh --system --system-components ram
+```
+
+No fstab entry, no sudoers rule and no NOPASSWD rule is created.
 
 ## Theming
 
@@ -581,9 +611,29 @@ is never committed. The generated files are ignored by git:
 - Firefox `colors.css`
 
 Only `matugen/config.toml` and the templates in
-`modules/matugen/home/.config/matugen/templates/` are tracked. The GTK4
-`gtk.css`, `gtk-dark.css` and `assets` entries are symlinks to
-`/usr/share/themes/adw-gtk3-dark/gtk-4.0/`; the `theming` module recreates them.
+`modules/matugen/home/.config/matugen/templates/` are tracked. The theming
+module renders GTK3/4, GTK2, xsettingsd, Qt5ct, Qt6ct and kdeglobals from
+`hosts/<host>/appearance.conf`. Fonts are Inter and `JetBrainsMono Nerd Font`,
+icons are `breeze-dark`, Qt uses Fusion, and Dolphin reads the Matugen KDE
+scheme. The GTK4 user stylesheet imports `colors.css` and the selected
+libadwaita theme explicitly.
+
+The portal pins Hyprland for screenshots and screencasts and GTK for Settings
+and file dialogs. `theme-menu` and the matugen hook update
+`org.freedesktop.appearance color-scheme` together with the GTK theme. Apps that
+cannot follow the palette automatically are listed in "Outside the unified
+theme": SMath, Steam/Wine, and application-owned chrome inside Spotify, Obsidian
+and Vesktop.
+
+### Outside the unified theme
+
+- SMath: Java/Mono application with its own look; it does not read GTK or Qt palettes.
+- Steam and Wine applications: their own renderers and game UIs.
+- Spotify, Obsidian and Vesktop: colors come from the generated CSS, but the
+  internal chrome and fonts stay application-owned. Restart them after a mode
+  change.
+- `mpv`, `imv`, `swappy` and `fastfetch` have no generated config yet; they use
+  the terminal palette or the GTK theme.
 
 ## System configuration (`--system`)
 
@@ -616,6 +666,7 @@ Manifest:
 | `system/pihole/pihole.toml.example` | `/etc/pihole/pihole.toml` (only after review) |
 | `system/wait-iface/wait-iface.sh` | `/usr/local/bin/wait-iface.sh` |
 | `system/systemd/...` | `/etc/systemd/system/...` |
+| `system/ram-cache/99-ram-cache.conf` | `/etc/sysctl.d/99-ram-cache.conf` (ram component only) |
 | `system/grub/default-grub` | `/etc/default/grub` (nvidia/hybrid only; extra confirmation) |
 | `system/mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` (nvidia/hybrid only; extra confirmation) |
 | `system/modprobe/nvidia.conf` | `/etc/modprobe.d/nvidia.conf` (nvidia/hybrid only) |
@@ -716,7 +767,7 @@ stored under `~/.local/state/dotfiles/sync-backup/<timestamp>/` with a
 make lint       # bash -n + shellcheck
 make test       # shell tests; temporary HOME, live files untouched
 make audit      # read-only live + repository audit
-make doctor     # CPU/kernel level, cursor, wallpaper, managed symlinks
+make doctor     # CPU/kernel, appearance, RAM cache, cursor, wallpaper, symlinks
 make check      # lint + test + audit + doctor
 make hooks      # install the repository pre-commit hook
 ```
@@ -730,7 +781,9 @@ hardcoded home paths, systemd units, Unbound syntax, `.pacnew` files, secrets,
 generated files, and the CPU level versus the installed kernel level. It never
 edits anything and never requires root.
 
-`./install.sh --doctor` is the same read-only check with `--json` available;
+`./install.sh --doctor` is the same read-only check with `--json` available.
+It covers the portal color scheme, GTK/Qt font availability, GTK4 colour import,
+portal backends, and the optional RAM cache (psd, preload, ramcache).
 `./install.sh --dns-check` verifies the DNS chain and warns that a configuration
 needs a working Pi-hole/Unbound pair before `--system` changes resolver files.
 
