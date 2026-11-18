@@ -60,6 +60,9 @@ AUTOSTART_ACTION=""
 GAMEMODE_ACTION=""
 IDLE_ACTION=""
 LID_ACTION=""
+BINDS_MODE=""
+MONITOR_PROFILES_ACTION=""
+PKG_SYNC_ACTION=""
 SYSTEM_COMPONENTS_ARG=""
 HAS_ACTION=0
 
@@ -122,6 +125,9 @@ Settings:
   --gamemode ACTION     on|off|toggle|status
   --idle ACTION         apply|set|configure|watch|status
   --lid ACTION          closed|open|status
+  --binds [MODE]        keybind cheatsheet: plain, rofi or json
+  --monitor-profiles ACTION
+                        apply|watch|status
 
 System (/etc, run the write actions with sudo):
   --system              install opt-in /etc files one by one
@@ -145,6 +151,7 @@ Maintenance:
   --sync COMMAND [target]
                         status|diff|pull to copy live changes back, or
                         packages to compare package lists
+  --pkg-sync ACTION     status|check|pull package drift
   --hooks               install the repository pre-commit hook and exit
 
 Other:
@@ -189,6 +196,16 @@ while (($#)); do
         --gamemode)   GAMEMODE_ACTION="${2:?missing value for --gamemode}"; HAS_ACTION=1; shift ;;
         --idle)       IDLE_ACTION="${2:?missing value for --idle}"; HAS_ACTION=1; shift ;;
         --lid)        LID_ACTION="${2:?missing value for --lid}"; HAS_ACTION=1; shift ;;
+        --binds)
+            BINDS_MODE="plain"
+            HAS_ACTION=1
+            if [[ -n ${2:-} && ${2} != -* ]]; then
+                BINDS_MODE="$2"
+                shift
+            fi
+            ;;
+        --monitor-profiles) MONITOR_PROFILES_ACTION="${2:?missing value for --monitor-profiles}"; HAS_ACTION=1; shift ;;
+        --pkg-sync)   PKG_SYNC_ACTION="${2:?missing value for --pkg-sync}"; HAS_ACTION=1; shift ;;
         --system)     DO_SYSTEM=1; HAS_ACTION=1 ;;
         --system-components) SYSTEM_COMPONENTS_ARG="${2:?missing value for --system-components}"; shift ;;
         --iface)      IFACE_ARG="${2:?missing value for --iface}"; shift ;;
@@ -345,6 +362,30 @@ if (( DO_HOOKS )); then
     hook_args=()
     (( DRY_RUN )) && hook_args+=(--dry-run)
     exec bash "$DOTFILES_DIR/scripts/install-hooks.sh" "${hook_args[@]}"
+fi
+
+if [[ -n $BINDS_MODE ]]; then
+    binds_args=()
+    case "$BINDS_MODE" in
+        plain) ;;
+        rofi)  binds_args+=(--rofi) ;;
+        json)  binds_args+=(--json) ;;
+        *)     die "unknown binds mode: $BINDS_MODE (plain, rofi, json)" ;;
+    esac
+    exec bash "$DOTFILES_DIR/modules/binds-cheatsheet/home/.local/bin/binds-cheatsheet.sh" "${binds_args[@]}"
+fi
+
+if [[ -n $MONITOR_PROFILES_ACTION ]]; then
+    profiles_args=("$MONITOR_PROFILES_ACTION")
+    (( DRY_RUN )) && profiles_args+=(--dry-run)
+    exec bash "$DOTFILES_DIR/modules/monitor-profiles/home/.local/bin/monitor-profiles.sh" "${profiles_args[@]}"
+fi
+
+if [[ -n $PKG_SYNC_ACTION ]]; then
+    pkg_sync_args=("$PKG_SYNC_ACTION")
+    (( DRY_RUN )) && pkg_sync_args+=(--dry-run)
+    (( ASSUME_YES )) && pkg_sync_args+=(--yes)
+    exec bash "$DOTFILES_DIR/scripts/pkg-sync.sh" "${pkg_sync_args[@]}"
 fi
 
 if (( DO_THEME )); then

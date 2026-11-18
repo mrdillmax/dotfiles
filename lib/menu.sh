@@ -31,6 +31,12 @@ declare -gA MENU_FLAG=(
     [gamemode-on]="--gamemode"
     [gamemode-off]="--gamemode"
     [gamemode-toggle]="--gamemode"
+    [binds-plain]="--binds"
+    [binds-rofi]="--binds"
+    [binds-json]="--binds"
+    [profiles-status]="--monitor-profiles"
+    [profiles-apply]="--monitor-profiles"
+    [profiles-watch]="--monitor-profiles"
     [system-all]="--system"
     [system-dns]="--system --system-components"
     [system-zram]="--system --system-components"
@@ -48,6 +54,9 @@ declare -gA MENU_FLAG=(
     [sync-diff]="--sync"
     [sync-pull]="--sync"
     [sync-packages]="--sync"
+    [pkg-sync-status]="--pkg-sync"
+    [pkg-sync-check]="--pkg-sync"
+    [pkg-sync-pull]="--pkg-sync"
     [hooks]="--hooks"
     [dryrun]="--dry-run"
 )
@@ -100,6 +109,9 @@ menu_title_for() {
         gamemode)    printf 'Game mode' ;;
         restore)     printf 'Restore a backup' ;;
         sync)        printf 'Sync live changes' ;;
+        binds)       printf 'Keybind cheatsheet' ;;
+        profiles)    printf 'Monitor profiles' ;;
+        pkg-sync)    printf 'Package drift' ;;
         *)           printf '%s' "$1" ;;
     esac
 }
@@ -134,7 +146,9 @@ menu_items_for() {
                 'autostart|Autostart|manage applications started at login' \
                 'menu:idle|Idle and lock|laptop power profiles' \
                 'menu:lid|Lid switch|actions when the lid closes or opens' \
-                'menu:gamemode|Game mode|on, off, toggle or status'
+                'menu:gamemode|Game mode|on, off, toggle or status' \
+                'menu:profiles|Monitor profiles|apply, watch or status' \
+                'menu:binds|Keybind cheatsheet|plain table, rofi menu or JSON'
             ;;
         system)
             printf '%s\n' \
@@ -157,6 +171,7 @@ menu_items_for() {
                 'dns-check|DNS check|resolv.conf -> Pi-hole -> unbound' \
                 'menu:restore|Restore|list backups and restore one' \
                 'menu:sync|Sync|status, diff, pull or packages' \
+                'menu:pkg-sync|Package drift|compare installed packages with the lists' \
                 'hooks|Git hooks|install the repository pre-commit hook'
             ;;
         theme)
@@ -196,6 +211,24 @@ menu_items_for() {
                 'sync-diff|Diff|unified diffs for those files' \
                 'sync-pull|Pull|copy live changes back after confirmation' \
                 'sync-packages|Packages|compare installed packages with packages/*.txt'
+            ;;
+        binds)
+            printf '%s\n' \
+                'binds-plain|Plain table|aligned cheatsheet in the terminal' \
+                'binds-rofi|Rofi menu|searchable keybind menu' \
+                'binds-json|JSON|machine-readable output'
+            ;;
+        profiles)
+            printf '%s\n' \
+                'profiles-status|Status|configured layout and detected monitors' \
+                'profiles-apply|Apply|apply the configured layout once' \
+                'profiles-watch|Watch|apply on hotplug events'
+            ;;
+        pkg-sync)
+            printf '%s\n' \
+                'pkg-sync-status|Status|report drift' \
+                'pkg-sync-check|Check|exit non-zero when lists drift' \
+                'pkg-sync-pull|Pull|append installed-but-unlisted packages'
             ;;
     esac
 }
@@ -362,6 +395,15 @@ menu_action() {
         sync-diff)        menu_run --sync diff ;;
         sync-pull)        menu_run --sync pull ;;
         sync-packages)    menu_run --sync packages ;;
+        pkg-sync-status)  menu_run --pkg-sync status ;;
+        pkg-sync-check)   menu_run --pkg-sync check ;;
+        pkg-sync-pull)    menu_run --pkg-sync pull ;;
+        binds-plain)      menu_run --binds plain ;;
+        binds-rofi)       menu_run --binds rofi ;;
+        binds-json)       menu_run --binds json ;;
+        profiles-status)  menu_run --monitor-profiles status ;;
+        profiles-apply)   menu_run --monitor-profiles apply ;;
+        profiles-watch)   menu_run --monitor-profiles watch ;;
         hooks)            menu_run --hooks ;;
         *)                warn "no action for menu item: $1" ;;
     esac
@@ -419,5 +461,5 @@ menu_flag_map() {
 }
 
 menu_menu_names() {
-    printf '%s\n' main install settings system kernel maintenance theme idle lid gamemode restore sync
+    printf '%s\n' main install settings system kernel maintenance theme idle lid gamemode restore sync binds profiles pkg-sync
 }
