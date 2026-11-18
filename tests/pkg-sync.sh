@@ -49,6 +49,11 @@ case "${1:-}" in
 esac
 EOF
 chmod 0755 "$bin/pacman"
+cat >"$bin/spicetify" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+chmod 0755 "$bin/spicetify"
 
 local_file="$repo/packages/local.tsv"
 
@@ -72,6 +77,7 @@ desktop-pkg	Desktop	pkg	yes	desktop	any	desktop package
 laptop-pkg	Session	pkg	yes	laptop	any	laptop package
 alt-pkg	Terminal	alt	no	any	any	alternative package
 optional-pkg	System	pkg	no	any	any	optional package
+spicetify-cli	Music	main	yes	any	any	spicetify script
 EOF
 }
 

@@ -163,6 +163,9 @@ compare() {
     done
 
     for pkg in "${required[@]}"; do
+        if [[ $pkg == spicetify-cli ]] && command -v spicetify >/dev/null 2>&1; then
+            continue
+        fi
         if [[ -z ${PRESENT[$pkg]:-} ]]; then
             # A group name (for example base-devel) is satisfied when every
             # member is installed.
