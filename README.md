@@ -632,8 +632,8 @@ and Vesktop.
 - Spotify, Obsidian and Vesktop: colors come from the generated CSS, but the
   internal chrome and fonts stay application-owned. Restart them after a mode
   change.
-- `mpv`, `imv`, `swappy` and `fastfetch` have no generated config yet; they use
-  the terminal palette or the GTK theme.
+- `imv`, `swappy` and `fastfetch` have no generated config yet; they use the
+  GTK theme or the terminal palette.
 
 ## System configuration (`--system`)
 
