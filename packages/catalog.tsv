@@ -67,18 +67,18 @@ zoxide	System	pkg	yes	any	any	A smarter cd command for your terminal
 zram-generator	System	pkg	yes	any	any	Systemd unit generator for zram devices
 ark	Desktop	pkg	yes	desktop	any	Archiving Tool
 audacity	Desktop	pkg	no	desktop	any	A program that lets you manipulate digital audio waveforms
-ayugram-desktop-bin	Desktop	pkg	no	desktop	any	Desktop Telegram client with good customization and Ghost mode
+ayugram-desktop-bin	Desktop	main	yes	any	any	Desktop Telegram client with good customization and Ghost mode
 cadcraft-bin	Desktop	pkg	no	any	any	Open-source CAD and drafting app
 cpu-x	Desktop	pkg	yes	desktop	any	A Free software that gathers information on CPU, motherboard and more
 cups-pdf	Desktop	pkg	yes	desktop	any	PDF printer for cups
 darktable	Desktop	pkg	no	desktop	any	Utility to organize and develop raw images
-deckcraft-bin	Desktop	pkg	no	any	any	Open-source presentation app
+deckcraft-bin	Desktop	alt	no	any	any	Open-source presentation app
 dupeguru	Desktop	pkg	no	desktop	any	Find duplicate files with various contents, using perceptual diff for pictures
 fbida	Desktop	pkg	yes	desktop	any	Few applications to display and elementary edit images: fbi, fbgs, ida, exiftran
 filezilla	Desktop	pkg	no	desktop	any	Fast and reliable FTP, FTPS and SFTP client
 firefox-i18n-uk	Desktop	pkg	no	desktop	any	Ukrainian language pack for Firefox
 gimp	Desktop	pkg	yes	desktop	any	GNU Image Manipulation Program
-gridcraft-bin	Desktop	pkg	no	any	any	Open-source spreadsheet app
+gridcraft-bin	Desktop	alt	no	any	any	Open-source spreadsheet app
 gsmartcontrol	Desktop	pkg	yes	desktop	any	A graphical user interface for the smartctl hard disk drive health inspection tool.
 gvfs	Desktop	pkg	yes	desktop	any	Virtual filesystem implementation for GIO
 gvfs-mtp	Desktop	pkg	yes	desktop	any	Virtual filesystem implementation for GIO - MTP backend (Android, media player)
@@ -107,7 +107,7 @@ telegram-desktop	Desktop	alt	no	any	any	Official Telegram desktop client
 tumbler	Desktop	pkg	yes	desktop	any	Thumbnail service implementing the thumbnail management D-Bus specification
 udisks2	Desktop	pkg	yes	desktop	any	Daemon, tools and libraries to access and manipulate disks, storage devices and technologies
 vesktop-bin	Desktop	pkg	yes	desktop	any	A cross platform electron-based desktop app aiming to give you a snappier Discord experience with Vencord pre-installed.
-wordcraft-bin	Desktop	pkg	no	any	any	Open-source word processor
+wordcraft-bin	Desktop	alt	no	any	any	Open-source word processor
 zoom	Desktop	pkg	no	desktop	any	Video Conferencing and Web Conferencing Service
 adw-gtk-theme	Hyprland	pkg	yes	any	any	Unofficial GTK 3 port of the libadwaita theme
 awww	Hyprland	pkg	yes	any	any	An Answer to your Wayland Wallpaper Woes
@@ -151,9 +151,9 @@ realtime-privileges	Audio	pkg	yes	any	any	Realtime privileges for users
 reaper	Audio	pkg	no	any	any	A complete digital audio production application for computers
 rtkit	Audio	pkg	yes	any	any	Realtime Policy and Watchdog Daemon
 networkmanager	Network	pkg	yes	any	any	Network connection manager and user applications
-pi-hole-core	Network	pkg	no	any	any	The Pi-hole is an advertising-aware DNS/Web server. Arch adaptation for lan wide DNS server.
-pi-hole-ftl-bin	Network	pkg	no	any	any	The Pi-hole FTL engine
-rclone	Network	pkg	yes	any	any	rsync for cloud storage
+pi-hole-core	Network	main	yes	any	any	The Pi-hole is an advertising-aware DNS/Web server. Arch adaptation for lan wide DNS server.
+pi-hole-ftl-bin	Network	main	yes	any	any	The Pi-hole FTL engine
+rclone	Network	pkg	no	any	any	rsync for cloud storage
 rclone-browser	Network	pkg	no	any	any	Simple cross-platform GUI for rclone
 sshfs	Network	pkg	no	any	any	FUSE client based on the SSH File Transfer Protocol
 syncthing	Network	pkg	yes	any	any	Open Source Continuous Replication / Cluster Synchronization Thing
@@ -171,7 +171,7 @@ jdk17-openjdk	Development	pkg	no	any	any	OpenJDK Java 17 development kit
 lld	Development	pkg	yes	any	any	Linker from the LLVM project
 llvm	Development	pkg	yes	any	any	Compiler infrastructure
 npm	Development	pkg	yes	any	any	JavaScript package manager
-opencode	Development	pkg	yes	any	any	The open source coding agent
+opencode	Development	pkg	no	any	any	The open source coding agent
 rustup	Development	pkg	yes	any	any	The Rust toolchain installer
 uv	Development	pkg	yes	any	any	An extremely fast Python package installer and resolver written in Rust
 gamemode	Games	pkg	yes	any	any	A daemon/lib combo that allows games to request a set of optimisations be temporarily applied to the host OS
@@ -195,7 +195,7 @@ libvirt	Virtualization	pkg	yes	any	any	API for controlling virtualization engine
 qemu-base	Virtualization	pkg	yes	any	any	A basic QEMU setup for headless environments
 qemu-desktop	Virtualization	pkg	yes	any	any	A QEMU setup for desktop environments
 swtpm	Virtualization	pkg	yes	any	any	Libtpms-based TPM emulator with socket, character device, and Linux CUSE interface
-ventoy-bin	Virtualization	pkg	yes	any	any	A new bootable USB solution
+ventoy-bin	Virtualization	pkg	no	any	any	A new bootable USB solution
 virt-manager	Virtualization	pkg	yes	any	any	Desktop user interface for managing virtual machines
 virtio-win	Virtualization	pkg	no	any	any	VirtIO drivers for Windows guests
 virtualbox	Virtualization	pkg	no	any	any	Powerful x86 virtualization for enterprise as well as home use
