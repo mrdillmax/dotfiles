@@ -218,8 +218,8 @@ Every menu entry maps to one of these flags. `tests/menu.sh` and
 
 `--all` means **modules + default packages**, not `/etc`. Every module is
 selected by default except `ram-cache` and `workspaces-split`; `lid` is skipped
-on desktops. `idle` installs its packages but starts disabled until you enable
-it. System files are always opt-in through `--system`.
+on desktops and `idle` is enabled when installed. System files are always opt-in
+through `--system`.
 
 The installer detects the host type from `/sys/class/power_supply/BAT*` and the
 DMI chassis type, and the GPU profile from `lspci`/`systemd-detect-virt`. You
@@ -234,7 +234,7 @@ it, a plain numbered prompt is used.
 | `autostart` | login-application state manager (`autostart.sh`, `SUPER+SHIFT+A` picker) |
 | `binds-cheatsheet` | Hyprland keybind cheatsheet (plain, markdown, JSON, rofi) |
 | `gamemode` | toggle animations, blur, shadows and rounding for gaming |
-| `idle` | hypridle/hyprlock profiles; AC on desktops, battery/AC on laptops; disabled until enabled |
+| `idle` | hypridle/hyprlock profiles; AC on desktops, battery/AC on laptops |
 | `lid` | lid-switch safety handler (laptop only; requires idle for the lock screen) |
 | `monitor-profiles` | dock/external-display hotplug profiles |
 | `theme-menu` | rofi menu for wallpaper, matugen mode and colour scheme |
@@ -407,12 +407,10 @@ originals and `off` always restores them.
 
 The `idle` module renders `~/.config/hypr/hypridle.conf` and installs
 `hyprlock.conf`. It works on desktops and laptops; a desktop with no battery
-uses the AC profile. The module is selected by default, but idle starts
-disabled so it does not surprise you at login:
+uses the AC profile. The module is selected by default and idle starts enabled:
 
 ```bash
 ./install.sh --modules idle
-./install.sh --idle enable                 # start hypridle and keep it on
 ./install.sh --idle status
 ~/.local/bin/idle-tune.sh apply --profile battery
 ./install.sh --idle configure              # prompts for all eight values
