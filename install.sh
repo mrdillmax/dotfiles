@@ -125,7 +125,7 @@ Settings:
   --spicetify           install the Spicetify CLI from the upstream script
   --autostart ACTION    list|enable|disable|toggle|add|remove|reset|run|pick
   --gamemode ACTION     on|off|toggle|status
-  --idle ACTION         apply|set|configure|watch|status
+  --idle ACTION         apply|set|configure|watch|status|enable|disable|toggle|run
   --lid ACTION          closed|open|status
   --binds [MODE]        keybind cheatsheet: plain, rofi or json
   --monitor-profiles ACTION
@@ -356,6 +356,88 @@ if (( LIST_ONLY )); then
     exit 0
 fi
 
+MODULES=()
+
+load_module_conf() {
+    DESCRIPTION=""
+    PACKAGES=()
+    SERVICES=()
+    REQUIRES=()
+    SYMLINKS=()
+    # shellcheck source=/dev/null
+    source "$1"
+}
+
+module_list() {
+    local dir
+    for dir in "$DOTFILES_DIR"/modules/*/; do
+        [[ -r $dir/module.conf ]] || continue
+        basename "$dir"
+    done
+}
+
+monitor_count() {
+    detect_monitors | wc -l
+}
+
+select_modules() {
+    local required=() labels=() required_labels=()
+    local dir name desc count monitors optional label
+    monitors="$(monitor_count)"
+
+    for dir in "$DOTFILES_DIR"/modules/*/; do
+        name="$(basename "$dir")"
+        [[ -r $dir/module.conf ]] || continue
+        [[ $name == lid && ${HOST_NAME:-} != laptop ]] && continue
+        if [[ $name == ram-cache ]]; then
+            local mem_gib
+            mem_gib="$(awk '/^MemTotal:/{print int($2 / 1048576)}' /proc/meminfo 2>/dev/null || printf '0')"
+            if [[ ${HOST_NAME:-} == laptop ]] || (( mem_gib < 16 )); then
+                info "ram-cache skipped: laptop host or less than 16 GiB RAM"
+                continue
+            fi
+        fi
+        if [[ $name == workspaces-split ]] && (( monitors < 2 )); then
+            continue
+        fi
+        load_module_conf "$dir/module.conf"
+        count="${#PACKAGES[@]}"
+        optional=0
+        case "$name" in
+            idle|lid|ram-cache) optional=1 ;;
+        esac
+        label="$name — ${DESCRIPTION:-} (${count} pkgs)"
+        ((optional)) && label+=" [optional]"
+        labels+=("$label")
+        if ((!optional)); then
+            required+=("$name")
+            required_labels+=("$label")
+        fi
+    done
+
+    if [[ -n $MODULES_ARG ]]; then
+        IFS=',' read -r -a MODULES <<<"$MODULES_ARG"
+        return 0
+    fi
+
+    if (( ALL )); then
+        MODULES=("${required[@]}")
+        return 0
+    fi
+
+    if (( !ASSUME_YES )) && [[ -t 0 ]]; then
+        TUI_CHECKED_ITEMS=("${required_labels[@]}")
+        tui_checklist "Modules to install" "${labels[@]}"
+        local line
+        for line in "${TUI_SELECTION[@]}"; do
+            MODULES+=("${line%% — *}")
+        done
+    else
+        MODULES=("${required[@]}")
+    fi
+}
+
+
 if (( DO_JSON && !DO_DOCTOR && !DO_DNS_CHECK )); then
     die "--json requires --doctor or --dns-check"
 fi
@@ -512,87 +594,6 @@ if (( !ASSUME_YES )) && [[ -t 0 ]]; then
     fi
     info "selected host: $HOST_NAME   gpu: $GPU_PROFILE"
 fi
-
-MODULES=()
-
-load_module_conf() {
-    DESCRIPTION=""
-    PACKAGES=()
-    SERVICES=()
-    REQUIRES=()
-    SYMLINKS=()
-    # shellcheck source=/dev/null
-    source "$1"
-}
-
-module_list() {
-    local dir
-    for dir in "$DOTFILES_DIR"/modules/*/; do
-        [[ -r $dir/module.conf ]] || continue
-        basename "$dir"
-    done
-}
-
-monitor_count() {
-    detect_monitors | wc -l
-}
-
-select_modules() {
-    local required=() labels=() required_labels=()
-    local dir name desc count monitors optional label
-    monitors="$(monitor_count)"
-
-    for dir in "$DOTFILES_DIR"/modules/*/; do
-        name="$(basename "$dir")"
-        [[ -r $dir/module.conf ]] || continue
-        [[ $name == lid && ${HOST_NAME:-} != laptop ]] && continue
-        if [[ $name == ram-cache ]]; then
-            local mem_gib
-            mem_gib="$(awk '/^MemTotal:/{print int($2 / 1048576)}' /proc/meminfo 2>/dev/null || printf '0')"
-            if [[ ${HOST_NAME:-} == laptop ]] || (( mem_gib < 16 )); then
-                info "ram-cache skipped: laptop host or less than 16 GiB RAM"
-                continue
-            fi
-        fi
-        if [[ $name == workspaces-split ]] && (( monitors < 2 )); then
-            continue
-        fi
-        load_module_conf "$dir/module.conf"
-        count="${#PACKAGES[@]}"
-        optional=0
-        case "$name" in
-            idle|lid|ram-cache) optional=1 ;;
-        esac
-        label="$name — ${DESCRIPTION:-} (${count} pkgs)"
-        ((optional)) && label+=" [optional]"
-        labels+=("$label")
-        if ((!optional)); then
-            required+=("$name")
-            required_labels+=("$label")
-        fi
-    done
-
-    if [[ -n $MODULES_ARG ]]; then
-        IFS=',' read -r -a MODULES <<<"$MODULES_ARG"
-        return 0
-    fi
-
-    if (( ALL )); then
-        MODULES=("${required[@]}")
-        return 0
-    fi
-
-    if (( !ASSUME_YES )) && [[ -t 0 ]]; then
-        TUI_CHECKED_ITEMS=("${required_labels[@]}")
-        tui_checklist "Modules to install" "${labels[@]}"
-        local line
-        for line in "${TUI_SELECTION[@]}"; do
-            MODULES+=("${line%% — *}")
-        done
-    else
-        MODULES=("${required[@]}")
-    fi
-}
 
 firefox_profile_dir() {
     local candidate

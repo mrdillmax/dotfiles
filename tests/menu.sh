@@ -59,6 +59,15 @@ source "$ROOT/lib/theme.sh"
 # shellcheck source=lib/menu.sh
 source "$ROOT/lib/menu.sh"
 
+# 0. Module selection is defined before the menu can call it.
+module_line="$(grep -n '^select_modules()' "$ROOT/install.sh" | cut -d: -f1)"
+menu_line="$(grep -n '^if menu_should_run' "$ROOT/install.sh" | cut -d: -f1)"
+if [[ -n $module_line && -n $menu_line ]] && ((module_line < menu_line)); then
+    pass "select_modules is defined before the menu opens"
+else
+    fail "select_modules is defined after the menu opens"
+fi
+
 # 1. Every actionable menu entry has a flag.
 missing=()
 for menu in $(menu_menu_names); do
