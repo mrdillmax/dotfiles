@@ -1,0 +1,423 @@
+#!/usr/bin/env bash
+# Rofi control center for the daily settings.
+#
+# Installation and updates stay in install.sh. This menu calls the small
+# per-feature helpers directly, so changing a setting does not run the
+# installer.
+set -uo pipefail
+
+REAL_HOME="${HOME:?HOME is not set}"
+THEME="$REAL_HOME/.config/rofi/control-center.rasi"
+CACHE_DIR="${XDG_CACHE_HOME:-$REAL_HOME/.cache}/dotfiles/wallpaper-thumbs"
+
+# Resolve the repository through the installed symlink. A copy without the
+# repository loses only the installer shortcuts.
+SELF="$(readlink -f -- "${BASH_SOURCE[0]}")"
+ROOT="$(cd -- "$(dirname -- "$SELF")/../../../../.." 2>/dev/null && pwd || true)"
+if [[ -z $ROOT || ! -x $ROOT/install.sh ]]; then
+    ROOT=""
+fi
+
+die() { printf 'control-center: %s\n' "$*" >&2; exit 1; }
+
+have() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+notify() {
+    local message="$1"
+    if have dunstify; then
+        dunstify -a "Control Center" "$message" >/dev/null 2>&1 || true
+    elif have notify-send; then
+        notify-send "Control Center" "$message" >/dev/null 2>&1 || true
+    else
+        printf '%s\n' "$message"
+    fi
+}
+
+rofi_pick() {
+    local prompt="$1"
+    shift
+    local -a args=(-dmenu -i -p "$prompt" -no-custom)
+    [[ -r $THEME ]] && args+=(-theme "$THEME")
+    rofi "${args[@]}" "$@"
+}
+
+message() {
+    local text="$1"
+    if have rofi; then
+        rofi -e "$text"
+    else
+        printf '%s\n' "$text"
+    fi
+}
+
+run_terminal() {
+    local command="$1"
+    local workdir="${ROOT:-$REAL_HOME}"
+    if have kitty; then
+        kitty --hold --class dotfiles-control-center \
+            -e bash -lc "cd $(printf '%q' "$workdir") && $command"
+    elif have x-terminal-emulator; then
+        x-terminal-emulator -e bash -lc "cd $(printf '%q' "$workdir") && $command"
+    else
+        notify "No terminal found for: $command"
+    fi
+}
+
+run_and_notify() {
+    local label="$1"
+    shift
+    if "$@" >/dev/null 2>&1; then
+        notify "$label"
+    else
+        notify "$label failed"
+    fi
+}
+
+require_helper() {
+    local helper="$1"
+    if ! have "$helper"; then
+        message "$helper is not installed. Install the matching module first."
+        return 1
+    fi
+    return 0
+}
+
+wallpaper_apply() {
+    local path="$1"
+    if require_helper theme-menu.sh; then
+        if theme-menu.sh --wallpaper "$path" --apply >/dev/null 2>&1; then
+            notify "Wallpaper applied: $(basename "$path")"
+        else
+            notify "Wallpaper could not be applied"
+        fi
+    fi
+}
+
+wallpaper_page() {
+    local -a dirs=(
+        "$REAL_HOME/.local/share/wallpapers"
+        "$REAL_HOME/Pictures"
+        "$REAL_HOME/Картинки"
+        "$REAL_HOME/Изображения"
+    )
+    local dir current image label thumb selected path
+    local -a images=() labels=()
+    local -A paths=()
+    local index=0
+
+    for dir in "${dirs[@]}"; do
+        [[ -d $dir ]] || continue
+        while IFS= read -r image; do
+            images+=("$image")
+        done < <(find "$dir" -maxdepth 2 -type f \
+            \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \
+               -o -iname '*.webp' -o -iname '*.avif' \) 2>/dev/null | sort)
+    done
+
+    if ((${#images[@]} == 0)); then
+        message "No wallpapers found in ~/.local/share/wallpapers or ~/Pictures."
+        return 0
+    fi
+
+    current=""
+    [[ -r $REAL_HOME/.config/hypr/wallpaper.path ]] \
+        && current="$(<"$REAL_HOME/.config/hypr/wallpaper.path")"
+
+    mkdir -p -- "$CACHE_DIR" 2>/dev/null || true
+    for image in "${images[@]}"; do
+        label="$(basename "$image")"
+        ((index++))
+        [[ $image == "$current" ]] && label+=" (current)"
+        if [[ -n ${paths[$label]:-} ]]; then
+            label+=" ($index)"
+        fi
+        paths["$label"]="$image"
+        labels+=("$label")
+    done
+
+    # Rofi row options: NUL, key, unit separator, value. The icon is a real
+    # thumbnail, so the list shows the wallpaper before it is applied.
+    local row
+    for row in "${labels[@]}"; do
+        image="${paths[$row]}"
+        thumb="$CACHE_DIR/$(printf '%s' "$image" | sha1sum | cut -c1-12).png"
+        if [[ ! -r $thumb || $image -nt $thumb ]]; then
+            if have magick; then
+                magick "$image" -auto-orient -thumbnail '320x180^' \
+                    -gravity center -extent 320x180 "$thumb" >/dev/null 2>&1 || thumb="$image"
+            else
+                thumb="$image"
+            fi
+        fi
+        printf '%s\0icon\x1f%s\n' "$row" "$thumb"
+    done >"$CACHE_DIR/rows"
+
+    selected="$(rofi_pick "Wallpaper" -show-icons <"$CACHE_DIR/rows")" || return 0
+    [[ -n ${paths[$selected]:-} ]] || return 0
+    wallpaper_apply "${paths[$selected]}"
+}
+
+theme_mode_page() {
+    local choice
+    choice="$(printf '%s\n' Dark Light Smart Back | rofi_pick "Theme mode")" || return 0
+    case "$choice" in
+        Dark)  run_and_notify "Dark theme applied" theme-menu.sh --mode dark --apply ;;
+        Light) run_and_notify "Light theme applied" theme-menu.sh --mode light --apply ;;
+        Smart) run_and_notify "Smart theme applied" theme-menu.sh --mode smart --apply ;;
+        Back|"") ;;
+    esac
+}
+
+theme_scheme_page() {
+    local -a types=()
+    local choice
+    mapfile -t types < <(theme-menu.sh --list-types 2>/dev/null)
+    ((${#types[@]})) || { message "theme-menu.sh is not installed."; return 0; }
+    choice="$(printf '%s\n' "${types[@]}" Back | rofi_pick "Color scheme")" || return 0
+    [[ -z $choice || $choice == Back ]] && return 0
+    run_and_notify "Color scheme applied" theme-menu.sh --type "$choice" --apply
+}
+
+appearance_status() {
+    local gtk icon font cursor scheme
+    gtk="$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null || printf 'unknown')"
+    icon="$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null || printf 'unknown')"
+    font="$(gsettings get org.gnome.desktop.interface font-name 2>/dev/null || printf 'unknown')"
+    cursor="$(gsettings get org.gnome.desktop.interface cursor-theme 2>/dev/null || printf 'unknown')"
+    scheme="$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || printf 'unknown')"
+    message "GTK: ${gtk}
+
+Icons: ${icon}
+Font: ${font}
+Cursor: ${cursor}
+Color scheme: ${scheme}"
+}
+
+appearance_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Wallpaper — choose with thumbnails" \
+            "Theme mode — dark, light or smart" \
+            "Color scheme — matugen palette" \
+            "Appearance status — fonts, icons, cursor" \
+            "Back" | rofi_pick "Appearance")" || return 0
+        case "$choice" in
+            Wallpaper*) wallpaper_page ;;
+            "Theme mode"*) theme_mode_page ;;
+            "Color scheme"*) theme_scheme_page ;;
+            "Appearance status"*) appearance_status ;;
+            Back|"") return 0 ;;
+        esac
+    done
+}
+
+desktop_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Monitors — status" \
+            "Monitors — apply the saved layout" \
+            "Dock layout — right, left, mirror or ask" \
+            "Back" | rofi_pick "Desktop")" || return 0
+        case "$choice" in
+            "Monitors — status")
+                require_helper monitor-profiles.sh && run_terminal "monitor-profiles.sh status"
+                ;;
+            "Monitors — apply"*)
+                require_helper monitor-profiles.sh && run_and_notify "Monitor layout applied" monitor-profiles.sh apply
+                ;;
+            "Dock layout"*)
+                if require_helper monitor-profiles.sh; then
+                    local layout
+                    layout="$(printf '%s\n' right left mirror ask Back | rofi_pick "Dock layout")" || continue
+                    [[ -z $layout || $layout == Back ]] && continue
+                    run_and_notify "Dock layout: $layout" monitor-profiles.sh set-layout "$layout"
+                fi
+                ;;
+            Back|"") return 0 ;;
+        esac
+    done
+}
+
+input_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Mouse and touchpad — live tuner" \
+            "Keybinds — searchable cheatsheet" \
+            "Back" | rofi_pick "Input")" || return 0
+        case "$choice" in
+            "Mouse"*)
+                require_helper mouse-tune.sh && run_terminal "mouse-tune.sh"
+                ;;
+            "Keybinds"*)
+                if require_helper binds-cheatsheet.sh; then
+                    binds-cheatsheet.sh --rofi
+                fi
+                ;;
+            Back|"") return 0 ;;
+        esac
+    done
+}
+
+session_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Autostart — choose login applications" \
+            "Idle — status" \
+            "Idle — apply the current profile" \
+            "Idle — configure timeouts" \
+            "Lid — status" \
+            "Game mode — toggle" \
+            "Game mode — status" \
+            "Back" | rofi_pick "Session")" || return 0
+        case "$choice" in
+            "Autostart"*)
+                require_helper autostart.sh && autostart.sh pick
+                ;;
+            "Idle — status")
+                require_helper idle-tune.sh && run_terminal "idle-tune.sh status"
+                ;;
+            "Idle — apply"*)
+                require_helper idle-tune.sh && run_and_notify "Idle profile applied" idle-tune.sh apply
+                ;;
+            "Idle — configure"*)
+                require_helper idle-tune.sh && run_terminal "idle-tune.sh configure"
+                ;;
+            "Lid — status")
+                require_helper lid-handler.sh && run_terminal "lid-handler.sh status"
+                ;;
+            "Game mode — toggle")
+                require_helper gamemode.sh && run_and_notify "Game mode toggled" gamemode.sh toggle
+                ;;
+            "Game mode — status")
+                require_helper gamemode.sh && run_terminal "gamemode.sh status"
+                ;;
+            Back|"") return 0 ;;
+        esac
+    done
+}
+
+system_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Doctor — read-only health check" \
+            "DNS — check the resolver chain" \
+            "Packages — drift from the catalog" \
+            "RAM cache — status" \
+            "RAM cache — warm configured directories" \
+            "Sync — files that differ from the repository" \
+            "Sync — unified diffs" \
+            "Sync — pull live changes back" \
+            "Restore — list and restore backups" \
+            "Back" | rofi_pick "System")" || return 0
+        case "$choice" in
+            "Doctor"*)
+                [[ -n $ROOT ]] && run_terminal "./install.sh --doctor"
+                ;;
+            "DNS"*)
+                if [[ -n $ROOT ]]; then
+                    run_terminal "./scripts/dns-check.sh"
+                fi
+                ;;
+            "Packages"*)
+                if [[ -n $ROOT ]]; then
+                    run_terminal "./scripts/pkg-sync.sh status"
+                fi
+                ;;
+            "RAM cache — status")
+                require_helper ramcache && run_terminal "ramcache status"
+                ;;
+            "RAM cache — warm"*)
+                require_helper ramcache && run_terminal "ramcache warm"
+                ;;
+            "Sync — files"*)
+                if [[ -n $ROOT ]]; then
+                    run_terminal "./scripts/sync.sh status"
+                fi
+                ;;
+            "Sync — unified"*)
+                if [[ -n $ROOT ]]; then
+                    run_terminal "./scripts/sync.sh diff"
+                fi
+                ;;
+            "Sync — pull"*)
+                if [[ -n $ROOT ]]; then
+                    run_terminal "./scripts/sync.sh pull"
+                fi
+                ;;
+            "Restore"*)
+                [[ -n $ROOT ]] && run_terminal "./install.sh --restore"
+                ;;
+            Back|"") return 0 ;;
+        esac
+    done
+}
+
+install_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Open the installer" \
+            "Update configuration files" \
+            "Back" | rofi_pick "Install and update")" || return 0
+        case "$choice" in
+            "Open the installer")
+                [[ -n $ROOT ]] && run_terminal "./install.sh"
+                ;;
+            "Update configuration"*)
+                [[ -n $ROOT ]] && run_terminal "./install.sh --sync pull"
+                ;;
+            Back|"") return 0 ;;
+        esac
+    done
+}
+
+main_menu() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Appearance — wallpaper, theme, fonts" \
+            "Desktop — monitors and dock" \
+            "Input — mouse and keybinds" \
+            "Session — autostart, idle, game mode" \
+            "System — doctor, DNS, packages, backups" \
+            "Install and update — run install.sh" \
+            "Close" | rofi_pick "Control Center")" || return 0
+        case "$choice" in
+            "Appearance"*) appearance_page ;;
+            "Desktop"*) desktop_page ;;
+            "Input"*) input_page ;;
+            "Session"*) session_page ;;
+            "System"*) system_page ;;
+            "Install"*) install_page ;;
+            Close|"") return 0 ;;
+        esac
+    done
+}
+
+case "${1:-}" in
+    --help|-h)
+        cat <<'EOF'
+Usage: dotfiles-control-center
+
+Opens the rofi control center for daily settings. Installation and updates
+stay in ./install.sh.
+EOF
+        ;;
+    --list-actions)
+        printf '%s\n' Appearance Desktop Input Session System "Install and update"
+        ;;
+    "")
+        have rofi || die "rofi is not installed"
+        main_menu
+        ;;
+    *)
+        die "unknown option: $1 (see --help)"
+        ;;
+esac

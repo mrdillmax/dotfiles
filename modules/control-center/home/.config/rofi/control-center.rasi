@@ -1,0 +1,103 @@
+@import "colors.rasi"
+
+* {
+    font:                       "Inter 11";
+}
+
+window {
+    transparency:               "real";
+    location:                   center;
+    anchor:                     center;
+    fullscreen:                 false;
+    width:                      720px;
+    x-offset:                   0px;
+    y-offset:                   0px;
+    margin:                     0px;
+    padding:                    0px;
+    border:                     2px solid;
+    border-radius:              14px;
+    border-color:               @primary;
+    cursor:                     "default";
+    background-color:           @surface;
+}
+
+mainbox {
+    spacing:                    0px;
+    margin:                     0px;
+    padding:                    0px;
+    border:                     0px solid;
+    background-color:           transparent;
+    children:                   [ "inputbar", "listview" ];
+}
+
+inputbar {
+    spacing:                    10px;
+    margin:                     0px;
+    padding:                    14px 18px;
+    border:                     0px 0px 1px 0px;
+    border-color:               @outline-variant;
+    background-color:           @surface-container-high;
+    text-color:                 @on-surface;
+    children:                   [ "prompt", "entry" ];
+}
+
+prompt {
+    padding:                    0px;
+    background-color:           transparent;
+    text-color:                 @primary;
+    vertical-align:             0.5;
+}
+
+entry {
+    padding:                    0px;
+    background-color:           transparent;
+    text-color:                 @on-surface;
+    cursor:                     text;
+    placeholder:                "Search settings";
+    placeholder-color:          @on-surface-variant;
+    vertical-align:             0.5;
+}
+
+listview {
+    columns:                    1;
+    lines:                      9;
+    cycle:                      true;
+    dynamic:                    true;
+    scrollbar:                  false;
+    layout:                     vertical;
+    fixed-height:               true;
+    fixed-columns:              true;
+    spacing:                    4px;
+    margin:                     0px;
+    padding:                    10px;
+    border:                     0px solid;
+    background-color:           transparent;
+    text-color:                 @on-surface;
+}
+
+element {
+    spacing:                    12px;
+    margin:                     0px;
+    padding:                    10px 14px;
+    border-radius:              10px;
+    background-color:           transparent;
+    text-color:                 @on-surface;
+    cursor:                     pointer;
+}
+
+element normal.normal {
+    background-color:           transparent;
+    text-color:                 @on-surface;
+}
+
+element selected.normal {
+    background-color:           @primary-container;
+    text-color:                 @on-primary-container;
+}
+
+element-icon {
+    background-color:           transparent;
+    text-color:                 inherit;
+    size:                       32px;
+    cursor:                     inherit;
+}

@@ -51,6 +51,9 @@ local procsmng    = "kitty btop"
 
 local mainMod     = "SUPER"
 
+-- Optional: the control-center module renders this bind and its launcher.
+pcall(dofile, HOME .. "/.config/hypr/control-center.lua")
+
 
 
 -------------------

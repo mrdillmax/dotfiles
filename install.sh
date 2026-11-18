@@ -132,7 +132,7 @@ Settings:
 System (/etc, run the write actions with sudo):
   --system              install opt-in /etc files one by one
   --system-components a,b
-                        dns|zram|cpupower|services|pacman|grub
+                        dns|zram|cpupower|services|pacman|grub|ram
                         (default: every component)
   --iface IFACE         network interface for Pi-hole (@IFACE@ rendering)
   --autologin-user USER user for the getty autologin drop-in (with --system)
@@ -257,8 +257,8 @@ if [[ -n $SYSTEM_COMPONENTS_ARG ]]; then
     IFS=',' read -r -a SYSTEM_COMPONENTS <<<"$SYSTEM_COMPONENTS_ARG"
     for component in "${SYSTEM_COMPONENTS[@]}"; do
         case "$component" in
-            dns|zram|cpupower|services|pacman|grub) ;;
-            *) die "unknown system component: $component (dns, zram, cpupower, services, pacman, grub)" ;;
+            dns|zram|cpupower|services|pacman|grub|ram) ;;
+            *) die "unknown system component: $component (dns, zram, cpupower, services, pacman, grub, ram)" ;;
         esac
     done
 fi
@@ -282,6 +282,12 @@ fi
 
 HOST_NAME="${HOST_ARG:-$(detect_host_type)}"
 GPU_PROFILE="${GPU_ARG:-$(detect_gpu_profile)}"
+
+CONTROL_CENTER_BIND="SUPER + Space"
+if [[ -r $DOTFILES_DIR/hosts/$HOST_NAME/control-center.conf ]]; then
+    # shellcheck source=/dev/null
+    source "$DOTFILES_DIR/hosts/$HOST_NAME/control-center.conf"
+fi
 
 if (( DO_KERNEL )); then
     install_kernel
@@ -617,6 +623,7 @@ render_template() {
     content="${content//@OBSIDIAN_VAULT@/$(obsidian_vault)}"
     content="${content//@CURSOR_THEME@/$CURSOR_THEME}"
     content="${content//@CURSOR_SIZE@/$CURSOR_SIZE}"
+    content="${content//@CONTROL_CENTER_BIND@/$CONTROL_CENTER_BIND}"
 
     tmp="$(mktemp)"
     printf '%s\n' "$content" >"$tmp"
@@ -755,6 +762,19 @@ fi
 if (( DO_PACKAGES )); then
     select_categories
     select_apps
+
+    # A selected module carries its own package requirements. This keeps
+    # --modules ram-cache (or idle) useful without a second package pick.
+    for name in "${MODULES[@]}"; do
+        load_module_conf "$DOTFILES_DIR/modules/$name/module.conf"
+        for pkg in "${PACKAGES[@]:-}"; do
+            [[ -n $pkg ]] || continue
+            if ! printf '%s\n' "${SELECTED_APPLICATIONS[@]:-}" | grep -Fxq -- "$pkg"; then
+                SELECTED_APPLICATIONS+=("$pkg")
+            fi
+        done
+    done
+
     install_packages
 fi
 

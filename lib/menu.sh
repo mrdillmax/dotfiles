@@ -121,7 +121,6 @@ menu_items_for() {
         main)
             printf '%s\n' \
                 'menu:install|Installation|modules, packages, host and GPU profile' \
-                'menu:settings|Settings|monitors, input, theme, session helpers' \
                 'menu:system|System (/etc)|DNS, zram, cpupower, services, boot' \
                 'menu:kernel|Kernel|CPU-level aware kernel selection' \
                 'menu:maintenance|Maintenance|doctor, DNS check, restore, sync, hooks'
