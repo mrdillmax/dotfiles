@@ -89,7 +89,7 @@ fi
 
 # 7. The session PATH contains the user bin directory.
 # shellcheck disable=SC2016 # literal shell text in the rendered file
-if grep -q 'export PATH="\$HOME/.local/bin:\$PATH"' "$ROOT/modules/uwsm/env.common" \
+if grep -q 'export PATH="\$HOME/.spicetify:\$HOME/.local/bin:\$PATH"' "$ROOT/modules/uwsm/env.common" \
     && grep -q 'fish_add_path \$HOME/.local/bin' "$ROOT/modules/fish/home/.config/fish/config.fish"; then
     pass "the user bin directory is on the session PATH"
 else
