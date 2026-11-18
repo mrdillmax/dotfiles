@@ -68,6 +68,14 @@ else
     fail "select_modules is defined after the menu opens"
 fi
 
+# 0b. Gum gets every default module as an explicit checked item.
+if grep -q 'args+=(--selected "${items\[$i\]}")' "$ROOT/lib/tui.sh" \
+    && grep -q 'label="${label//,/;}"' "$ROOT/install.sh"; then
+    pass "module labels are comma-safe and preselected individually"
+else
+    fail "gum preselection still builds a comma-separated list"
+fi
+
 # 1. Every actionable menu entry has a flag.
 missing=()
 for menu in $(menu_menu_names); do

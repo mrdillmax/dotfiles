@@ -407,6 +407,7 @@ select_modules() {
             ram-cache|workspaces-split) optional=1 ;;
         esac
         label="$name — ${DESCRIPTION:-} (${count} pkgs)"
+        label="${label//,/;}"
         ((optional)) && label+=" [optional]"
         labels+=("$label")
         if ((!optional)); then

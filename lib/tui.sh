@@ -254,13 +254,9 @@ tui_checklist_indexes() {
         done
 
         local -a args=(--no-limit --header "$title")
-        if ((${#selected[@]})); then
-            local list=""
-            for i in "${selected[@]}"; do
-                list+="${items[$i]},"
-            done
-            args+=(--selected "${list%,}")
-        fi
+        for i in "${selected[@]}"; do
+            args+=(--selected "${items[$i]}")
+        done
 
         while IFS= read -r line; do
             [[ -n $line ]] || continue
