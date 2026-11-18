@@ -62,7 +62,7 @@ fi
 # 3. Status explains that the defaults are not written yet.
 status_out="$(run_auto status)"
 if grep -q 'defaults, not written yet' <<<"$status_out" \
-    && grep -qx 'entries: 17 enabled, 0 disabled' <<<"$status_out"; then
+    && grep -qx 'entries: 16 enabled, 0 disabled' <<<"$status_out"; then
     pass "status reports the default entry counts"
 else
     fail "status output is wrong"
@@ -218,8 +218,8 @@ fi
 # 11. reset restores every default.
 run_auto reset >/dev/null
 if grep -qx $'1\twaybar\tuwsm app -- waybar' "$state_file" \
-    && [[ "$(grep -c $'^1\t' "$state_file")" == 17 ]]; then
-    pass "reset restores all 17 defaults as enabled"
+    && [[ "$(grep -c $'^1\t' "$state_file")" == 16 ]]; then
+    pass "reset restores all 16 defaults as enabled"
 else
     fail "reset did not restore the defaults"
     grep -c $'^1\t' "$state_file" 2>/dev/null

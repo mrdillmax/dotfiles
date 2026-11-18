@@ -44,7 +44,6 @@ system_file_map() {
                 fi
                 ;;
             modprobe/*)                      printf '%s\t%s\t%s\n' "$src" "/etc/modprobe.d/${rel#modprobe/}" "0644" ;;
-            sysctl/*)                        printf '%s\t%s\t%s\n' "$src" "/etc/sysctl.d/${rel#sysctl/}" "0644" ;;
             *)                               printf 'warning: unmapped system file: %s\n' "$rel" >&2 ;;
         esac
     done < <(find "$root" -type f | sort)
