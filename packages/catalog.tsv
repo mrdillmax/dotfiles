@@ -9,12 +9,12 @@ archlinux-xdg-menu	System	pkg	yes	any	any	Generate window-manager menus from XDG
 base	System	pkg	yes	any	any	Minimal package set to define a basic Arch Linux installation
 base-devel	System	pkg	yes	any	any	Basic tools to build Arch Linux packages
 bat	System	pkg	yes	any	any	Cat clone with syntax highlighting and git integration
-btrfs-progs	System	pkg	yes	any	any	Btrfs filesystem utilities
+btrfs-progs	System	pkg	no	any	any	Btrfs filesystem utilities
 cachyos-ananicy-rules	System	pkg	yes	any	any	CachyOS ananicy rules
-compsize	System	pkg	yes	any	any	Calculate compression ratio of a set of files on Btrfs
+compsize	System	pkg	no	any	any	Calculate compression ratio of a set of files on Btrfs
 cpupower	System	pkg	yes	any	any	Linux kernel tool to examine and tune power saving related features of your processor
-ddrescue	System	pkg	yes	any	any	GNU data recovery tool
-dosfstools	System	pkg	yes	any	any	DOS filesystem utilities
+ddrescue	System	pkg	no	any	any	GNU data recovery tool
+dosfstools	System	pkg	no	any	any	DOS filesystem utilities
 duf	System	pkg	yes	any	any	Disk Usage/Free Utility
 dust	System	pkg	yes	any	any	A more intuitive version of du in rust
 efibootmgr	System	pkg	yes	any	any	Linux user-space application to modify the EFI Boot Manager
@@ -27,67 +27,58 @@ fisher	System	pkg	yes	any	any	A package manager for the fish shell
 fzf	System	pkg	yes	any	any	Command-line fuzzy finder
 git	System	pkg	yes	any	any	the fast distributed version control system
 gitleaks	System	pkg	yes	any	any	Audit Git repos for secrets and keys
-grub	System	pkg	yes	any	any	GNU GRand Unified Bootloader (2)
-grub-btrfs	System	pkg	yes	any	any	Include btrfs snapshots in GRUB boot options
-grub-hook	System	pkg	yes	any	any	Pacman hook to update GRUB after a kernel update
-gum	System	pkg	yes	any	any	A tool for glamorous shell scripts
+grub-btrfs	System	pkg	no	any	any	Include btrfs snapshots in GRUB boot options
+grub-hook	System	pkg	no	any	any	Pacman hook to update GRUB after a kernel update
 informant	System	pkg	yes	any	any	An Arch Linux News reader and pacman hook
 inotify-tools	System	pkg	yes	any	any	a C library and a set of command-line programs for Linux providing a simple interface to inotify.
-intel-mlc	System	pkg	yes	any	any	Intel® Memory Latency Checker (Intel® MLC) is a tool used to measure memory latencies and b/w, and how they change with increasing load on the system.
-intel-ucode	System	pkg	yes	any	any	Microcode update files for Intel CPUs
+intel-mlc	System	pkg	no	any	any	Intel® Memory Latency Checker (Intel® MLC) is a tool used to measure memory latencies and b/w, and how they change with increasing load on the system.
 iotop	System	pkg	yes	any	any	View I/O usage of processes
-iriunwebcam-bin	System	pkg	yes	any	any	Use your phone's camera as a wireless webcam in your PC
+iriunwebcam-bin	System	pkg	no	any	any	Use your phone's camera as a wireless webcam in your PC
 irqbalance	System	pkg	yes	any	any	IRQ balancing daemon for SMP systems
-jq	System	pkg	yes	any	any	Command-line JSON processor
 kopia-bin	System	pkg	yes	any	any	A cross-platform backup-tool with encryption, deduplication, compression and cloud support.
 kopia-ui-bin	System	pkg	yes	any	any	A cross-platform backup-tool with encryption, deduplication, compression and cloud support.
 less	System	pkg	yes	any	any	A terminal based program for viewing text files
-linux-firmware	System	pkg	yes	any	any	Firmware files for Linux - Default set
-linux-lts	System	pkg	yes	any	any	The LTS Linux kernel and modules
-linux-lts-headers	System	pkg	yes	any	any	Headers and scripts for building modules for the LTS Linux kernel
-linux-xanmod-linux-bin-x64v3	System	pkg	yes	any	any	Xanmod kernel, x86-64-v3 build
-linux-xanmod-linux-headers-bin-x64v3	System	pkg	yes	any	any	Headers for the x86-64-v3 Xanmod kernel
 mokutil	System	pkg	yes	any	any	Shim.efi Machine Owner Key management tool
-mprime	System	pkg	yes	any	any	A GIMPS, distributed computing project client, dedicated to finding Mersenne primes.
 ncdu	System	pkg	yes	any	any	Disk usage analyzer with an ncurses interface
-ntfs-3g	System	pkg	yes	any	any	NTFS FUSE driver
-ntfsprogs	System	pkg	yes	any	any	NTFS userspace utilities
-os-prober	System	pkg	yes	any	any	Utility to detect other OSes on a set of drives
+ntfs-3g	System	pkg	no	any	any	NTFS FUSE driver
+ntfsprogs	System	pkg	no	any	any	NTFS userspace utilities
 pacman-contrib	System	pkg	yes	any	any	Contributed scripts and tools for pacman systems
 preload	System	pkg	no	any	any	Makes applications run faster by prefetching binaries and shared objects
-pv	System	pkg	yes	any	any	A terminal-based tool for monitoring the progress of data through a pipeline
+pv	System	pkg	no	any	any	A terminal-based tool for monitoring the progress of data through a pipeline
 reflector	System	pkg	yes	any	any	A Python 3 module and script to retrieve and filter the latest Pacman mirror list.
 ripgrep	System	pkg	yes	any	any	A search tool that combines the usability of ag with the raw speed of grep
-rsync	System	pkg	yes	any	any	A fast and versatile file copying tool for remote and local files
+rsync	System	pkg	no	any	any	A fast and versatile file copying tool for remote and local files
 sbctl	System	pkg	yes	any	any	Secure Boot key manager
 shellcheck	System	pkg	yes	any	any	Shell script analysis tool
 smartmontools	System	pkg	yes	any	any	Control and monitor S.M.A.R.T. enabled ATA and SCSI Hard Drives
 snap-pac	System	pkg	yes	any	any	Pacman hooks that use snapper to create pre/post btrfs snapshots like openSUSE's YaST
-snapper	System	pkg	yes	any	any	A tool for managing BTRFS and LVM snapshots
+snapper	System	pkg	no	any	any	A tool for managing BTRFS and LVM snapshots
 socat	System	pkg	yes	any	any	Multipurpose relay
 sysstat	System	pkg	yes	any	any	a collection of performance monitoring tools (iostat,isag,mpstat,pidstat,sadf,sar)
 tcpdump	System	pkg	yes	any	any	Powerful command-line packet analyzer
-testdisk	System	pkg	yes	any	any	Checks and undeletes partitions + PhotoRec, signature based recovery tool
+testdisk	System	pkg	no	any	any	Checks and undeletes partitions + PhotoRec, signature based recovery tool
 unrar	System	pkg	yes	any	any	The RAR uncompression program
 unzip	System	pkg	yes	any	any	For extracting and viewing files in .zip archives
 vmtouch	System	pkg	no	any	any	Inspect and control the file-system page cache
 wayland-protocols	System	pkg	yes	any	any	Specifications of extended Wayland protocols
-whdd	System	pkg	yes	any	any	Diagnostic and recovery tool for block devices (near to replace MHDD for Linux)
-yay	System	pkg	yes	any	any	Yet another yogurt. Pacman wrapper and AUR helper written in go.
+whdd	System	pkg	no	any	any	Diagnostic and recovery tool for block devices (near to replace MHDD for Linux)
 zip	System	pkg	yes	any	any	Compressor/archiver for creating and modifying zipfiles
 zoxide	System	pkg	yes	any	any	A smarter cd command for your terminal
 zram-generator	System	pkg	yes	any	any	Systemd unit generator for zram devices
 ark	Desktop	pkg	yes	desktop	any	Archiving Tool
-audacity	Desktop	pkg	yes	desktop	any	A program that lets you manipulate digital audio waveforms
-ayugram-desktop-bin	Desktop	pkg	yes	desktop	any	Desktop Telegram client with good customization and Ghost mode
+audacity	Desktop	pkg	no	desktop	any	A program that lets you manipulate digital audio waveforms
+ayugram-desktop-bin	Desktop	pkg	no	desktop	any	Desktop Telegram client with good customization and Ghost mode
+cadcraft-bin	Desktop	pkg	no	any	any	Open-source CAD and drafting app
 cpu-x	Desktop	pkg	yes	desktop	any	A Free software that gathers information on CPU, motherboard and more
 cups-pdf	Desktop	pkg	yes	desktop	any	PDF printer for cups
-darktable	Desktop	pkg	yes	desktop	any	Utility to organize and develop raw images
-dupeguru	Desktop	pkg	yes	desktop	any	Find duplicate files with various contents, using perceptual diff for pictures
+darktable	Desktop	pkg	no	desktop	any	Utility to organize and develop raw images
+deckcraft-bin	Desktop	pkg	no	any	any	Open-source presentation app
+dupeguru	Desktop	pkg	no	desktop	any	Find duplicate files with various contents, using perceptual diff for pictures
 fbida	Desktop	pkg	yes	desktop	any	Few applications to display and elementary edit images: fbi, fbgs, ida, exiftran
-filezilla	Desktop	pkg	yes	desktop	any	Fast and reliable FTP, FTPS and SFTP client
-firefox-i18n-uk	Desktop	pkg	yes	desktop	any	Ukrainian language pack for Firefox
+filezilla	Desktop	pkg	no	desktop	any	Fast and reliable FTP, FTPS and SFTP client
+firefox-i18n-uk	Desktop	pkg	no	desktop	any	Ukrainian language pack for Firefox
 gimp	Desktop	pkg	yes	desktop	any	GNU Image Manipulation Program
+gridcraft-bin	Desktop	pkg	no	any	any	Open-source spreadsheet app
 gsmartcontrol	Desktop	pkg	yes	desktop	any	A graphical user interface for the smartctl hard disk drive health inspection tool.
 gvfs	Desktop	pkg	yes	desktop	any	Virtual filesystem implementation for GIO
 gvfs-mtp	Desktop	pkg	yes	desktop	any	Virtual filesystem implementation for GIO - MTP backend (Android, media player)
@@ -108,12 +99,16 @@ pdfcraft-bin	Desktop	pkg	yes	desktop	any	Open-source native PDF workbench, Acrob
 qalculate-gtk	Desktop	pkg	yes	desktop	any	GTK frontend for libqalculate
 qbittorrent	Desktop	pkg	yes	desktop	any	An advanced BitTorrent client programmed in C++, based on Qt toolkit and libtorrent-rasterbar
 s-tui	Desktop	pkg	yes	desktop	any	Terminal UI stress test and monitoring tool
+smath	Desktop	pkg	no	any	any	Mathematical notebook with a paper-like interface
+solidcraft-bin	Desktop	pkg	no	any	any	Open-source parametric 3D CAD
 superfile	Desktop	pkg	yes	desktop	any	Pretty fancy and modern terminal file manager
-tabby-bin	Desktop	pkg	yes	desktop	any	Tabby (formerly Terminus) is a highly configurable terminal emulator, SSH and serial client for Windows, macOS and Linux
+tabby-bin	Desktop	pkg	no	desktop	any	Tabby (formerly Terminus) is a highly configurable terminal emulator, SSH and serial client for Windows, macOS and Linux
+telegram-desktop	Desktop	alt	no	any	any	Official Telegram desktop client
 tumbler	Desktop	pkg	yes	desktop	any	Thumbnail service implementing the thumbnail management D-Bus specification
 udisks2	Desktop	pkg	yes	desktop	any	Daemon, tools and libraries to access and manipulate disks, storage devices and technologies
 vesktop-bin	Desktop	pkg	yes	desktop	any	A cross platform electron-based desktop app aiming to give you a snappier Discord experience with Vencord pre-installed.
-zoom	Desktop	pkg	yes	desktop	any	Video Conferencing and Web Conferencing Service
+wordcraft-bin	Desktop	pkg	no	any	any	Open-source word processor
+zoom	Desktop	pkg	no	desktop	any	Video Conferencing and Web Conferencing Service
 adw-gtk-theme	Hyprland	pkg	yes	any	any	Unofficial GTK 3 port of the libadwaita theme
 awww	Hyprland	pkg	yes	any	any	An Answer to your Wayland Wallpaper Woes
 breeze	Hyprland	pkg	yes	any	any	Artwork, styles and assets for the Breeze visual style for the Plasma Desktop
@@ -153,62 +148,64 @@ pipewire-alsa	Audio	pkg	yes	any	any	Low-latency audio/video router and processor
 pipewire-pulse	Audio	pkg	yes	any	any	Low-latency audio/video router and processor - PulseAudio replacement
 qpwgraph	Audio	pkg	yes	any	any	PipeWire Graph Qt GUI Interface
 realtime-privileges	Audio	pkg	yes	any	any	Realtime privileges for users
-reaper	Audio	pkg	yes	any	any	A complete digital audio production application for computers
+reaper	Audio	pkg	no	any	any	A complete digital audio production application for computers
 rtkit	Audio	pkg	yes	any	any	Realtime Policy and Watchdog Daemon
 networkmanager	Network	pkg	yes	any	any	Network connection manager and user applications
-pi-hole-core	Network	pkg	yes	any	any	The Pi-hole is an advertising-aware DNS/Web server. Arch adaptation for lan wide DNS server.
-pi-hole-ftl-bin	Network	pkg	yes	any	any	The Pi-hole FTL engine
+pi-hole-core	Network	pkg	no	any	any	The Pi-hole is an advertising-aware DNS/Web server. Arch adaptation for lan wide DNS server.
+pi-hole-ftl-bin	Network	pkg	no	any	any	The Pi-hole FTL engine
 rclone	Network	pkg	yes	any	any	rsync for cloud storage
-rclone-browser	Network	pkg	yes	any	any	Simple cross-platform GUI for rclone
-sshfs	Network	pkg	yes	any	any	FUSE client based on the SSH File Transfer Protocol
+rclone-browser	Network	pkg	no	any	any	Simple cross-platform GUI for rclone
+sshfs	Network	pkg	no	any	any	FUSE client based on the SSH File Transfer Protocol
 syncthing	Network	pkg	yes	any	any	Open Source Continuous Replication / Cluster Synchronization Thing
 ufw	Network	pkg	yes	any	any	Uncomplicated and easy to use CLI tool for managing a netfilter firewall
 unbound	Network	pkg	yes	any	any	Validating, recursive, and caching DNS resolver
 zerotier-one	Network	pkg	yes	any	any	Creates virtual Ethernet networks of almost unlimited size.
-antigravity-cli	Development	pkg	yes	any	any	Google Antigravity agentic development CLI
+antigravity-cli	Development	pkg	no	any	any	Google Antigravity agentic development CLI
 clang	Development	pkg	yes	any	any	C language family frontend for LLVM
 cmake	Development	pkg	yes	any	any	A cross-platform open-source make system
 cuda-12.9	Development	pkg	no	any	nvidia,hybrid	NVIDIA CUDA toolkit 12.9
+easyeda-pro-bin	Development	pkg	no	any	any	Schematic and PCB editor
 ghgrab-bin	Development	pkg	yes	any	any	A simple, pretty terminal tool that lets you search and download files from GitHub without leaving your CLI
-git-filter-repo	Development	pkg	yes	any	any	Rewrite git repository history
-jdk17-openjdk	Development	pkg	yes	any	any	OpenJDK Java 17 development kit
+git-filter-repo	Development	pkg	no	any	any	Rewrite git repository history
+jdk17-openjdk	Development	pkg	no	any	any	OpenJDK Java 17 development kit
 lld	Development	pkg	yes	any	any	Linker from the LLVM project
 llvm	Development	pkg	yes	any	any	Compiler infrastructure
 npm	Development	pkg	yes	any	any	JavaScript package manager
 opencode	Development	pkg	yes	any	any	The open source coding agent
 rustup	Development	pkg	yes	any	any	The Rust toolchain installer
 uv	Development	pkg	yes	any	any	An extremely fast Python package installer and resolver written in Rust
+gamemode	Games	pkg	yes	any	any	A daemon/lib combo that allows games to request a set of optimisations be temporarily applied to the host OS
+gamescope	Games	pkg	yes	any	any	SteamOS session compositing window manager
+goverlay	Games	pkg	yes	any	any	A GUI to help manage Vulkan/OpenGL overlays
+lib32-gamemode	Games	pkg	yes	any	any	A daemon/lib combo that allows games to request a set of optimisations be temporarily applied to the host OS
+lib32-harfbuzz	Games	pkg	yes	any	any	OpenType text shaping engine - 32-bit
+lib32-libxcomposite	Games	pkg	yes	any	any	X11 Composite extension library (32-bit)
+lib32-mangohud	Games	pkg	yes	any	any	32-bit libraries for MangoHud and MangoApp
+mangohud	Games	pkg	yes	any	any	A Vulkan overlay layer for monitoring FPS, temperatures, CPU/GPU load and more.
+protontricks	Games	pkg	yes	any	any	Run Winetricks commands for Steam Play/Proton games among other common Wine features
+protonup-qt-bin	Games	pkg	yes	any	any	Install and manage Proton-GE for Steam and Wine-GE for Lutris with this graphical user interface.
+steam	Games	pkg	yes	any	any	Valve's digital software delivery system
+sunshine-bin	Games	pkg	yes	any	any	A self-hosted game stream host for Moonlight.
+wine-gecko	Games	pkg	yes	any	any	Wine's built-in replacement for Microsoft's Internet Explorer
+wine-mono	Games	pkg	yes	any	any	Wine's built-in replacement for Microsoft's .NET Framework
+xmclauncher-bin	Games	pkg	yes	any	any	X Minecraft Launcher - A modern, open-source Minecraft Launcher (repackaged from the official .pacman artifact)
 docker	Virtualization	pkg	yes	any	any	Pack, ship and run any application as a lightweight container
 docker-compose	Virtualization	pkg	yes	any	any	Fast, isolated development environments using Docker
-gamemode	Virtualization	pkg	yes	any	any	A daemon/lib combo that allows games to request a set of optimisations be temporarily applied to the host OS
-gamescope	Virtualization	pkg	yes	any	any	SteamOS session compositing window manager
-goverlay	Virtualization	pkg	yes	any	any	A GUI to help manage Vulkan/OpenGL overlays
-lib32-gamemode	Virtualization	pkg	yes	any	any	A daemon/lib combo that allows games to request a set of optimisations be temporarily applied to the host OS
-lib32-harfbuzz	Virtualization	pkg	yes	any	any	OpenType text shaping engine - 32-bit
-lib32-libxcomposite	Virtualization	pkg	yes	any	any	X11 Composite extension library (32-bit)
-lib32-mangohud	Virtualization	pkg	yes	any	any	32-bit libraries for MangoHud and MangoApp
 libvirt	Virtualization	pkg	yes	any	any	API for controlling virtualization engines (openvz,kvm,qemu,virtualbox,xen,etc)
-mangohud	Virtualization	pkg	yes	any	any	A Vulkan overlay layer for monitoring FPS, temperatures, CPU/GPU load and more.
-onlinefix-linux-launcher-bin	Virtualization	pkg	yes	any	any	OnlineFix Linux Launcher - play games with community multiplayer fixes on Linux!
-protontricks	Virtualization	pkg	yes	any	any	Run Winetricks commands for Steam Play/Proton games among other common Wine features
-protonup-qt-bin	Virtualization	pkg	yes	any	any	Install and manage Proton-GE for Steam and Wine-GE for Lutris with this graphical user interface.
 qemu-base	Virtualization	pkg	yes	any	any	A basic QEMU setup for headless environments
 qemu-desktop	Virtualization	pkg	yes	any	any	A QEMU setup for desktop environments
-steam	Virtualization	pkg	yes	any	any	Valve's digital software delivery system
-sunshine-bin	Virtualization	pkg	yes	any	any	A self-hosted game stream host for Moonlight.
 swtpm	Virtualization	pkg	yes	any	any	Libtpms-based TPM emulator with socket, character device, and Linux CUSE interface
 ventoy-bin	Virtualization	pkg	yes	any	any	A new bootable USB solution
 virt-manager	Virtualization	pkg	yes	any	any	Desktop user interface for managing virtual machines
 virtio-win	Virtualization	pkg	no	any	any	VirtIO drivers for Windows guests
-virtualbox	Virtualization	pkg	yes	any	any	Powerful x86 virtualization for enterprise as well as home use
-virtualbox-guest-iso	Virtualization	pkg	yes	any	any	The official VirtualBox Guest Additions ISO image
-waydroid	Virtualization	pkg	yes	any	any	A container-based approach to boot a full Android system on a regular Linux system
-wine-gecko	Virtualization	pkg	yes	any	any	Wine's built-in replacement for Microsoft's Internet Explorer
-wine-mono	Virtualization	pkg	yes	any	any	Wine's built-in replacement for Microsoft's .NET Framework
-xmclauncher-bin	Virtualization	pkg	yes	any	any	X Minecraft Launcher - A modern, open-source Minecraft Launcher (repackaged from the official .pacman artifact)
+virtualbox	Virtualization	pkg	no	any	any	Powerful x86 virtualization for enterprise as well as home use
+virtualbox-guest-iso	Virtualization	pkg	no	any	any	The official VirtualBox Guest Additions ISO image
+waydroid	Virtualization	pkg	no	any	any	A container-based approach to boot a full Android system on a regular Linux system
+adwaita-fonts	Fonts	pkg	yes	any	any	Adwaita Sans and Mono fonts
 gnu-free-fonts	Fonts	pkg	yes	any	any	A free family of scalable outline fonts
 hunspell-uk	Fonts	pkg	yes	any	any	Ukrainian spelling dictionary
 hyphen-uk	Fonts	pkg	yes	any	any	Ukrainian hyphenation rules
+inter-font	Fonts	pkg	yes	any	any	A typeface for user interfaces; installed by the theming module
 noto-fonts-cjk	Fonts	pkg	yes	any	any	Google Noto CJK fonts
 noto-fonts-emoji	Fonts	pkg	yes	any	any	Google Noto Color Emoji font
 terminus-font	Fonts	pkg	yes	any	any	Monospace bitmap font (for X11 and console)
@@ -217,23 +214,34 @@ ttf-dejavu	Fonts	pkg	yes	any	any	Font family based on the Bitstream Vera Fonts w
 ttf-jetbrains-mono-nerd	Fonts	pkg	yes	any	any	Patched font JetBrains Mono from nerd fonts library
 ttf-liberation	Fonts	pkg	yes	any	any	Font family which aims at metric compatibility with Arial, Times New Roman, and Courier New
 ttf-ms-fonts	Fonts	pkg	yes	any	any	Core TTF Fonts from Microsoft
+ttf-roboto	Fonts	pkg	yes	any	any	Google's signature family of fonts
 woff2-font-awesome	Fonts	pkg	yes	any	any	Iconic font designed for Bootstrap - woff2 format
+intel-media-driver	Drivers	pkg	no	any	any	Intel media driver for Gen9+
 lact	Drivers	pkg	yes	any	nvidia,hybrid	Linux GPU Configuration Tool
-lib32-nvidia-580xx-utils	Drivers	pkg	yes	any	nvidia,hybrid	NVIDIA drivers utilities (32-bit) (580xx)
-lib32-opencl-nvidia-580xx	Drivers	pkg	yes	any	nvidia,hybrid	OpenCL implemention for NVIDIA (32-bit) (580xx)
+lib32-mesa	Drivers	pkg	no	any	any	32-bit Mesa drivers for Steam
+lib32-nvidia-580xx-utils	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA drivers utilities (32-bit) (580xx)
+lib32-opencl-nvidia-580xx	Drivers	pkg	no	any	nvidia,hybrid	OpenCL implemention for NVIDIA (32-bit) (580xx)
+lib32-vulkan-intel	Drivers	pkg	no	any	any	32-bit Intel Vulkan driver
+lib32-vulkan-radeon	Drivers	pkg	no	any	any	32-bit RADV Vulkan driver
+libva-intel-driver	Drivers	pkg	no	any	any	Intel VA-API driver for older GPUs
 libva-nvidia-driver	Drivers	pkg	yes	any	nvidia,hybrid	VA-API implementation that uses NVDEC as a backend
-nvidia-580xx-dkms	Drivers	pkg	yes	any	nvidia,hybrid	NVIDIA kernel modules - module sources (580xx)
-nvidia-580xx-settings	Drivers	pkg	yes	any	nvidia,hybrid	Tool for configuring the NVIDIA graphics driver (580xx)
-nvidia-580xx-utils	Drivers	pkg	yes	any	nvidia,hybrid	NVIDIA drivers utilities (580xx)
+mesa	Drivers	pkg	no	any	any	Open-source OpenGL drivers
+nvidia-340xx-dkms	Drivers	pkg	no	any	nvidia,hybrid	Legacy NVIDIA 340xx kernel modules (Tesla)
+nvidia-390xx-dkms	Drivers	pkg	no	any	nvidia,hybrid	Legacy NVIDIA 390xx kernel modules (Fermi)
+nvidia-470xx-dkms	Drivers	pkg	no	any	nvidia,hybrid	Legacy NVIDIA 470xx kernel modules (Kepler)
+nvidia-580xx-dkms	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA kernel modules - module sources (580xx)
+nvidia-580xx-settings	Drivers	pkg	no	any	nvidia,hybrid	Tool for configuring the NVIDIA graphics driver (580xx)
+nvidia-580xx-utils	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA drivers utilities (580xx)
+nvidia-open	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA open kernel modules for the current kernel
+nvidia-open-dkms	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA open kernel modules for any kernel
+nvidia-open-lts	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA open kernel modules for linux-lts
 nvtop	Drivers	pkg	yes	any	nvidia,hybrid	GPUs process monitoring for AMD, Intel and NVIDIA
-opencl-nvidia-580xx	Drivers	pkg	yes	any	nvidia,hybrid	OpenCL implemention for NVIDIA (580xx)
-deckcraft-bin	Office	pkg	yes	any	any	Open-source presentation app
-gridcraft-bin	Office	pkg	yes	any	any	Open-source spreadsheet app
-smath	Office	pkg	yes	any	any	Mathematical notebook with a paper-like interface
-wordcraft-bin	Office	pkg	yes	any	any	Open-source word processor
-cadcraft-bin	Engineering	pkg	yes	any	any	Open-source CAD and drafting app
-easyeda-pro-bin	Engineering	pkg	yes	any	any	Schematic and PCB editor
-solidcraft-bin	Engineering	pkg	yes	any	any	Open-source parametric 3D CAD
+opencl-nvidia-580xx	Drivers	pkg	no	any	nvidia,hybrid	OpenCL implemention for NVIDIA (580xx)
+spice-vdagent	Drivers	pkg	no	any	any	SPICE guest agent integration
+virglrenderer	Drivers	pkg	no	any	any	VirGL rendering for virtual machines
+vulkan-intel	Drivers	pkg	no	any	any	Intel Vulkan driver
+vulkan-radeon	Drivers	pkg	no	any	any	RADV Vulkan driver for AMD
+xf86-video-amdgpu	Drivers	pkg	no	any	any	Xorg AMDGPU driver for legacy sessions
 alacritty	Terminal	alt	no	any	any	A cross-platform, GPU-accelerated terminal emulator
 foot	Terminal	alt	no	any	any	Fast, lightweight, and minimalistic Wayland terminal emulator
 ghostty	Terminal	alt	no	any	any	Fast, native, feature-rich terminal emulator pushing modern features
@@ -262,6 +270,7 @@ micro	Editor	main	yes	any	any	Modern and intuitive terminal-based text editor
 neovim	Editor	alt	no	any	any	Fork of Vim aiming to improve user experience, plugins, and GUIs
 amberol	Music	alt	no	any	any	Small and simple sound and music player that is well integrated with GNOME
 elisa	Music	alt	no	any	any	A simple music player aiming to provide a nice experience for its users
+spicetify-cli	Music	main	yes	any	any	Spicetify CLI installed by the upstream script
 spotify-launcher	Music	main	yes	any	any	Client for spotify's apt repository in Rust for Arch Linux
 bottom	System Monitor	alt	no	any	any	A graphical process/system monitor
 btop	System Monitor	main	yes	any	any	A monitor of system resources, bpytop ported to C++
@@ -272,15 +281,5 @@ profile-sync-daemon	Session	pkg	no	any	any	Sync browser profiles to tmpfs
 ffmpegthumbnailer	Media	pkg	yes	any	any	Lightweight video thumbnailer that can be used by file managers
 imagemagick	Media	pkg	yes	any	any	An image viewing/manipulation program
 img2pdf	Media	pkg	yes	any	any	Losslessly convert raster images to PDF
-jpegoptim	Media	pkg	yes	any	any	Jpeg optimisation utility
-oxipng	Media	pkg	yes	any	any	A lossless PNG compression optimiser
-inter-font	Fonts	pkg	no	any	any	A typeface for user interfaces; installed by the theming module
-adwaita-fonts	Fonts	pkg	yes	any	any	Adwaita Sans and Mono fonts
-ttf-roboto	Fonts	pkg	yes	any	any	Google's signature family of fonts
-spicetify-cli	Music	pkg	no	any	any	Spicetify CLI installed by the upstream script
-nvidia-open	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA open kernel modules for the current kernel
-nvidia-open-lts	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA open kernel modules for linux-lts
-nvidia-open-dkms	Drivers	pkg	no	any	nvidia,hybrid	NVIDIA open kernel modules for any kernel
-nvidia-470xx-dkms	Drivers	pkg	no	any	nvidia,hybrid	Legacy NVIDIA 470xx kernel modules (Kepler)
-nvidia-390xx-dkms	Drivers	pkg	no	any	nvidia,hybrid	Legacy NVIDIA 390xx kernel modules (Fermi)
-nvidia-340xx-dkms	Drivers	pkg	no	any	nvidia,hybrid	Legacy NVIDIA 340xx kernel modules (Tesla)
+jpegoptim	Media	pkg	no	any	any	Jpeg optimisation utility
+oxipng	Media	pkg	no	any	any	A lossless PNG compression optimiser

@@ -87,9 +87,20 @@ check_contains "[ ] alternative" "$legend" "ASCII legend names the alternative m
 check_contains "[i] installed" "$legend" "ASCII legend names the installed mark"
 
 # 4. The catalog has the expected categories and no duplicate rows.
+for removed in gum grub jq mprime onlinefix-linux-launcher-bin linux-lts; do
+    if catalog_lines | cut -f1 | grep -qx "$removed"; then
+        fail "$removed should not be in the catalog"
+    fi
+done
+pass "removed system packages stay out of the catalog"
 category_list="$(catalog_categories)"
+if grep -qx 'Office' <<<"$category_list" || grep -qx 'Engineering' <<<"$category_list"; then
+    fail "the removed Office or Engineering category is still present"
+else
+    pass "Office and Engineering are merged into other categories"
+fi
 check_contains "Terminal" "$category_list" "catalog has the Terminal category"
-check_contains "Office" "$category_list" "catalog has the Office category"
+check_contains "Games" "$category_list" "catalog has the Games category"
 check_contains "System" "$category_list" "catalog has the System category"
 duplicates="$(catalog_lines | cut -f1 | sort | uniq -d)"
 if [[ -z $duplicates ]]; then
@@ -102,8 +113,11 @@ fi
 default_list="$(catalog_default_packages)"
 check_contains "kitty" "$default_list" "main terminal is a default"
 check_contains "firefox" "$default_list" "main browser is a default"
-check_contains "cadcraft-bin" "$default_list" "office and engineering are defaults"
-check_contains "easyeda-pro-bin" "$default_list" "easyeda is a default"
+if grep -qx 'cadcraft-bin' <<<"$default_list" || grep -qx 'easyeda-pro-bin' <<<"$default_list"; then
+    fail "optional CAD apps are defaults"
+else
+    pass "optional CAD and EasyEDA apps are not defaults"
+fi
 if grep -qx 'hypridle' <<<"$default_list"; then
     fail "optional hypridle is a default"
 else
@@ -125,11 +139,11 @@ else
     pass "optional profile-sync-daemon is not a default"
 fi
 
-# 5b. Spicetify is a Music entry and stays opt-in.
-if catalog_lines | awk -F'\t' '$1 == "spicetify-cli" && $2 == "Music" && $4 == "no" { found = 1 } END { exit !found }'; then
-    pass "Spicetify is an opt-in Music entry"
+# 5b. Spicetify is a main Music entry and stays selected.
+if catalog_lines | awk -F'\t' '$1 == "spicetify-cli" && $2 == "Music" && $3 == "main" && $4 == "yes" { found = 1 } END { exit !found }'; then
+    pass "Spicetify is a selected main Music entry"
 else
-    fail "Spicetify is not in Music or is selected by default"
+    fail "Spicetify is not a selected main Music entry"
 fi
 
 # 6. Alternatives stay visible but are not selected by default.

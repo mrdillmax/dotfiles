@@ -12,9 +12,9 @@ LOCAL_CATALOG="$DOTFILES_DIR/packages/local.tsv"
 
 # The order is the order of the category tabs in the installer.
 CATEGORY_ORDER=(
-    System Desktop Hyprland Audio Network Development Gaming Virtualization
-    Fonts Drivers Office Engineering Terminal Launcher Bar Notifications
-    Browser Files Editor Music "System Monitor" Session Media Local
+    System Desktop Hyprland Audio Network Development Games Virtualization
+    Fonts Drivers Terminal Launcher Bar Notifications Browser Files Editor
+    Music "System Monitor" Session Media Local
 )
 
 catalog_lines() {
