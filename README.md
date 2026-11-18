@@ -26,6 +26,7 @@ Install guide: [docs/arch-install.md](docs/arch-install.md).
 - [Quick start](#quick-start)
 - [Bootstrap a fresh machine](#bootstrap-a-fresh-machine)
 - [Repository layout](#repository-layout)
+- [Where is what](#where-is-what)
 - [Installer](#installer)
 - [Modules](#modules)
 - [Host profiles](#host-profiles)
@@ -82,20 +83,33 @@ been run on that hardware.
 
 ## Quick start
 
+Run the dry-run first: `./install.sh --dry-run` shows every action in the same
+menu and changes nothing. Read that output before the first real install.
+
 ```bash
 git clone <repo-url> ~/Projects/dotfiles
 cd ~/Projects/dotfiles
 
-make lint                 # bash -n + shellcheck
-./tests/run.sh            # shell suite; temporary HOME, live files untouched
-make dry-run              # full install preview, changes nothing
-./install.sh              # interactive installer
+./install.sh              # main menu
+./install.sh --dry-run    # same menu, every action only prints
+```
+
+The first screen shows the detected host, GPU, monitor count and CPU level.
+You can change them there. Every action returns to the menu, and the top entry
+toggles dry-run for the whole session.
+
+Flags stay for automation:
+
+```bash
+./install.sh --dry-run --all
+./install.sh --modules hypr,uwsm,waybar,rofi,kitty,fish
+./install.sh --monitors
 ```
 
 On a machine that does not have the prerequisites yet:
 
 ```bash
-./bootstrap.sh            # base-devel/git/curl, then the installer
+./bootstrap.sh            # base-devel/git/curl, then ./install.sh
 ./bootstrap.sh --dry-run  # show every command first
 ```
 
@@ -105,7 +119,8 @@ A typical first run:
 ./install.sh --host desktop --gpu nvidia --modules hypr,uwsm,waybar,rofi,kitty,fish
 ./install.sh --monitors   # detect and write the monitor layout
 fish -c 'fisher update'   # install the tide prompt plugins
-make theme WALLPAPER=~/Pictures/wallpaper.jpg
+./install.sh --wallpaper ~/Pictures/wallpaper.jpg
+./install.sh --theme      # generate matugen colours from that wallpaper
 ```
 
 ## Bootstrap a fresh machine
@@ -126,9 +141,9 @@ is forwarded to `install.sh`.
 
 ```text
 .
-├── install.sh                 interactive installer and entry point
+├── install.sh                 menu-first installer, the only user entry point
 ├── bootstrap.sh               fresh-machine prerequisites, then install.sh
-├── lib/                       common, TUI, monitors, packages, system, secrets
+├── lib/                       common, TUI, menu, monitors, packages, system, secrets
 ├── profiles/gpu/              nvidia, amd, intel, hybrid, vm, software
 ├── hosts/
 │   ├── desktop/               monitors.conf.sh, input.lua, host env
@@ -146,41 +161,56 @@ is forwarded to `install.sh`.
 └── README.md / README.uk.md
 ```
 
+## Where is what
+
+| Path | Purpose |
+|------|---------|
+| `install.sh` | the only user entry point: main menu, flags and one-off actions |
+| `Makefile` | developer tasks only: `lint`, `test`, `check`, `audit`, `doctor`, `hooks` |
+| `scripts/` | internal helpers called by the installer, CI and the pre-commit hook |
+| `lib/` | shared shell code: TUI, menu, packages, monitors, system files |
+| `modules/`, `hosts/`, `profiles/` | the configuration content that gets linked or rendered |
+| `bootstrap.sh` | the single exception: first run on a clean system, before `install.sh` |
+
+`bootstrap.sh` stays a separate file on purpose. It runs before `gum`, `jq` and
+the rest of the installer dependencies exist, so it uses only bash and no
+`lib/`. When `install.sh` misses `gum`, `jq` or `git`, it tells you to run
+`./bootstrap.sh` first.
+
 ## Installer
 
-```text
-./install.sh [options]
-
-  --all                 select every module and package group
-  --dry-run             show actions, change nothing
-  --yes, -y             answer "yes" to confirmations
-  --modules a,b,c       install only these modules
-  --no-packages         skip package installation
-  --host desktop|laptop override host detection
-  --gpu PROFILE         nvidia|amd|intel|hybrid|vm|software
-  --monitors            reconfigure the monitor layout and exit
-  --dock-layout LAYOUT  store right|left|mirror|ask for external monitors
-  --mouse               run the mouse/touchpad tuner
-  --cursor              install/configure the cursor theme and exit
-  --cursor-archive PATH install a cursor theme from a local archive (not committed)
-  --cursor-theme NAME   cursor theme name (default: host cursor.conf)
-  --cursor-size N       cursor size 16..128 (default: 24)
-  --wallpaper PATH      store the wallpaper path and optionally apply it
-  --system              install opt-in /etc files (run with sudo)
-  --iface IFACE         network interface for Pi-hole (@IFACE@ rendering)
-  --autologin-user USER user for the getty autologin drop-in (with --system)
-  --kernel              detect the CPU level and install a matching kernel
-  --kernel-level LEVEL  override the kernel level: v1..v4
-  --hooks               install the repository pre-commit hook and exit
-  --doctor              read-only health check and exit (never needs sudo)
-  --json                machine-readable output (with --doctor/--dns-check)
-  --dns-check           read-only DNS chain check and exit
-  --restore [date]      list backups and restore one (with --modules a,b;
-                        /etc also needs --system)
-  --sync COMMAND        status|diff|pull|packages
-  --list                list modules, GPU profiles and package groups
-  -h, --help            help
+```bash
+./install.sh        # main menu (needs a terminal)
+./install.sh --help # grouped flag reference
 ```
+
+The menu covers:
+
+- **Installation** — configuration modules, applications, host/GPU profile
+- **Settings** — monitors, mouse/touchpad, cursor, wallpaper/theme, autostart,
+  idle/lid (laptop), game mode, monitor profiles, keybind cheatsheet
+- **System (/etc)** — DNS (Pi-hole/Unbound), zram, cpupower, services,
+  pacman/makepkg, GRUB/mkinitcpio
+- **Kernel** — CPU-level report and kernel selection
+- **Maintenance** — doctor, DNS check, restore, sync, package drift, hooks
+
+Entries that cannot work on this machine stay visible but greyed, with the
+reason (laptop-only, NVIDIA-only, missing `sudo`). Without a terminal the
+installer keeps the previous non-interactive behaviour.
+
+### Flags for automation
+
+| Area | Flags |
+|------|-------|
+| Installation | `--all`, `--modules a,b`, `--groups a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu` |
+| Settings | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
+| System | `--system`, `--system-components a,b`, `--iface`, `--autologin-user` |
+| Kernel | `--kernel`, `--kernel-level v1..v4` |
+| Maintenance | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
+| General | `--dry-run`, `--yes`, `--list`, `--help` |
+
+Every menu entry maps to one of these flags. `tests/menu.sh` and
+`tests/help-flags.sh` fail when the menu and `--help` drift apart.
 
 `--all` means **modules + packages**, not `/etc`. System files are always
 opt-in through `--system`.
@@ -283,9 +313,9 @@ Store it through the installer or change it directly:
 
 ```bash
 ./install.sh --dock-layout right
-make monitor-profiles ACTION=status
-make monitor-profiles ACTION=apply DRY_RUN=1
-make monitor-profiles ACTION=watch
+./install.sh --monitor-profiles status
+./install.sh --monitor-profiles apply --dry-run
+./install.sh --monitor-profiles watch
 ```
 
 `watch` listens on the Hyprland event socket (`socket2`) with `socat` and
@@ -295,7 +325,7 @@ Hyprland configuration files. Before applying it saves the current
 `hyprctl monitors -j` under `~/.local/state/dotfiles/monitor-profiles/`.
 `ask` never changes monitors.
 
-> **Not verified on real dock hardware.** Run `apply` with `DRY_RUN=1` first and
+> **Not verified on real dock hardware.** Run `apply` with `--dry-run` first and
 > keep the saved monitor snapshot. If the layout is wrong after a real run, use
 > `./install.sh --restore` to put the previous files back.
 
@@ -304,23 +334,26 @@ Hyprland configuration files. Before applying it saves the current
 These modules share one rule: state lives under
 `~/.local/state/dotfiles/`, never in the compositor config.
 
+After the matching module is installed, the same tools are also commands in
+`~/.local/bin`: `autostart.sh`, `idle-tune.sh` and `monitor-profiles.sh`.
+
 ### Theme menu
 
 ```bash
-make theme-menu                 # rofi/gum/whiptail/dialog/plain menu
-make theme-menu DRY_RUN=1
+./install.sh --theme-menu       # rofi/gum/whiptail/dialog/plain menu
+./install.sh --theme-menu --dry-run
 ```
 
 Choose a wallpaper, matugen mode (`dark`/`light`) and colour scheme. The choice
-is stored in `~/.local/state/dotfiles/theme.conf`; `make theme` can then reuse
-it.
+is stored in `~/.local/state/dotfiles/theme.conf`; `./install.sh --theme` can
+then reuse it.
 
 ### Keybind cheatsheet
 
 ```bash
-make binds                      # aligned table
-make binds ROFI=1               # rofi menu
-make binds JSON=1               # JSON for scripts
+./install.sh --binds            # aligned table
+./install.sh --binds rofi       # rofi menu
+./install.sh --binds json       # JSON for scripts
 ~/.local/bin/binds-cheatsheet.sh --duplicates
 ```
 
@@ -330,9 +363,9 @@ dispatchers reports opaque numeric arguments in `hyprctl binds -j`.
 ### Gamemode
 
 ```bash
-make gamemode ACTION=toggle
-make gamemode ACTION=status
-make gamemode ACTION=on DRY_RUN=1
+./install.sh --gamemode toggle
+./install.sh --gamemode status
+./install.sh --gamemode on --dry-run
 ```
 
 Enabling disables animations, blur, shadows and rounding. The values that were
@@ -353,10 +386,10 @@ The `idle` module renders `~/.config/hypr/hypridle.conf` from two profiles:
 Settings live in `~/.local/state/dotfiles/idle.conf`.
 
 ```bash
-make idle ACTION=status
-make idle ACTION=apply PROFILE=battery
-make idle ACTION=configure              # prompts for all eight values
-make idle ACTION=watch                  # re-apply on AC/battery changes
+./install.sh --idle status
+~/.local/bin/idle-tune.sh apply --profile battery
+./install.sh --idle configure              # prompts for all eight values
+./install.sh --idle watch                  # re-apply on AC/battery changes
 ```
 
 The previous `hypridle.conf` is backed up before it is replaced. `hypridle` and
@@ -365,9 +398,9 @@ The previous `hypridle.conf` is backed up before it is replaced. `hypridle` and
 ### Lid switch
 
 ```bash
-make lid ACTION=status
-make lid ACTION=closed
-make lid ACTION=closed DRY_RUN=1
+./install.sh --lid status
+./install.sh --lid closed
+./install.sh --lid closed --dry-run
 ```
 
 On close, the handler reads `hyprctl monitors -j` immediately before acting:
@@ -380,10 +413,10 @@ covered by synthetic tests only, not by physical lid hardware.
 ### Autostart
 
 ```bash
-make autostart                        # list
-make autostart ACTION=disable NAME=vesktop
-make autostart ACTION=add NAME=notes CMD=obsidian
-make autostart ACTION=pick            # rofi/gum/whiptail/dialog/plain
+./install.sh --autostart list
+~/.local/bin/autostart.sh disable vesktop
+~/.local/bin/autostart.sh add notes obsidian
+./install.sh --autostart pick          # rofi/gum/whiptail/dialog/plain
 ```
 
 Entries live in `~/.local/state/dotfiles/autostart.tsv` and are seeded from the
@@ -394,10 +427,9 @@ config. `SUPER+SHIFT+A` opens the picker.
 ## Mouse and touchpad tuner
 
 ```bash
-make mouse
 ./install.sh --mouse
 ~/.local/bin/mouse-tune.sh          # after installation
-./scripts/mouse-tune.sh --show      # read-only current values
+mouse-tune.sh --show                # read-only current values
 ```
 
 The tuner requires a running Hyprland session and uses the Lua runtime API:
@@ -440,22 +472,37 @@ so a missing file is safe.
 
 ## Application categories
 
-Package groups live in `packages/<category>.txt`. The installer lets you pick
-groups, and marks alternatives as `[main, config]` (this repository contains
-its config) or `[package only]` (no config here).
+The picker groups applications by role. Each category starts with its main
+application (this repository contains the config), followed by package-only
+alternatives:
 
-| Category | Main (config included) | Alternatives (package only) |
-|----------|------------------------|-----------------------------|
-| terminal | kitty | foot, alacritty, wezterm, ghostty |
-| launcher | rofi | fuzzel, wofi, anyrun |
-| status bar | waybar | hyprpanel, ags |
-| notifications | dunst | mako, swaync |
-| browser | firefox | chromium, brave-bin, librewolf |
-| file manager | dolphin | nautilus, thunar, yazi |
-| system monitor | btop | htop, bottom |
-| editor | micro | neovim, kate |
-| music | spotify-launcher | amberol, elisa |
-| kernel | managed by `--kernel` | linux, linux-lts, linux-zen, linux-hardened |
+- ★ main — config in this repo, preselected
+- ○ alternative — package only, no config
+- ✓ already installed
+
+| Category | Main ★ | Alternatives ○ |
+|----------|--------|----------------|
+| Terminal | **kitty** | foot, alacritty, wezterm, ghostty |
+| Launcher | **rofi** | fuzzel, wofi, anyrun |
+| Status bar | **waybar** | hyprpanel, ags |
+| Notifications | **dunst** | mako, swaync |
+| Browser | **firefox** | chromium, brave-bin, librewolf |
+| File manager | **dolphin** | nautilus, thunar, yazi |
+| Editor | **micro** | neovim, kate |
+| Music | **spotify-launcher** | amberol, elisa |
+| System monitor | **btop** | htop, bottom |
+
+An alternative can be added next to the main application, but the repository
+config always belongs to the main one. Kernels are not part of this picker;
+use the Kernel menu or `--kernel`.
+
+Non-interactive selection:
+
+```bash
+./install.sh --only-packages --groups base,desktop
+./install.sh --only-packages --groups base --apps foot
+./install.sh --only-packages --packages foot,kitty
+```
 
 Group overview:
 
@@ -481,10 +528,10 @@ Group overview:
 ### Package drift
 
 ```bash
-make pkg-sync                        # report only
-make pkg-sync ACTION=check           # exit 1 when lists drift
-make pkg-sync ACTION=pull DRY_RUN=1
-make pkg-sync ACTION=pull YES=1      # append, never remove
+./install.sh --pkg-sync status       # report only
+./install.sh --pkg-sync check        # exit 1 when lists drift
+./install.sh --pkg-sync pull --dry-run
+./install.sh --pkg-sync pull --yes   # append, never remove
 ```
 
 `pkg-sync` compares explicitly installed packages with `packages/*.txt`.
@@ -510,18 +557,19 @@ level requires a red warning and typing `I UNDERSTAND`; non-interactive mode
 refuses it. The running kernel and the fallback kernel are never removed.
 
 NVIDIA DKMS always gets matching headers. The installer prints
-`mkinitcpio`/`grub-mkconfig` commands and never runs them. `make doctor`
-compares the CPU level with the installed kernel level.
+`mkinitcpio`/`grub-mkconfig` commands and never runs them.
+`./install.sh --doctor` compares the CPU level with the installed kernel level.
 
 ## Theming
 
 Colours are generated with matugen from a wallpaper:
 
 ```bash
-make theme WALLPAPER=~/Pictures/wallpaper.jpg
+./install.sh --wallpaper ~/Pictures/wallpaper.jpg
+./install.sh --theme
 ```
 
-Without `WALLPAPER`, `make theme` first reads
+Without `--wallpaper`, `./install.sh --theme` first reads
 `~/.config/hypr/wallpaper.path` (written by `./install.sh --wallpaper`) and
 falls back to the `image` field in `~/.config/hypr/colors.lua`. The image itself
 is never committed. The generated files are ignored by git:
@@ -629,8 +677,7 @@ Or use the built-in restore flow:
 ```bash
 ./install.sh --restore                       # list backups with file counts
 ./install.sh --restore 2026-11-16_120000
-make restore RESTORE_DATE=2026-11-16_120000
-make restore RESTORE_DATE=2026-11-16_120000 MODULES=hypr DRY_RUN=1
+./install.sh --restore 2026-11-16_120000 --modules hypr --dry-run
 ```
 
 Restore reads `manifest.tsv`, shows a diff, asks for confirmation and backs up
@@ -650,11 +697,11 @@ The direction is always **live system → repository**. Nothing under `$HOME` is
 written.
 
 ```bash
-make sync-status                    # files that differ
-make sync-diff SYNC_TARGET=hypr     # unified diffs
-make sync-pull DRY_RUN=1            # preview
-make sync-pull YES=1                # write back (diff + secret scan)
-./scripts/sync.sh packages          # compare installed packages
+./install.sh --sync status          # files that differ
+./install.sh --sync diff hypr       # unified diffs
+./install.sh --sync pull --dry-run  # preview
+./install.sh --sync pull --yes      # write back (diff + secret scan)
+./install.sh --sync packages        # compare installed packages
 ```
 
 Pull reverse-renders `@HOME@`, `@FIREFOX_PROFILE_DIR@` and `@OBSIDIAN_VAULT@`,
@@ -667,13 +714,16 @@ stored under `~/.local/state/dotfiles/sync-backup/<timestamp>/` with a
 
 ```bash
 make lint       # bash -n + shellcheck
+make test       # shell tests; temporary HOME, live files untouched
 make audit      # read-only live + repository audit
 make doctor     # CPU/kernel level, cursor, wallpaper, managed symlinks
-make dns-check  # resolv.conf -> Pi-hole -> unbound
-make check      # lint + audit + doctor
-./tests/run.sh  # full shell suite
+make check      # lint + test + audit + doctor
 make hooks      # install the repository pre-commit hook
 ```
+
+The Makefile is a developer tool only. User-facing checks are
+`./install.sh --doctor`, `./install.sh --dns-check` and
+`./install.sh --pkg-sync check`.
 
 The audit checks Hyprland config errors, duplicate binds, monitor portability,
 hardcoded home paths, systemd units, Unbound syntax, `.pacnew` files, secrets,

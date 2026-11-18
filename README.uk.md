@@ -26,6 +26,7 @@
 - [Швидкий старт](#швидкий-старт)
 - [Bootstrap нової машини](#bootstrap-нової-машини)
 - [Структура репозиторію](#структура-репозиторію)
+- [Де що лежить](#де-що-лежить)
 - [Інсталятор](#інсталятор)
 - [Модулі](#модулі)
 - [Профілі хоста](#профілі-хоста)
@@ -82,20 +83,33 @@ dock/monitor-profiles покриті лише синтетичними тест�
 
 ## Швидкий старт
 
+Спершу виконайте `./install.sh --dry-run`: він показує кожну дію в тому ж меню
+й нічого не змінює. Прочитайте цей вивід перед першим реальним встановленням.
+
 ```bash
 git clone <repo-url> ~/Projects/dotfiles
 cd ~/Projects/dotfiles
 
-make lint                 # bash -n + shellcheck
-./tests/run.sh            # shell-набір; тимчасовий HOME, живі файли не чіпаються
-make dry-run              # повний перегляд встановлення, нічого не змінює
-./install.sh              # інтерактивний інсталятор
+./install.sh              # головне меню
+./install.sh --dry-run    # те саме меню, кожна дія лише друкується
+```
+
+Перший екран показує визначені host, GPU, кількість моніторів і рівень CPU.
+Їх можна змінити там же. Після кожної дії меню повертається, а верхній пункт
+перемикає dry-run для всієї сесії.
+
+Прапорці лишаються для автоматизації:
+
+```bash
+./install.sh --dry-run --all
+./install.sh --modules hypr,uwsm,waybar,rofi,kitty,fish
+./install.sh --monitors
 ```
 
 На машині, де ще немає передумов:
 
 ```bash
-./bootstrap.sh            # base-devel/git/curl, далі інсталятор
+./bootstrap.sh            # base-devel/git/curl, далі ./install.sh
 ./bootstrap.sh --dry-run  # спершу показати всі команди
 ```
 
@@ -105,7 +119,8 @@ make dry-run              # повний перегляд встановленн
 ./install.sh --host desktop --gpu nvidia --modules hypr,uwsm,waybar,rofi,kitty,fish
 ./install.sh --monitors   # виявити й записати розкладку моніторів
 fish -c 'fisher update'   # встановити плагіни tide
-make theme WALLPAPER=~/Pictures/wallpaper.jpg
+./install.sh --wallpaper ~/Pictures/wallpaper.jpg
+./install.sh --theme      # згенерувати кольори matugen зі шпалер
 ```
 
 ## Bootstrap нової машини
@@ -126,9 +141,9 @@ Bootstrap ставить лише інструменти, потрібні ін�
 
 ```text
 .
-├── install.sh                 інтерактивний інсталятор і точка входу
+├── install.sh                 інсталятор із меню, єдина точка входу для користувача
 ├── bootstrap.sh               передумови нової машини, далі install.sh
-├── lib/                       common, TUI, монітори, пакети, система, секрети
+├── lib/                       common, TUI, меню, монітори, пакети, система, секрети
 ├── profiles/gpu/              nvidia, amd, intel, hybrid, vm, software
 ├── hosts/
 │   ├── desktop/               monitors.conf.sh, input.lua, env хоста
@@ -146,41 +161,57 @@ Bootstrap ставить лише інструменти, потрібні ін�
 └── README.md / README.uk.md
 ```
 
+## Де що лежить
+
+| Шлях | Призначення |
+|------|-------------|
+| `install.sh` | єдина точка входу для користувача: меню, прапорці й одноразові дії |
+| `Makefile` | лише розробницькі задачі: `lint`, `test`, `check`, `audit`, `doctor`, `hooks` |
+| `scripts/` | внутрішні помічники для інсталятора, CI і pre-commit hook |
+| `lib/` | спільний shell-код: TUI, меню, пакети, монітори, системні файли |
+| `modules/`, `hosts/`, `profiles/` | конфігурації, які лінкуються або рендеряться |
+| `bootstrap.sh` | єдиний виняток: перший запуск на чистій системі, до `install.sh` |
+
+`bootstrap.sh` навмисно лишається окремим файлом. Він запускається до того, як
+з'являться `gum`, `jq` та інші залежності інсталятора, тому використовує лише
+bash і не потребує `lib/`. Якщо `install.sh` не знаходить `gum`, `jq` чи `git`,
+він підказує спершу запустити `./bootstrap.sh`.
+
 ## Інсталятор
 
-```text
-./install.sh [options]
-
-  --all                 вибрати всі модулі й групи пакетів
-  --dry-run             показати дії, нічого не змінювати
-  --yes, -y             відповідати "yes" на підтвердження
-  --modules a,b,c       встановити лише ці модулі
-  --no-packages         пропустити встановлення пакетів
-  --host desktop|laptop перевизначити визначення хоста
-  --gpu PROFILE         nvidia|amd|intel|hybrid|vm|software
-  --monitors            переналаштувати розкладку моніторів і вийти
-  --dock-layout LAYOUT  зберегти right|left|mirror|ask для зовнішніх моніторів
-  --mouse               запустити тюнер мишки/тачпада
-  --cursor              встановити/налаштувати тему курсора і вийти
-  --cursor-archive PATH встановити тему курсора з локального архіву (не комітиться)
-  --cursor-theme NAME   назва теми курсора (типово: cursor.conf хоста)
-  --cursor-size N       розмір курсора 16..128 (типово: 24)
-  --wallpaper PATH      зберегти шлях шпалер і за потреби застосувати
-  --system              встановити опційні /etc файли (запускати через sudo)
-  --iface IFACE         мережевий інтерфейс для Pi-hole (рендер @IFACE@)
-  --autologin-user USER користувач для getty autologin drop-in (з --system)
-  --kernel              визначити рівень CPU і встановити відповідне ядро
-  --kernel-level LEVEL  перевизначити рівень ядра: v1..v4
-  --hooks               встановити pre-commit hook репозиторію і вийти
-  --doctor              read-only перевірка здоров'я і вихід (без sudo)
-  --json                machine-readable вивід (з --doctor/--dns-check)
-  --dns-check           read-only перевірка DNS-ланцюжка і вихід
-  --restore [date]      показати бекапи й відновити один (з --modules a,b;
-                        /etc також потребує --system)
-  --sync COMMAND        status|diff|pull|packages
-  --list                показати модулі, GPU-профілі й групи пакетів
-  -h, --help            довідка
+```bash
+./install.sh        # головне меню (потрібен термінал)
+./install.sh --help # згрупована довідка прапорців
 ```
+
+Меню охоплює:
+
+- **Встановлення** — модулі конфігів, програми, профіль host/GPU
+- **Налаштування** — монітори, миша/тачпад, курсор, шпалери й тема,
+  автозапуск, простій/кришка (ноутбук), game mode, профілі моніторів,
+  шпаргалка біндових клавіш
+- **Система (/etc)** — DNS (Pi-hole/Unbound), zram, cpupower, сервіси,
+  pacman/makepkg, GRUB/mkinitcpio
+- **Ядро** — звіт про рівень CPU і вибір ядра
+- **Обслуговування** — doctor, DNS-перевірка, restore, sync, дрейф пакетів, hooks
+
+Пункти, які не працюють на цій машині, лишаються видимими, але сірими, з
+причиною (лише ноутбук, лише NVIDIA, немає `sudo`). Без термінала інсталятор
+поводиться як раніше.
+
+### Прапорці для автоматизації
+
+| Область | Прапорці |
+|---------|----------|
+| Встановлення | `--all`, `--modules a,b`, `--groups a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu` |
+| Налаштування | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
+| Система | `--system`, `--system-components a,b`, `--iface`, `--autologin-user` |
+| Ядро | `--kernel`, `--kernel-level v1..v4` |
+| Обслуговування | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
+| Загальні | `--dry-run`, `--yes`, `--list`, `--help` |
+
+Кожен пункт меню відповідає одному з цих прапорців. `tests/menu.sh` і
+`tests/help-flags.sh` падають, якщо меню й `--help` розійдуться.
 
 `--all` означає **модулі + пакети**, а не `/etc`. Системні файли завжди
 опційні й ставляться лише через `--system`.
@@ -284,9 +315,9 @@ DOCK_LAYOUT=right      # right|left|mirror|ask
 
 ```bash
 ./install.sh --dock-layout right
-make monitor-profiles ACTION=status
-make monitor-profiles ACTION=apply DRY_RUN=1
-make monitor-profiles ACTION=watch
+./install.sh --monitor-profiles status
+./install.sh --monitor-profiles apply --dry-run
+./install.sh --monitor-profiles watch
 ```
 
 `watch` слухає сокет подій Hyprland (`socket2`) через `socat` і дебаунсить
@@ -297,7 +328,7 @@ make monitor-profiles ACTION=watch
 ніколи не змінює монітори.
 
 > **На реальному обладнанні док-станції не перевірено.** Спершу запустіть
-> `apply` з `DRY_RUN=1` і збережіть знімок моніторів. Якщо після реального
+> `apply` з `--dry-run` і збережіть знімок моніторів. Якщо після реального
 > запуску розкладка неправильна, поверніть попередні файли через
 > `./install.sh --restore`.
 
@@ -306,23 +337,27 @@ make monitor-profiles ACTION=watch
 У цих модулів одне правило: стан живе в `~/.local/state/dotfiles/`, а не в
 конфігу композитора.
 
+Після встановлення відповідного модуля ті самі інструменти доступні як
+команди в `~/.local/bin`: `autostart.sh`, `idle-tune.sh` і
+`monitor-profiles.sh`.
+
 ### Меню теми
 
 ```bash
-make theme-menu                 # меню rofi/gum/whiptail/dialog/plain
-make theme-menu DRY_RUN=1
+./install.sh --theme-menu       # меню rofi/gum/whiptail/dialog/plain
+./install.sh --theme-menu --dry-run
 ```
 
 Вибір шпалер, режиму matugen (`dark`/`light`) і схеми кольорів. Вибір
-зберігається в `~/.local/state/dotfiles/theme.conf`; `make theme` може його
-перевикористати.
+зберігається в `~/.local/state/dotfiles/theme.conf`; `./install.sh --theme`
+може його перевикористати.
 
 ### Шпаргалка клавіш
 
 ```bash
-make binds                      # вирівняна таблиця
-make binds ROFI=1               # меню rofi
-make binds JSON=1               # JSON для скриптів
+./install.sh --binds            # вирівняна таблиця
+./install.sh --binds rofi       # меню rofi
+./install.sh --binds json       # JSON для скриптів
 ~/.local/bin/binds-cheatsheet.sh --duplicates
 ```
 
@@ -332,9 +367,9 @@ make binds JSON=1               # JSON для скриптів
 ### Gamemode
 
 ```bash
-make gamemode ACTION=toggle
-make gamemode ACTION=status
-make gamemode ACTION=on DRY_RUN=1
+./install.sh --gamemode toggle
+./install.sh --gamemode status
+./install.sh --gamemode on --dry-run
 ```
 
 Увімкнення вимикає анімації, blur, тіні й округлення. Значення, активні до
@@ -356,10 +391,10 @@ make gamemode ACTION=on DRY_RUN=1
 `~/.local/state/dotfiles/idle.conf`.
 
 ```bash
-make idle ACTION=status
-make idle ACTION=apply PROFILE=battery
-make idle ACTION=configure              # запитує всі вісім значень
-make idle ACTION=watch                  # перезастосувати при зміні AC/батареї
+./install.sh --idle status
+~/.local/bin/idle-tune.sh apply --profile battery
+./install.sh --idle configure              # запитує всі вісім значень
+./install.sh --idle watch                  # перезастосувати при зміні AC/батареї
 ```
 
 Попередній `hypridle.conf` бекапиться перед заміною. `hypridle` і `hyprlock`
@@ -368,9 +403,9 @@ make idle ACTION=watch                  # перезастосувати при 
 ### Кришка ноутбука
 
 ```bash
-make lid ACTION=status
-make lid ACTION=closed
-make lid ACTION=closed DRY_RUN=1
+./install.sh --lid status
+./install.sh --lid closed
+./install.sh --lid closed --dry-run
 ```
 
 Під час закриття обробник читає `hyprctl monitors -j` безпосередньо перед дією:
@@ -384,10 +419,10 @@ make lid ACTION=closed DRY_RUN=1
 ### Автозапуск
 
 ```bash
-make autostart                        # список
-make autostart ACTION=disable NAME=vesktop
-make autostart ACTION=add NAME=notes CMD=obsidian
-make autostart ACTION=pick            # rofi/gum/whiptail/dialog/plain
+./install.sh --autostart list
+~/.local/bin/autostart.sh disable vesktop
+~/.local/bin/autostart.sh add notes obsidian
+./install.sh --autostart pick          # rofi/gum/whiptail/dialog/plain
 ```
 
 Записи живуть у `~/.local/state/dotfiles/autostart.tsv` і при першому
@@ -398,10 +433,9 @@ make autostart ACTION=pick            # rofi/gum/whiptail/dialog/plain
 ## Тюнер мишки й тачпада
 
 ```bash
-make mouse
 ./install.sh --mouse
 ~/.local/bin/mouse-tune.sh          # після встановлення
-./scripts/mouse-tune.sh --show      # read-only поточні значення
+mouse-tune.sh --show                # read-only поточні значення
 ```
 
 Тюнер потребує запущеної сесії Hyprland і використовує Lua runtime API:
@@ -444,22 +478,36 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 
 ## Категорії застосунків
 
-Групи пакетів живуть у `packages/<category>.txt`. Інсталятор дає вибрати
-групи й позначає альтернативи як `[main, config]` (конфіг цього застосунку є в
-репозиторії) або `[package only]` (конфігу тут немає).
+Пікер групує застосунки за роллю. У кожній категорії спершу йде основна
+програма (конфіг є в репозиторії), далі аналоги лише як пакети:
 
-| Категорія | Основна (конфіг включено) | Альтернативи (лише пакет) |
-|-----------|---------------------------|---------------------------|
-| термінал | kitty | foot, alacritty, wezterm, ghostty |
-| лаунчер | rofi | fuzzel, wofi, anyrun |
-| статус-бар | waybar | hyprpanel, ags |
-| сповіщення | dunst | mako, swaync |
-| браузер | firefox | chromium, brave-bin, librewolf |
-| файловий менеджер | dolphin | nautilus, thunar, yazi |
-| системний монітор | btop | htop, bottom |
-| редактор | micro | neovim, kate |
-| музика | spotify-launcher | amberol, elisa |
-| ядро | керується `--kernel` | linux, linux-lts, linux-zen, linux-hardened |
+- ★ основна — конфіг у репозиторії, вибрана попередньо
+- ○ аналог — лише пакет, без конфігу
+- ✓ вже встановлено
+
+| Категорія | Основна ★ | Аналоги ○ |
+|-----------|-----------|-----------|
+| Термінал | **kitty** | foot, alacritty, wezterm, ghostty |
+| Лаунчер | **rofi** | fuzzel, wofi, anyrun |
+| Бар | **waybar** | hyprpanel, ags |
+| Сповіщення | **dunst** | mako, swaync |
+| Браузер | **firefox** | chromium, brave-bin, librewolf |
+| Файловий менеджер | **dolphin** | nautilus, thunar, yazi |
+| Редактор | **micro** | neovim, kate |
+| Музика | **spotify-launcher** | amberol, elisa |
+| Системний монітор | **btop** | htop, bottom |
+
+Аналог можна додати поряд з основною, але конфіг репозиторію завжди належить
+основній. Ядра не входять до цього пікера; для них є меню «Ядро» або
+`--kernel`.
+
+Вибір без інтерактиву:
+
+```bash
+./install.sh --only-packages --groups base,desktop
+./install.sh --only-packages --groups base --apps foot
+./install.sh --only-packages --packages foot,kitty
+```
 
 Огляд груп:
 
@@ -485,10 +533,10 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 ### Дрейф пакетів
 
 ```bash
-make pkg-sync                        # лише звіт
-make pkg-sync ACTION=check           # exit 1, коли списки розійшлися
-make pkg-sync ACTION=pull DRY_RUN=1
-make pkg-sync ACTION=pull YES=1      # дописати, ніколи не видаляти
+./install.sh --pkg-sync status       # лише звіт
+./install.sh --pkg-sync check        # exit 1, коли списки розійшлися
+./install.sh --pkg-sync pull --dry-run
+./install.sh --pkg-sync pull --yes   # дописати, ніколи не видаляти
 ```
 
 `pkg-sync` порівнює явно встановлені пакети з `packages/*.txt`. `pull` лише
@@ -514,21 +562,22 @@ xanmod на десктопах. Ноутбуки трактуються конс
 режим відмовляє. Запущене ядро й fallback-ядро ніколи не видаляються.
 
 NVIDIA DKMS завжди отримує відповідні headers. Інсталятор друкує команди
-`mkinitcpio`/`grub-mkconfig` і ніколи їх не запускає. `make doctor` порівнює
-рівень CPU з рівнем встановленого ядра.
+`mkinitcpio`/`grub-mkconfig` і ніколи їх не запускає. `./install.sh --doctor`
+порівнює рівень CPU з рівнем встановленого ядра.
 
 ## Тема
 
 Кольори генеруються matugen зі шпалер:
 
 ```bash
-make theme WALLPAPER=~/Pictures/wallpaper.jpg
+./install.sh --wallpaper ~/Pictures/wallpaper.jpg
+./install.sh --theme
 ```
 
-Без `WALLPAPER` `make theme` спершу читає `~/.config/hypr/wallpaper.path`
-(пише `./install.sh --wallpaper`), а далі поле `image` у
-`~/.config/hypr/colors.lua`. Сам файл зображення ніколи не комітиться.
-Згенеровані файли ігноруються git:
+Без `--wallpaper` `./install.sh --theme` спершу читає
+`~/.config/hypr/wallpaper.path` (пише `./install.sh --wallpaper`), а далі поле
+`image` у `~/.config/hypr/colors.lua`. Сам файл зображення ніколи не
+комітиться. Згенеровані файли ігноруються git:
 
 - `~/.config/hypr/colors.lua`
 - кольори waybar/rofi/kitty/dunst
@@ -634,8 +683,7 @@ cp -a ~/.dotfiles-backup/2026-11-16_120000/.config/hypr/hyprland.lua \
 ```bash
 ./install.sh --restore                       # список бекапів із кількістю файлів
 ./install.sh --restore 2026-11-16_120000
-make restore RESTORE_DATE=2026-11-16_120000
-make restore RESTORE_DATE=2026-11-16_120000 MODULES=hypr DRY_RUN=1
+./install.sh --restore 2026-11-16_120000 --modules hypr --dry-run
 ```
 
 Відновлення читає `manifest.tsv`, показує diff, питає підтвердження й бекапить
@@ -655,11 +703,11 @@ make restore RESTORE_DATE=2026-11-16_120000 MODULES=hypr DRY_RUN=1
 записується.
 
 ```bash
-make sync-status                    # файли, що відрізняються
-make sync-diff SYNC_TARGET=hypr     # unified diff
-make sync-pull DRY_RUN=1            # перегляд
-make sync-pull YES=1                # записати назад (diff + скан секретів)
-./scripts/sync.sh packages          # порівняти встановлені пакети
+./install.sh --sync status          # файли, що відрізняються
+./install.sh --sync diff hypr       # unified diff
+./install.sh --sync pull --dry-run  # перегляд
+./install.sh --sync pull --yes      # записати назад (diff + скан секретів)
+./install.sh --sync packages        # порівняти встановлені пакети
 ```
 
 Pull зворотно рендерить `@HOME@`, `@FIREFOX_PROFILE_DIR@` і `@OBSIDIAN_VAULT@`,
@@ -672,13 +720,16 @@ Pull зворотно рендерить `@HOME@`, `@FIREFOX_PROFILE_DIR@` і `@
 
 ```bash
 make lint       # bash -n + shellcheck
+make test       # shell-тести; тимчасовий HOME, живі файли не чіпаються
 make audit      # read-only аудит живої системи й репозиторію
 make doctor     # рівень CPU/ядра, курсор, шпалери, керовані symlink-и
-make dns-check  # resolv.conf -> Pi-hole -> unbound
-make check      # lint + audit + doctor
-./tests/run.sh  # повний shell-набір
+make check      # lint + test + audit + doctor
 make hooks      # встановити pre-commit hook репозиторію
 ```
+
+Makefile — інструмент розробника. Користувацькі перевірки:
+`./install.sh --doctor`, `./install.sh --dns-check` і
+`./install.sh --pkg-sync check`.
 
 Аудит перевіряє помилки конфігу Hyprland, дублікати біндів, переносимість
 моніторів, захардкожені домашні шляхи, systemd-юніти, синтаксис Unbound,
