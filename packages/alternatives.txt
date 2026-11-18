@@ -1,7 +1,10 @@
-# Alternative applications, grouped by category.
+# Application registry for the installer picker.
 # Format: package <TAB> category <TAB> role <TAB> note
-# role=main  -> a config exists in this repo
-# role=alt   -> package only, no config in this repo
+# role=main  -> a config exists in this repo (shown as main)
+# role=alt   -> package only, no config in this repo (shown as alternative)
+# Picker order: terminal, launcher, status-bar, notifications, browser,
+# file-manager, editor, music, system-monitor.
+# kernel rows are not shown in the picker; use ./install.sh --kernel instead.
 kitty	terminal	main	config: modules/kitty
 foot	terminal	alt	package only
 alacritty	terminal	alt	package only
