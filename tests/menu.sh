@@ -69,6 +69,7 @@ else
 fi
 
 # 0b. Gum gets every default module as an explicit checked item.
+# shellcheck disable=SC2016 # literal shell text is being checked
 if grep -q 'args+=(--selected "${items\[$i\]}")' "$ROOT/lib/tui.sh" \
     && grep -q 'label="${label//,/;}"' "$ROOT/install.sh"; then
     pass "module labels are comma-safe and preselected individually"
