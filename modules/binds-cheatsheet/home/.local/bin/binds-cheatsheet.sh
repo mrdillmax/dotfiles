@@ -22,6 +22,7 @@ Usage: binds-cheatsheet.sh [options]
   --markdown      markdown table
   --json          JSON array of {keybind, action, dynamic}
   --rofi          show the table in rofi (falls back to plain)
+  --rofi-edit     pick a bind and print "<config>:<line>" for an editor
   --duplicates    print duplicate keybinds and exit 1 when any exist
   --file PATH     parse another Hyprland Lua config
   -h, --help      this help
@@ -36,6 +37,7 @@ while (($#)); do
         --markdown)   MODE="markdown" ;;
         --json)       MODE="json" ;;
         --rofi)       MODE="rofi" ;;
+        --rofi-edit)  MODE="rofi-edit" ;;
         --duplicates) CHECK_DUPLICATES=1 ;;
         --file)       CONFIG="${2:?missing value for --file}"; shift ;;
         -h|--help)    usage; exit 0 ;;
@@ -223,8 +225,11 @@ normalize_action() {
 KEYS=()
 ACTIONS=()
 DYNAMIC=()
+LINES=()
+line_number=0
 
 while IFS= read -r line; do
+    ((line_number++))
     [[ $line == *'hl.bind('* ]] || continue
 
     rest="${line#*hl.bind(}"
@@ -237,6 +242,7 @@ while IFS= read -r line; do
     KEYS+=("$key")
     ACTIONS+=("$action")
     DYNAMIC+=("$dynamic")
+    LINES+=("$line_number")
 done <"$CONFIG"
 
 if ((${#KEYS[@]} == 0)); then
@@ -326,9 +332,29 @@ print_rofi() {
     fi
 }
 
+print_rofi_edit() {
+    local i index
+    local -a rows=()
+
+    for i in "${!KEYS[@]}"; do
+        rows+=("<span font='JetBrainsMono Nerd Font 13'>\uf11c</span>  $(printf '%-28s %s' "${KEYS[$i]}" "${ACTIONS[$i]}")")
+    done
+
+    if ! command -v rofi >/dev/null 2>&1 || [[ -z ${WAYLAND_DISPLAY:-}${DISPLAY:-} ]]; then
+        return 1
+    fi
+    index="$(printf '%s\n' "${rows[@]}" | rofi \
+        -theme "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/launcher.rasi" \
+        -dmenu -p "" -no-custom -no-fixed-num-lines -markup-rows -format i \
+        -theme-str 'entry { placeholder: "Edit keybind"; }')" || return 1
+    [[ $index =~ ^[0-9]+$ ]] || return 1
+    printf '%s:%s\n' "$CONFIG" "${LINES[$index]}"
+}
+
 case "$MODE" in
-    plain)    print_plain ;;
-    markdown) print_markdown ;;
-    json)     print_json ;;
-    rofi)     print_rofi ;;
+    plain)     print_plain ;;
+    markdown)  print_markdown ;;
+    json)      print_json ;;
+    rofi)      print_rofi ;;
+    rofi-edit) print_rofi_edit ;;
 esac

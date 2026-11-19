@@ -414,3 +414,21 @@ hl.window_rule({
     },
     workspace = "special:cam silent",
 })
+
+-- Control center helpers run in floating terminals so fzf, nmcli and the
+-- package tools do not take over a workspace.
+hl.window_rule({
+    name = "dotfiles-control-center-float",
+    match = { class = "^dotfiles-control-center$" },
+    float = true,
+    center = true,
+    size = { 860, 560 },
+})
+
+hl.window_rule({
+    name = "pavucontrol-float",
+    match = { class = "^(pavucontrol|org.pulseaudio.pavucontrol)$" },
+    float = true,
+    center = true,
+    size = { 900, 600 },
+})

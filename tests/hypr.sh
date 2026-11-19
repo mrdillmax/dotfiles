@@ -48,5 +48,13 @@ else
     fail "the microphone tooltip is hardcoded"
 fi
 
+if grep -q 'dotfiles-control-center-float' "$lua" \
+    && grep -q 'pavucontrol-float' "$lua" \
+    && grep -q 'center = true' "$lua"; then
+    pass "helper terminals and pavucontrol float in the centre"
+else
+    fail "helper terminals or pavucontrol still tile"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

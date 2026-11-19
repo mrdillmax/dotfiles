@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=LazyDocker
+Comment=Terminal UI for Docker
+Exec=kitty --class dotfiles-control-center -e lazydocker
+TryExec=lazydocker
+Icon=docker
+Terminal=false
+Categories=System;
+Keywords=docker;containers;

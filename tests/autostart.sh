@@ -273,5 +273,13 @@ else
     fail "the autostart picker cannot remove a program"
 fi
 
+if grep -q 'labels=("+ Add a program" "- Remove a program")' "$AUTO" \
+    && grep -q '^choose_program()' "$AUTO" \
+    && grep -q 'fzf --height=100%' "$AUTO"; then
+    pass "add and remove are at the top, programs are chosen with fzf"
+else
+    fail "the autostart add flow does not use fzf"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

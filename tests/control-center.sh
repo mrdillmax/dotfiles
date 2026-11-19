@@ -39,7 +39,7 @@ done
 main_block="$(awk '/^main_menu\(\)/,/^}/' "$CC")"
 icons_ok=1
 for code in f009 f02d f0c9 f1fc f013 f019 f1f8 f021 f011; do
-    grep -qF "\$'\\u$code'" <<<"$main_block" || icons_ok=0
+    grep -qF "$(printf '%b' "\\u$code")" <<<"$main_block" || icons_ok=0
 done
 if ((icons_ok)); then
     pass "the main menu has nine real icon glyphs"
@@ -73,7 +73,7 @@ fi
 
 # 1d. Spicetify lives in the update page as one button.
 update_block="$(awk '/^update_page\(\)/,/^}/' "$CC")"
-if grep -q '"Spicetify"' <<<"$update_block" \
+if grep -q 'Spicetify' <<<"$update_block" \
     && grep -q 'backup apply' <<<"$update_block" \
     && ! grep -q 'spicetify update' <<<"$update_block"; then
     pass "Spicetify update is a single action inside updates"
@@ -103,7 +103,7 @@ else
     fail "the lid entry is not gated by host"
 fi
 monitor_block="$(awk '/^monitors_page\(\)/,/^}/' "$CC")"
-if grep -q 'host_is_laptop && items+=' <<<"$monitor_block"; then
+if grep -q 'host_is_laptop && specs+=' <<<"$monitor_block"; then
     pass "dock layout is only offered on laptops"
 else
     fail "desktop still offers laptop-only dock entries"
@@ -222,13 +222,62 @@ else
     fail "Tide configuration is missing"
 fi
 
+# 5a. Menu wording and the leaf actions that should close the panel.
+menu_block="$(awk '/^menu_page\(\)/,/^}/' "$CC")"
+if grep -q 'Toggle notifications' <<<"$menu_block" \
+    && ! grep -q 'Apply idle' <<<"$menu_block" \
+    && ! grep -q 'Game mode status' <<<"$menu_block" \
+    && grep -q 'Autostart") run_terminal' <<<"$menu_block"; then
+    pass "menu entries are toggles and autostart uses a terminal"
+else
+    fail "menu wording is stale"
+fi
+
+# 5b. Info pages are normal, readable rows instead of a plain rofi -e block.
+if grep -q '^show_info()' "$CC" \
+    && grep -q 'show_info "Versions"' "$CC" \
+    && grep -q 'show_info "Fonts and icons"' "$CC"; then
+    pass "versions and font details render as readable rows"
+else
+    fail "info pages still use an unreadable message block"
+fi
+
+# 5c. The colour-scheme menu is curated and labelled with icons.
+scheme_block="$(awk '/^theme_scheme_page\(\)/,/^}/' "$CC")"
+if grep -q 'Tonal spot' <<<"$scheme_block" \
+    && grep -q 'Vibrant' <<<"$scheme_block" \
+    && grep -q 'Monochrome' <<<"$scheme_block" \
+    && ! grep -q 'scheme-rainbow' <<<"$scheme_block"; then
+    pass "the colour scheme menu is curated"
+else
+    fail "the colour scheme menu still lists every scheme"
+fi
+
+# 5d. Wallpapers use large cards with the name under the photo.
+if grep -q '^make_wallpaper_card()' "$CC" \
+    && grep -q 'caption:' "$CC" \
+    && grep -q 'element-icon { size: 300px; }' "$CC"; then
+    pass "wallpapers use large named cards"
+else
+    fail "wallpapers still use small icons"
+fi
+
+# 5e. The large menu keeps every entry on screen.
+if grep -q 'lines: *20;' "$RASI"; then
+    pass "the menu can show twenty rows"
+else
+    fail "the menu still scrolls for a normal page"
+fi
+
 # 6. Install and uninstall use fzf when it is available.
 if grep -q 'pacman -Slq | fzf' "$CC" \
+    && grep -q -- '-Slq | fzf' "$CC" \
     && grep -q 'pacman -Qqe | fzf' "$CC" \
+    && grep -q 'pacman -Qq | fzf' "$CC" \
     && grep -q 'lazydocker' "$CC"; then
-    pass "install and uninstall use fzf, Docker opens lazydocker"
+    pass "repo, AUR, removal and inspection use fzf"
 else
-    fail "fzf install or removal is missing"
+    fail "fzf install, removal or inspection is missing"
 fi
 
 # 7. The update page covers repos, AUR, mirrors, dotfiles and Spicetify.
@@ -242,7 +291,7 @@ else
     fail "system or dotfiles updates are incomplete"
 fi
 
-if grep -q '"Mirrors"' <<<"$update_block" \
+if grep -q 'Mirrors' <<<"$update_block" \
     && grep -q 'reflector --latest 20 --protocol https --sort rate' <<<"$update_block" \
     && grep -q 'mirrorlist.bak' <<<"$update_block"; then
     pass "mirror refresh is wired to reflector with a backup"

@@ -382,12 +382,89 @@ choose_line() {
     printf '%s\n' "${items[$((choice - 1))]}"
 }
 
+sanitize_name() {
+    printf '%s' "$1" | sed 's/[^A-Za-z0-9_.-]/-/g'
+}
+
+# Installed desktop entries as id<TAB>name<TAB>command. The id keeps names
+# unique and safe for the state file.
+desktop_apps() {
+    local dir file line id name exec nodisplay
+    local -A seen=()
+
+    for dir in /usr/share/applications "$REAL_HOME/.local/share/applications"; do
+        [[ -d $dir ]] || continue
+        while IFS= read -r file; do
+            [[ -r $file ]] || continue
+            id="$(basename "$file" .desktop)"
+            [[ -n ${seen[$id]:-} ]] && continue
+            seen[$id]=1
+            name=""
+            exec=""
+            nodisplay=0
+            while IFS= read -r line; do
+                case "$line" in
+                    Name=*) [[ -z $name ]] && name="${line#Name=}" ;;
+                    Exec=*) [[ -z $exec ]] && exec="${line#Exec=}" ;;
+                    NoDisplay=true|Hidden=true) nodisplay=1 ;;
+                esac
+            done <"$file"
+            [[ $nodisplay == 1 || -z $name || -z $exec ]] && continue
+            exec="${exec//%[fFuUdDnNickvm]/}"
+            exec="$(printf '%s' "$exec" | sed 's/[[:space:]]*$//')"
+            printf '%s\t%s\t%s\n' "$id" "$name" "$exec"
+        done < <(find "$dir" -maxdepth 1 -name '*.desktop' -type f 2>/dev/null | sort)
+    done
+}
+
+# Selects an application with fzf, or Command... for anything else. Prints
+# name<TAB>command.
+choose_program() {
+    local -a rows=() names=() commands=()
+    local id name exec selection i answer_name answer_command
+
+    while IFS=$'\t' read -r id name exec; do
+        [[ -n $id && -n $name && -n $exec ]] || continue
+        names+=("$id")
+        commands+=("uwsm app -- $exec")
+        rows+=("$name  [$id]")
+    done < <(desktop_apps)
+
+    rows=("Command..." "${rows[@]}")
+    names=("__command__" "${names[@]}")
+    commands=("" "${commands[@]}")
+
+    if command -v fzf >/dev/null 2>&1 && [[ -t 0 ]]; then
+        selection="$(printf '%s\n' "${rows[@]}" | fzf --height=100% --reverse \
+            --prompt='application> ' --header='Select a program or Command...')" || return 1
+    else
+        selection="$(choose_line "Run at login" "${rows[@]}")" || return 1
+    fi
+    [[ -n $selection ]] || return 1
+
+    for i in "${!rows[@]}"; do
+        [[ ${rows[$i]} == "$selection" ]] || continue
+        if [[ ${names[$i]} == "__command__" ]]; then
+            answer_name="$(ask_line 'Program name')" || return 1
+            [[ -n $answer_name ]] || return 1
+            answer_name="$(sanitize_name "$answer_name")"
+            answer_command="$(ask_line 'Command')" || return 1
+            [[ -n $answer_command ]] || return 1
+            printf '%s\t%s\n' "$answer_name" "$answer_command"
+        else
+            printf '%s\t%s\n' "${names[$i]}" "${commands[$i]}"
+        fi
+        return 0
+    done
+    return 1
+}
+
 pick_entries() {
     local line enabled name _cmd labels=() choice chosen state
 
     load_entries
     while true; do
-        labels=()
+        labels=("+ Add a program" "- Remove a program")
         for line in "${ENTRIES[@]}"; do
             IFS=$'\t' read -r enabled name _cmd <<<"$line"
             if [[ $enabled == 1 ]]; then state='[x]'; else state='[ ]'; fi
@@ -396,16 +473,18 @@ pick_entries() {
             labels+=("$state $name$missing")
         done
 
-        labels+=("+ Add a program" "- Remove a program")
         choice="$(choose_line "Autostart (pick to toggle)" "${labels[@]}")" || return 0
         [[ -n $choice ]] || return 0
         if [[ $choice == '+ Add a program' ]]; then
-            local new_name new_command
-            new_name="$(ask_line 'Program name')" || continue
-            [[ -n $new_name ]] || continue
-            new_command="$(ask_line 'Command')" || continue
-            [[ -n $new_command ]] || continue
-            add_entry "$new_name" "$new_command" || true
+            local picked new_name new_command
+            picked="$(choose_program)" || continue
+            IFS=$'\t' read -r new_name new_command <<<"$picked"
+            [[ -n $new_name && -n $new_command ]] || continue
+            if entry_index "$new_name" >/dev/null 2>&1; then
+                warn "an entry named $new_name already exists"
+            else
+                add_entry "$new_name" "$new_command" || true
+            fi
             load_entries
             continue
         fi
