@@ -43,6 +43,27 @@ rofi_pick() {
     rofi "${args[@]}" "$@"
 }
 
+ask_text() {
+    local prompt="$1"
+    local -a args=(-dmenu -i -p "$prompt" -l 0)
+    [[ -r $THEME ]] && args+=(-theme "$THEME")
+    printf '\n' | rofi "${args[@]}"
+}
+
+ask_confirm() {
+    local prompt="$1" choice
+    choice="$(printf '%s\n' Yes No | rofi_pick "$prompt")" || return 1
+    [[ $choice == Yes ]]
+}
+
+aur_helper() {
+    if have paru; then
+        printf 'paru'
+    elif have yay; then
+        printf 'yay'
+    fi
+}
+
 message() {
     local text="$1"
     if have rofi; then
@@ -329,13 +350,96 @@ music_page() {
     done
 }
 
+package_search_install() {
+    local query choice helper pkg
+    local -a repo=() aur=() labels=()
+
+    query="$(ask_text "Search repositories and AUR")" || return 0
+    [[ -n $query ]] || return 0
+
+    mapfile -t repo < <(pacman -Ssq -- "$query" 2>/dev/null | head -100)
+    for pkg in "${repo[@]}"; do
+        labels+=("repo/$pkg")
+    done
+
+    helper="$(aur_helper)"
+    if [[ -n $helper ]]; then
+        mapfile -t aur < <("$helper" -Ssq -- "$query" 2>/dev/null | head -100)
+        for pkg in "${aur[@]}"; do
+            printf '%s\n' "${repo[@]}" | grep -Fxq -- "$pkg" && continue
+            labels+=("aur/$pkg")
+        done
+    fi
+
+    if ((${#labels[@]} == 0)); then
+        notify "No packages found for: $query"
+        return 0
+    fi
+
+    choice="$(printf '%s\n' "${labels[@]}" | rofi_pick "Install package")" || return 0
+    pkg="${choice#*/}"
+    case "$choice" in
+        repo/*) run_terminal "sudo pacman -S --needed $(printf '%q' "$pkg")" ;;
+        aur/*)
+            if [[ -n $helper ]]; then
+                run_terminal "$helper -S --needed $(printf '%q' "$pkg")"
+            else
+                notify "No AUR helper; install $pkg manually"
+            fi
+            ;;
+    esac
+}
+
+package_search_installed() {
+    local query choice pkg
+    local -a packages=()
+
+    query="$(ask_text "Filter installed packages")" || return 0
+    [[ -n $query ]] || return 0
+    mapfile -t packages < <(pacman -Qq 2>/dev/null | grep -iF -- "$query" | head -100)
+    if ((${#packages[@]} == 0)); then
+        notify "No installed package matches: $query"
+        return 0
+    fi
+    choice="$(printf '%s\n' "${packages[@]}" | rofi_pick "Installed package")" || return 0
+    pkg="$choice"
+    run_terminal "pacman -Qi $(printf '%q' "$pkg")"
+}
+
+package_remove() {
+    local query choice pkg helper
+    local -a packages=()
+
+    query="$(ask_text "Filter packages to remove")" || return 0
+    [[ -n $query ]] || return 0
+    mapfile -t packages < <(pacman -Qqe 2>/dev/null | grep -iF -- "$query" | head -100)
+    if ((${#packages[@]} == 0)); then
+        notify "No explicitly installed package matches: $query"
+        return 0
+    fi
+    choice="$(printf '%s\n' "${packages[@]}" | rofi_pick "Remove package")" || return 0
+    pkg="$choice"
+    ask_confirm "Remove $pkg and its unused dependencies?" || return 0
+    helper="$(aur_helper)"
+    if [[ -n $helper ]]; then
+        run_terminal "$helper -Rns $(printf '%q' "$pkg")"
+    else
+        run_terminal "sudo pacman -Rns $(printf '%q' "$pkg")"
+    fi
+}
+
 system_page() {
     local choice
     while :; do
         choice="$(printf '%s\n' \
+            "Update — repository packages" \
+            "Update — repository and AUR" \
+            "Packages — search and install" \
+            "Packages — search installed" \
+            "Packages — remove" \
             "Doctor — read-only health check" \
             "DNS — check the resolver chain" \
-            "Packages — drift from the catalog" \
+            "Packages — catalog drift" \
             "RAM cache — status" \
             "RAM cache — warm configured directories" \
             "Sync — files that differ from the repository" \
@@ -344,6 +448,26 @@ system_page() {
             "Restore — list and restore backups" \
             "Back" | rofi_pick "System")" || return 0
         case "$choice" in
+            "Update — repository packages")
+                run_terminal "sudo pacman -Syu"
+                ;;
+            "Update — repository and AUR")
+                if [[ -n $(aur_helper) ]]; then
+                    run_terminal "$(aur_helper) -Syu"
+                else
+                    notify "No AUR helper; updating repository packages only"
+                    run_terminal "sudo pacman -Syu"
+                fi
+                ;;
+            "Packages — search and install")
+                package_search_install
+                ;;
+            "Packages — search installed")
+                package_search_installed
+                ;;
+            "Packages — remove")
+                package_remove
+                ;;
             "Doctor"*)
                 [[ -n $ROOT ]] && run_terminal "./install.sh --doctor"
                 ;;
@@ -352,7 +476,7 @@ system_page() {
                     run_terminal "./scripts/dns-check.sh"
                 fi
                 ;;
-            "Packages"*)
+            "Packages — catalog drift"*)
                 if [[ -n $ROOT ]]; then
                     run_terminal "./scripts/pkg-sync.sh status"
                 fi

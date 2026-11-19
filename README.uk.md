@@ -483,7 +483,7 @@ dotfiles-control-center
 - **Ввід**: тюнер мишки/тачпада, шпаргалка біндів
 - **Сесія**: автозапуск, idle, кришка, game mode
 - **Музика**: Spicetify update, backup/apply і restore
-- **Система**: doctor, DNS, дрейф пакетів, sync і restore
+- **Система**: оновлення, пошук/встановлення/видалення пакетів, doctor, DNS, дрейф пакетів, sync і restore
 - **Встановлення й оновлення**: відкриває `install.sh` у kitty
 
 Меню використовує палітру matugen (`colors.rasi`), Inter і

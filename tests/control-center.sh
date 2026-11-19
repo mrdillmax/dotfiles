@@ -72,7 +72,17 @@ else
     fail "control center Lua template is incomplete"
 fi
 
-# 5. Daily actions call helpers directly, not the installer menu.
+# 5. System page covers updates, package search and removal.
+if grep -q 'Update — repository packages' "$CC" \
+    && grep -q 'Packages — search and install' "$CC" \
+    && grep -q 'Packages — remove' "$CC" \
+    && grep -q 'sudo pacman -Syu' "$CC"; then
+    pass "system updates and package management are wired"
+else
+    fail "system package management is incomplete"
+fi
+
+# 6. Daily actions call helpers directly, not the installer menu.
 if grep -q 'autostart.sh pick' "$CC" \
     && grep -q 'gamemode.sh toggle' "$CC" \
     && grep -q 'idle-tune.sh' "$CC" \

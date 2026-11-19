@@ -476,7 +476,7 @@ Press `SUPER + Space` or launch **Control Center** from rofi. Pages cover:
 - **Input**: mouse/touchpad tuner, searchable keybind cheatsheet
 - **Session**: autostart, idle, lid, game mode
 - **Music**: Spicetify update, backup/apply and restore
-- **System**: doctor, DNS check, package drift, sync and restore
+- **System**: updates, package search/install/remove, doctor, DNS check, package drift, sync and restore
 - **Install and update**: opens `install.sh` in kitty
 
 The menu uses the matugen palette (`colors.rasi`), Inter and
