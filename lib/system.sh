@@ -319,6 +319,13 @@ merge_pacman_conf() {
     rm -f -- "$tmp"
 }
 
+# True when pacman.conf contains an active [multilib] section.
+multilib_enabled() {
+    local conf="${1:-/etc/pacman.conf}"
+    [[ -r $conf ]] || return 1
+    awk '/^\[multilib\][[:space:]]*$/ { found = 1 } END { exit !found }' "$conf"
+}
+
 merge_makepkg_conf() {
     local target="${1:-/etc/makepkg.conf}"
     local tmp
