@@ -45,7 +45,7 @@ make doctor           # перевірка стану лише читанням
 
 `./install.sh --dry-run --all` вибирає обовʼязкові модулі й типові пакети, але не торкається `/etc`.
 
-Якщо на машині бракує передумов (`base-devel`, `git`, `curl`, `jq`, `gum`), bootstrap
+Якщо на машині бракує передумов (`base-devel`, `git`, `curl`, `jq`, `gum`, `networkmanager`), bootstrap
 встановить їх і запустить інсталятор:
 
 ```bash

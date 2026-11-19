@@ -135,7 +135,8 @@ fish -c 'fisher update'   # встановити плагіни tide
 ```
 
 Bootstrap ставить інструменти, потрібні інсталятору (`base-devel`, `git`,
-`curl`, `jq`, `gum`), перевіряє доступність мережі й збирає `yay-bin`, якщо
+`curl`, `jq`, `gum`, `networkmanager`), перевіряє доступність мережі й збирає
+`yay-bin`, якщо
 AUR-помічника немає. `--no-aur` лишає старий режим лише з попередженням. Далі
 запускає `install.sh` (з `--all --yes`, якщо передано `--yes`) і завершує
 read-only проходом `--doctor`. Усе після `--` передається в `install.sh`.
@@ -187,13 +188,18 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 ./install.sh --help # згрупована довідка прапорців
 ```
 
-Меню охоплює:
+Головне меню йде в порядку першого встановлення:
 
-- **Встановлення** — модулі конфігів, програми, профіль host/GPU
-- **Система (/etc)** — DNS (Pi-hole/Unbound), zram, cpupower, сервіси,
-  pacman/makepkg, GRUB/mkinitcpio, sysctl для RAM-кешу
-- **Ядро** — звіт про рівень CPU і вибір ядра
-- **Обслуговування** — doctor, DNS-перевірка, restore, sync, дрейф пакетів, hooks
+1. **First-time setup** — проводить через пакети, конфіги, файли `/etc`
+   (через `sudo`) і ядро, з поясненням і підтвердженням між кроками.
+2. **Profile** — профіль host і GPU.
+3. **1. Packages**, **2. Configuration files**, **3. System configuration**,
+   **4. Kernel** — ті самі кроки для повторних запусків.
+4. **Обслуговування** — doctor, DNS-перевірка, restore, sync, дрейф пакетів,
+   hooks.
+
+Майстер зупиняється на першому невдалому кроці й повертається в меню. `--setup`
+запускає його без меню; для скриптів він не призначений.
 
 Щоденні налаштування живуть у rofi Control Center, а не в цьому меню. Натисни
 `SUPER + Space` або відкрий **Control Center** з rofi.
@@ -206,7 +212,7 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 
 | Область | Прапорці |
 |---------|----------|
-| Встановлення | `--all`, `--modules a,b`, `--category a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu`, `--spicetify` |
+| Встановлення | `--setup`, `--all`, `--modules a,b`, `--category a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu`, `--spicetify` |
 | Налаштування | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
 | Система | `--system`, `--system-components a,b` (включно з `ram`), `--iface`, `--autologin-user` |
 | Ядро | `--kernel`, `--kernel-level v1..v4` |
@@ -220,6 +226,11 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 типово, крім `ram-cache` і `workspaces-split`; `lid` пропускається на десктопі,
 а `idle` вмикається після встановлення. Системні файли завжди опційні й
 ставляться лише через `--system`.
+
+`--only-packages` без `--packages`, `--category` чи `--apps` завершується
+помилкою, коли немає термінала для пікера. Після встановлення інсталятор
+перечитує базу пакетів і падає, якщо якийсь запитаний пакет досі відсутній,
+тож тихий no-op не вважається успіхом.
 
 Інсталятор визначає тип хоста за `/sys/class/power_supply/BAT*` і DMI chassis
 type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва можна
@@ -483,7 +494,9 @@ dotfiles-control-center
 - **Ввід**: тюнер мишки/тачпада, шпаргалка біндів
 - **Сесія**: автозапуск, idle, кришка, game mode
 - **Музика**: Spicetify update, backup/apply і restore
-- **Система**: оновлення, пошук/встановлення/видалення пакетів, doctor, DNS, дрейф пакетів, sync і restore
+- **Система**: оновлення, оновлення дзеркал репозиторіїв (reflector),
+  пошук/встановлення/видалення пакетів, doctor, DNS, дрейф пакетів, sync і
+  restore
 - **Встановлення й оновлення**: відкриває `install.sh` у kitty
 
 Меню використовує палітру matugen (`colors.rasi`), Inter і
@@ -551,9 +564,12 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 - • пакет: звичайний пакет
 - ✓ вже встановлено
 
-`--all` ставить рядки з `default=yes`. Офісні, engineering- і CAD-програми
-видимі, але опційні. `cuda`, `virtio-win`, `hypridle`, `hyprlock`,
-`profile-sync-daemon`, `vmtouch` і `preload` також видимі, але опційні.
+`--all` ставить рядки з `default=yes`. Офісні та CAD-програми видимі, але
+опційні. `cuda`, `virtio-win`, `hypridle`, `hyprlock`, `profile-sync-daemon`,
+`vmtouch` і `preload` також видимі, але опційні. Базові системні пакети
+(`base`, `base-devel`, `git`, `networkmanager`, компілятори тощо) не входять до
+каталогу; ними керує bootstrap. Віртуалізація, Docker і засоби діагностики
+заліза опційні.
 
 Категорії: System, Desktop, Hyprland, Audio, Network, Development, Games,
 Virtualization, Fonts, Drivers, Terminal, Launcher, Bar, Notifications,

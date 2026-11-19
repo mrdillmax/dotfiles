@@ -135,7 +135,8 @@ fish -c 'fisher update'   # install the tide prompt plugins
 ```
 
 Bootstrap installs the tools the installer needs (`base-devel`, `git`, `curl`,
-`jq`, `gum`), checks network reachability and builds `yay-bin` when no AUR
+`jq`, `gum`, `networkmanager`), checks network reachability and builds `yay-bin`
+when no AUR
 helper exists. Use `--no-aur` to keep the old report-only behaviour. It then
 runs `install.sh` (with `--all --yes` when `--yes` is given) and finishes with a
 read-only `--doctor` pass. Everything after `--` is forwarded to `install.sh`.
@@ -187,13 +188,18 @@ the rest of the installer dependencies exist, so it uses only bash and no
 ./install.sh --help # grouped flag reference
 ```
 
-The menu covers:
+The main menu follows the order of a first install:
 
-- **Installation** — configuration modules, applications, host/GPU profile
-- **System (/etc)** — DNS (Pi-hole/Unbound), zram, cpupower, services,
-  pacman/makepkg, GRUB/mkinitcpio, RAM cache sysctl
-- **Kernel** — CPU-level report and kernel selection
-- **Maintenance** — doctor, DNS check, restore, sync, package drift, hooks
+1. **First-time setup** — walks through packages, configuration files, `/etc`
+   files (with `sudo`) and the kernel, with an explanation and a confirmation
+   between steps.
+2. **Profile** — host and GPU profile.
+3. **1. Packages**, **2. Configuration files**, **3. System configuration**,
+   **4. Kernel** — the same stages for repeat runs.
+4. **Maintenance** — doctor, DNS check, restore, sync, package drift, hooks.
+
+The wizard stops at the first failed stage and returns to the menu. `--setup`
+runs it non-interactively; it is not meant for scripts.
 
 Daily settings live in the rofi control center, not in this menu. Press
 `SUPER + Space` or launch **Control Center** from rofi.
@@ -206,7 +212,7 @@ installer keeps the previous non-interactive behaviour.
 
 | Area | Flags |
 |------|-------|
-| Installation | `--all`, `--modules a,b`, `--category a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu`, `--spicetify` |
+| Installation | `--setup`, `--all`, `--modules a,b`, `--category a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu`, `--spicetify` |
 | Settings | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
 | System | `--system`, `--system-components a,b` (includes `ram`), `--iface`, `--autologin-user` |
 | Kernel | `--kernel`, `--kernel-level v1..v4` |
@@ -220,6 +226,11 @@ Every menu entry maps to one of these flags. `tests/menu.sh` and
 selected by default except `ram-cache` and `workspaces-split`; `lid` is skipped
 on desktops and `idle` is enabled when installed. System files are always opt-in
 through `--system`.
+
+`--only-packages` without `--packages`, `--category` or `--apps` exits with an
+error when there is no terminal to show the picker. After installation the
+installer re-reads the package database and fails when a requested package is
+still missing, so a silent no-op cannot pass as success.
 
 The installer detects the host type from `/sys/class/power_supply/BAT*` and the
 DMI chassis type, and the GPU profile from `lspci`/`systemd-detect-virt`. You
@@ -476,7 +487,8 @@ Press `SUPER + Space` or launch **Control Center** from rofi. Pages cover:
 - **Input**: mouse/touchpad tuner, searchable keybind cheatsheet
 - **Session**: autostart, idle, lid, game mode
 - **Music**: Spicetify update, backup/apply and restore
-- **System**: updates, package search/install/remove, doctor, DNS check, package drift, sync and restore
+- **System**: updates, repository mirror refresh (reflector), package
+  search/install/remove, doctor, DNS check, package drift, sync and restore
 - **Install and update**: opens `install.sh` in kitty
 
 The menu uses the matugen palette (`colors.rasi`), Inter and
@@ -545,9 +557,12 @@ drop one package without editing a list.
 - • package: regular package
 - ✓ already installed
 
-`--all` installs rows with `default=yes`. The office, engineering and CAD apps
-are visible but opt-in. `cuda`, `virtio-win`, `hypridle`, `hyprlock`,
+`--all` installs rows with `default=yes`. The office and CAD apps are visible
+but opt-in. `cuda`, `virtio-win`, `hypridle`, `hyprlock`,
 `profile-sync-daemon`, `vmtouch` and `preload` also stay visible but opt-in.
+Base-system packages (`base`, `base-devel`, `git`, `networkmanager`, compilers
+and similar) are not in the catalog; bootstrap owns them. Virtualization, Docker
+and hardware-inspection tools are opt-in.
 
 Categories: System, Desktop, Hyprland, Audio, Network, Development, Games,
 Virtualization, Fonts, Drivers, Terminal, Launcher, Bar, Notifications,

@@ -45,7 +45,7 @@ make doctor           # read-only health check
 
 `./install.sh --dry-run --all` selects the required modules and default packages but never touches `/etc`.
 
-If the machine lacks the prerequisites (`base-devel`, `git`, `curl`, `jq`, `gum`), bootstrap
+If the machine lacks the prerequisites (`base-devel`, `git`, `curl`, `jq`, `gum`, `networkmanager`), bootstrap
 can install them and then start the installer:
 
 ```bash
