@@ -336,7 +336,14 @@ install_packages() {
     missing=("${manager_packages[@]}")
     ((${#missing[@]})) || return 0
 
-    case "$(package_manager)" in
+    local manager
+    manager="$(package_manager)"
+    if [[ $manager == pacman ]] && (( EUID != 0 )) \
+        && ! command -v sudo >/dev/null 2>&1; then
+        die "sudo is required to install packages"
+    fi
+
+    case "$manager" in
         pacman)
             local -a official=() aur=()
             declare -A OFFICIAL=()
@@ -379,6 +386,22 @@ install_packages() {
         *)
             warn "unknown package manager; install manually:"
             printf '  %s\n' "${missing[@]}"
+            return 1
             ;;
     esac
+
+    if [[ $manager == pacman ]]; then
+        unset PACKAGE_INSTALLED
+        declare -gA PACKAGE_INSTALLED=()
+        package_installed_map
+        local -a not_installed=()
+        for pkg in "${manager_packages[@]}"; do
+            [[ -n ${PACKAGE_INSTALLED[$pkg]:-} ]] || not_installed+=("$pkg")
+        done
+        if ((${#not_installed[@]})); then
+            warn "not installed: ${not_installed[*]}"
+            return 1
+        fi
+        ok "installed ${#manager_packages[@]} package(s)"
+    fi
 }

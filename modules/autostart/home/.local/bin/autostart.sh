@@ -168,7 +168,9 @@ show_list() {
     for line in "${ENTRIES[@]}"; do
         IFS=$'\t' read -r enabled name cmd <<<"$line"
         if [[ $enabled == 1 ]]; then state='[x]'; else state='[ ]'; fi
-        printf '%s %-20s %s\n' "$state" "$name" "$cmd"
+        local missing=''
+        entry_command_available "$cmd" || missing=' (not installed)'
+        printf '%s %-20s %s%s\n' "$state" "$name" "$cmd" "$missing"
     done
 }
 
@@ -244,6 +246,21 @@ reset_entries() {
     ok "restored the default autostart list"
 }
 
+entry_command_available() {
+    local cmd="$1" first
+    cmd="${cmd#uwsm app -- }"
+    read -r first _ <<<"$cmd"
+    first="${first%\"}"
+    first="${first#\"}"
+    first="${first%\'}"
+    first="${first#\'}"
+    if [[ $first == /* ]]; then
+        [[ -x $first ]]
+    else
+        command -v -- "$first" >/dev/null 2>&1
+    fi
+}
+
 launch() {
     local name="$1" cmd="$2"
 
@@ -256,7 +273,7 @@ launch() {
 }
 
 run_entries() {
-    local line enabled name cmd started=0 failed=0
+    local line enabled name cmd started=0 failed=0 skipped=0
 
     load_entries
     if ((${#ENTRIES[@]} == 0)); then
@@ -274,10 +291,15 @@ run_entries() {
         for line in "${ENTRIES[@]}"; do
             IFS=$'\t' read -r enabled name cmd <<<"$line"
             [[ $enabled == 1 ]] || continue
+            if ! entry_command_available "$cmd"; then
+                info "[dry-run] skip $name: command not found"
+                skipped=$((skipped + 1))
+                continue
+            fi
             info "[dry-run] would start $name: $cmd"
             started=$((started + 1))
         done
-        info "[dry-run] $started enabled entries"
+        info "[dry-run] $started enabled entries ($skipped skipped)"
         return 0
     fi
 
@@ -286,11 +308,16 @@ run_entries() {
     for line in "${ENTRIES[@]}"; do
         IFS=$'\t' read -r enabled name cmd <<<"$line"
         [[ $enabled == 1 ]] || continue
+        if ! entry_command_available "$cmd"; then
+            info "skip $name: command not found"
+            skipped=$((skipped + 1))
+            continue
+        fi
         launch "$name" "$cmd" || failed=$((failed + 1))
         started=$((started + 1))
     done
 
-    ok "started $started enabled entries (log: $LOG_FILE)"
+    ok "started $started enabled entries ($skipped skipped, log: $LOG_FILE)"
     ((failed == 0)) || warn "$failed entries could not be started"
 }
 
@@ -343,7 +370,9 @@ pick_entries() {
         for line in "${ENTRIES[@]}"; do
             IFS=$'\t' read -r enabled name _cmd <<<"$line"
             if [[ $enabled == 1 ]]; then state='[x]'; else state='[ ]'; fi
-            labels+=("$state $name")
+            local missing=''
+            entry_command_available "$_cmd" || missing=' (not installed)'
+            labels+=("$state $name$missing")
         done
 
         choice="$(choose_line "Autostart (pick to toggle)" "${labels[@]}")" || return 0
@@ -354,7 +383,12 @@ pick_entries() {
             warn "unknown selection: $chosen"
             continue
         fi
-        IFS=$'\t' read -r enabled _ _ <<<"${ENTRIES[$index]}"
+        IFS=$'\t' read -r enabled _ cmd <<<"${ENTRIES[$index]}"
+
+        if [[ $enabled == 0 ]] && ! entry_command_available "$cmd"; then
+            warn "$chosen: command not found, not enabling"
+            continue
+        fi
 
         if [[ $enabled == 1 ]]; then
             set_enabled "$chosen" 0

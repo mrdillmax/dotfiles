@@ -54,6 +54,7 @@ CATEGORY_ARG=""
 APPS_ARG=""
 PACKAGES_ARG=""
 ONLY_PACKAGES=0
+SETUP=0
 DO_THEME=0
 DO_THEME_MENU=0
 DO_SPICETIFY=0
@@ -108,6 +109,8 @@ Installation:
   --packages a,b        install exactly these packages (no app picker)
   --no-packages         skip package installation
   --only-packages       install packages without touching configuration files
+  --setup               interactive first run: packages, configuration,
+                        system (/etc, sudo) and kernel, in that order
   --host desktop|laptop override host detection
   --gpu PROFILE         nvidia|amd|intel|hybrid|vm|software
 
@@ -178,6 +181,7 @@ while (($#)); do
         --yes|-y)     ASSUME_YES=1 ;;
         --no-packages) DO_PACKAGES=0; HAS_ACTION=1 ;;
         --only-packages) ONLY_PACKAGES=1; HAS_ACTION=1 ;;
+        --setup)      SETUP=1; HAS_ACTION=1 ;;
         --modules)    MODULES_ARG="${2:?missing value for --modules}"; HAS_ACTION=1; shift ;;
         --category)   CATEGORY_ARG="${2:?missing value for --category}"; HAS_ACTION=1; shift ;;
         --apps)       APPS_ARG="${2:?missing value for --apps}"; HAS_ACTION=1; shift ;;
@@ -255,6 +259,17 @@ if (( ONLY_PACKAGES && !DO_PACKAGES )); then
 fi
 if (( ONLY_PACKAGES )); then
     DO_PACKAGES=1
+    if [[ -z $PACKAGES_ARG && -z $CATEGORY_ARG && -z $APPS_ARG ]] \
+        && { (( ASSUME_YES )) || [[ ! -t 0 ]]; }; then
+        die "--only-packages needs --packages, --category or --apps"
+    fi
+fi
+if (( SETUP )); then
+    (( ASSUME_YES )) && die "--setup is interactive; do not combine it with --yes"
+    (( !DRY_RUN )) && [[ ! -t 0 ]] && die "--setup needs an interactive terminal"
+    if (( ONLY_PACKAGES )) || (( !DO_PACKAGES )); then
+        die "--setup runs every stage; do not combine it with --only-packages or --no-packages"
+    fi
 fi
 if [[ -n $SYSTEM_COMPONENTS_ARG ]]; then
     IFS=',' read -r -a SYSTEM_COMPONENTS <<<"$SYSTEM_COMPONENTS_ARG"
@@ -748,6 +763,15 @@ install_selected_modules() {
     done
 }
 
+user_unit_exists() {
+    local unit="$1"
+    if systemctl --user list-unit-files --no-legend "$unit" 2>/dev/null | grep -q .; then
+        return 0
+    fi
+    [[ -f "/usr/lib/systemd/user/$unit" || -f "/etc/systemd/user/$unit" \
+        || -f "$REAL_HOME/.config/systemd/user/$unit" ]]
+}
+
 enable_services() {
     local name service labels=()
 
@@ -760,6 +784,10 @@ enable_services() {
         load_module_conf "$DOTFILES_DIR/modules/$name/module.conf"
         for service in "${SERVICES[@]:-}"; do
             [[ -n $service ]] || continue
+            if ! user_unit_exists "$service"; then
+                warn "service not installed, skipping: $service"
+                continue
+            fi
             labels+=("$name: $service")
         done
     done
@@ -785,8 +813,57 @@ enable_services() {
     done
 }
 
+setup_stage() {
+    local label="$1"
+    shift
+    if ! tui_confirm "$label" yes; then
+        info "step skipped"
+        return 0
+    fi
+    "$@" || {
+        local rc=$?
+        warn "setup stopped after: $label"
+        return "$rc"
+    }
+}
+
+run_setup() {
+    local -a common=(--host "$HOST_NAME" --gpu "$GPU_PROFILE")
+    (( DRY_RUN )) && common+=(--dry-run)
+
+    info "First-time setup: packages -> configuration -> system -> kernel"
+    setup_stage "Step 1/4: packages — choose categories and applications?" \
+        bash "$DOTFILES_DIR/install.sh" --only-packages "${common[@]}" || return $?
+    setup_stage "Step 2/4: configuration files — link dotfiles and enable user services?" \
+        bash "$DOTFILES_DIR/install.sh" --no-packages "${common[@]}" || return $?
+
+    local -a system_cmd=(--system)
+    (( DRY_RUN )) && system_cmd+=(--dry-run)
+    system_cmd+=(--host "$HOST_NAME" --gpu "$GPU_PROFILE")
+    if (( DRY_RUN || EUID == 0 )); then
+        setup_stage "Step 3/4: system configuration — review /etc files one by one?" \
+            bash "$DOTFILES_DIR/install.sh" "${system_cmd[@]}" || return $?
+    else
+        setup_stage "Step 3/4: system configuration — review /etc files one by one (sudo)?" \
+            sudo bash "$DOTFILES_DIR/install.sh" "${system_cmd[@]}" || return $?
+    fi
+
+    setup_stage "Step 4/4: kernel — detect the CPU level and install a matching kernel?" \
+        bash "$DOTFILES_DIR/install.sh" --kernel "${common[@]}" || return $?
+
+    ok "first-time setup finished"
+}
+
+if (( SETUP )); then
+    if run_setup; then
+        exit 0
+    else
+        exit $?
+    fi
+fi
+
 if (( ONLY_PACKAGES )); then
-    info "packages only; configuration modules are skipped"
+    info "installing packages only; configuration files are not touched"
 else
     select_modules
     if ((${#MODULES[@]} == 0)); then

@@ -442,6 +442,7 @@ system_page() {
         choice="$(printf '%s\n' \
             "Update — repository packages" \
             "Update — repository and AUR" \
+            "Update — repository mirrors (reflector)" \
             "Packages — search and install" \
             "Packages — search installed" \
             "Packages — remove" \
@@ -469,6 +470,14 @@ system_page() {
                 else
                     notify "No AUR helper; updating repository packages only"
                     run_terminal "sudo pacman -Syu"
+                fi
+                ;;
+            "Update — repository mirrors (reflector)")
+                if have reflector; then
+                    local backup="/etc/pacman.d/mirrorlist.bak.$(date +%Y%m%d-%H%M%S)"
+                    run_terminal "sudo cp -a /etc/pacman.d/mirrorlist $(printf '%q' "$backup") && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist"
+                else
+                    notify "reflector is not installed"
                 fi
                 ;;
             "Packages — search and install")

@@ -32,7 +32,7 @@ SKIP_AUR=0
 INSTALLER_ARGS=()
 AUR_TMP=""
 
-BASE_PACKAGES=(base-devel git curl jq gum)
+BASE_PACKAGES=(base-devel git curl jq gum networkmanager)
 
 usage() {
     cat <<'EOF'
@@ -48,7 +48,7 @@ Usage: ./bootstrap.sh [options] [-- installer options]
 Everything after `--` is passed to install.sh, for example:
   ./bootstrap.sh --yes -- --host laptop --gpu intel
 
-Bootstrap installs base-devel, git, curl, jq and gum. When neither paru nor
+Bootstrap installs base-devel, git, curl, jq, gum and networkmanager. When neither paru nor
 yay exists, it builds yay-bin from the AUR as your user. Use --no-aur to skip
 that step.
 EOF
@@ -124,6 +124,9 @@ missing_packages() {
     for pkg in git curl jq gum; do
         command -v "$pkg" >/dev/null 2>&1 || MISSING+=("$pkg")
     done
+    # The catalogue no longer carries NetworkManager, so bootstrap keeps a
+    # fresh machine online after the first reboot.
+    command -v nmcli >/dev/null 2>&1 || MISSING+=("networkmanager")
 }
 
 install_packages() {

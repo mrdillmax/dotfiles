@@ -175,7 +175,7 @@ fi
 base="$(new_case)"
 add_tool "$base" curl
 yes_out="$(run_bs "$base" --yes -- --host laptop)"
-if grep -q '^-S --needed --noconfirm base-devel git jq gum$' "$base/pacman.log"; then
+if grep -q '^-S --needed --noconfirm base-devel git jq gum networkmanager$' "$base/pacman.log"; then
     pass "--yes installs the missing bootstrap packages"
 else
     fail "pacman was not called with the expected packages"
@@ -225,7 +225,7 @@ fi
 
 # 9. An already provisioned machine needs no pacman call.
 base="$(new_case)"
-for tool in curl git makepkg gcc fakeroot paru jq gum; do
+for tool in curl git makepkg gcc fakeroot paru jq gum nmcli; do
     add_tool "$base" "$tool"
 done
 present_out="$(run_bs "$base" --yes)"

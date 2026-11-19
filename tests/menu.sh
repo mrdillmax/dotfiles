@@ -155,6 +155,32 @@ else
     pass "menu_should_run honours --yes"
 fi
 
+# 6b. The main menu shows the first-run order and the setup entry.
+main_items="$(menu_items_for main)"
+if grep -q '^setup|' <<<"$main_items" \
+    && grep -q '^apps|1\. Packages' <<<"$main_items" \
+    && grep -q '^modules|2\. Configuration files' <<<"$main_items" \
+    && grep -q '^menu:system|3\. System configuration' <<<"$main_items" \
+    && grep -q '^menu:kernel|4\. Kernel' <<<"$main_items"; then
+    pass "the main menu shows the packages -> configs -> system -> kernel order"
+else
+    fail "the main menu does not show the setup order"
+    printf '%s\n' "$main_items"
+fi
+
+if grep -q -- '--setup' <<<"$help_text"; then
+    pass "--setup is documented"
+else
+    fail "--setup is missing from --help"
+fi
+
+if grep -q '^user_unit_exists()' "$ROOT/install.sh" \
+    && grep -q "user_unit_exists \"\$service\"" "$ROOT/install.sh"; then
+    pass "services are gated on installed units"
+else
+    fail "services are not gated on installed units"
+fi
+
 # 6. No-argument non-interactive run terminates and does not open the menu.
 log="$(mktemp)"
 if timeout 90 bash "$ROOT/install.sh" --dry-run </dev/null >"$log" 2>&1; then

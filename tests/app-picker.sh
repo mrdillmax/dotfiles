@@ -93,6 +93,31 @@ for removed in gum grub jq mprime onlinefix-linux-launcher-bin linux-lts; do
     fi
 done
 pass "removed system packages stay out of the catalog"
+
+# 4b. The requested catalogue cleanup is applied.
+for removed in base base-devel efibootmgr git gitleaks tcpdump cups-pdf \
+    fbida smath networkmanager clang cmake jdk17-openjdk lld llvm uv rustup \
+    jpegoptim oxipng; do
+    if catalog_lines | cut -f1 | grep -qx "$removed"; then
+        fail "$removed should have been removed from the catalog"
+    fi
+done
+pass "requested removals are gone from the catalog"
+
+for optional in inotify-tools snap-pac cpu-x gsmartcontrol hardinfo2 \
+    kdiskmark pdfcraft-bin s-tui docker docker-compose libvirt qemu-base \
+    qemu-desktop swtpm virt-manager; do
+    if ! catalog_lines | awk -F'\t' -v p="$optional" '$1 == p && $4 == "no" { found = 1 } END { exit !found }'; then
+        fail "$optional should be optional (default=no)"
+    fi
+done
+pass "requested optional packages default to no"
+
+if catalog_lines | awk -F'\t' '$1 == "profile-sync-daemon" && $2 == "System" { found = 1 } END { exit !found }'; then
+    pass "profile-sync-daemon moved to System"
+else
+    fail "profile-sync-daemon is not in System"
+fi
 category_list="$(catalog_categories)"
 if grep -qx 'Office' <<<"$category_list" || grep -qx 'Engineering' <<<"$category_list"; then
     fail "the removed Office or Engineering category is still present"
@@ -224,6 +249,21 @@ if grep -qx 'kitty' <<<"$selected"; then
 else
     fail "the selected package is missing"
 fi
+
+# 13. --only-packages without a selector cannot silently do nothing.
+guard_log="$(mktemp)"
+if (cd "$ROOT" && timeout 20 ./install.sh --dry-run --yes --only-packages) \
+    >"$guard_log" 2>&1; then
+    fail "--only-packages without a selector succeeded"
+else
+    if grep -q 'needs --packages, --category or --apps' "$guard_log"; then
+        pass "--only-packages without a selector fails loudly"
+    else
+        fail "--only-packages failed without a clear message"
+        cat "$guard_log"
+    fi
+fi
+rm -f -- "$guard_log"
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

@@ -9,6 +9,7 @@ MENU_GPU="${MENU_GPU:-}"
 
 # Action id -> flags that perform the same action non-interactively.
 declare -gA MENU_FLAG=(
+    [setup]="--setup"
     [profile]="--host --gpu"
     [modules]="--modules --no-packages"
     [apps]="--category --apps --packages --only-packages"
@@ -121,21 +122,17 @@ menu_items_for() {
     case "$1" in
         main)
             printf '%s\n' \
-                'menu:install|Installation|modules, packages, host and GPU profile' \
-                'menu:system|System (/etc)|DNS, zram, cpupower, services, boot' \
-                'menu:kernel|Kernel|CPU-level aware kernel selection' \
+                'setup|First-time setup (recommended)|packages -> configuration -> system -> kernel' \
+                'profile|Profile|host and GPU profile' \
+                'apps|1. Packages|choose categories and applications' \
+                'modules|2. Configuration files|link dotfiles and enable user services' \
+                'menu:system|3. System configuration|/etc files, sudo required' \
+                'menu:kernel|4. Kernel|CPU-level aware kernel selection' \
                 'menu:maintenance|Maintenance|doctor, DNS check, restore, sync, hooks'
             printf '%s|%s|%s\n' dryrun \
                 "Dry run: $([[ ${DRY_RUN:-0} == 1 ]] && printf 'on' || printf 'off')" \
                 'toggle for every action'
             printf '%s\n' 'exit|Exit|leave without doing anything'
-            ;;
-        install)
-            printf '%s\n' \
-                'profile|Host and GPU profile|detected values can be overridden' \
-                'modules|Configuration modules|link or render dotfiles into your home directory' \
-                'apps|Applications|choose package categories and individual programs' \
-                'all|Everything|all modules and the default packages'
             ;;
         settings)
             printf '%s\n' \
@@ -356,6 +353,7 @@ menu_action_restore_date() {
 
 menu_action() {
     case "$1" in
+        setup)            menu_run --setup ;;
         profile)          menu_action_profile ;;
         modules)          menu_action_modules ;;
         apps)             menu_action_apps ;;
@@ -462,5 +460,5 @@ menu_flag_map() {
 }
 
 menu_menu_names() {
-    printf '%s\n' main install settings system kernel maintenance theme idle lid gamemode restore sync binds profiles pkg-sync
+    printf '%s\n' main settings system kernel maintenance theme idle lid gamemode restore sync binds profiles pkg-sync
 }

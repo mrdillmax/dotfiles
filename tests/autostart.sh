@@ -199,6 +199,19 @@ else
     fail "run wrote no log"
 fi
 
+# 9b. run skips entries whose command does not exist.
+{
+    printf '1\tmissing\tdefinitely-not-a-real-command --flag\n'
+} >"$state_file"
+missing_out="$(run_auto run 2>&1)"
+if grep -q 'skip missing: command not found' <<<"$missing_out" \
+    && ! grep -q 'start missing:' <<<"$missing_out"; then
+    pass "run skips an autostart entry with a missing command"
+else
+    fail "run launched a missing autostart entry"
+    printf '%s\n' "$missing_out"
+fi
+
 # 10. A malformed state line is ignored with a warning.
 {
     printf '1\tgood\ttrue\n'

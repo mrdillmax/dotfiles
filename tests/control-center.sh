@@ -83,6 +83,14 @@ else
     fail "system package management is incomplete"
 fi
 
+if grep -q 'Update — repository mirrors (reflector)' "$CC" \
+    && grep -q 'reflector --latest 20 --protocol https --sort rate' "$CC" \
+    && grep -q 'mirrorlist.bak' "$CC"; then
+    pass "mirror refresh is wired to reflector with a backup"
+else
+    fail "mirror refresh is missing"
+fi
+
 # 6. Daily actions call helpers directly, not the installer menu.
 if grep -q 'autostart.sh pick' "$CC" \
     && grep -q 'gamemode.sh toggle' "$CC" \
