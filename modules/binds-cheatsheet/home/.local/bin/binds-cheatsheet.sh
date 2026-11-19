@@ -319,7 +319,8 @@ print_rofi() {
     done
 
     if command -v rofi >/dev/null 2>&1 && [[ -n ${WAYLAND_DISPLAY:-}${DISPLAY:-} ]]; then
-        printf '%s\n' "${rows[@]}" | rofi -theme "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/launcher.rasi" -dmenu -p "Hyprland binds" -no-custom -no-fixed-num-lines
+        printf '%s\n' "${rows[@]}" | rofi -theme "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/launcher.rasi" -dmenu -p "" -no-custom -no-fixed-num-lines \
+            -theme-str 'entry { placeholder: "Hyprland binds"; }'
     else
         print_plain
     fi

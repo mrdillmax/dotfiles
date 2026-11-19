@@ -34,12 +34,29 @@ for action in Apps Docs Menu Style Configuration Install Uninstall Update Power;
     fi
 done
 
-# 1b. Every top-level entry has an icon and a short hint.
+# 1b. Every top-level entry has an icon. The glyphs are real characters, not
+# the literal "\uf..." escapes rofi would show.
 main_block="$(awk '/^main_menu\(\)/,/^}/' "$CC")"
-if [[ $(grep -c '^            "\\uf' <<<"$main_block") -eq 9 ]]; then
-    pass "the main menu has nine icon rows"
+icons_ok=1
+for code in f009 f02d f0c9 f1fc f013 f019 f1f8 f021 f011; do
+    grep -qF "\$'\\u$code'" <<<"$main_block" || icons_ok=0
+done
+if ((icons_ok)); then
+    pass "the main menu has nine real icon glyphs"
 else
-    fail "the main menu is missing icons or rows"
+    fail "the main menu shows literal escapes or misses icons"
+fi
+if grep -q -- '-markup-rows' "$CC" \
+    && grep -q "font='JetBrainsMono Nerd Font 13'" "$CC" \
+    && grep -q -- '-format i' "$CC"; then
+    pass "icons render through a Nerd Font span"
+else
+    fail "icons still depend on the UI font fallback"
+fi
+if ! grep -qE '^ +"\\uf[0-9a-f]+' "$CC"; then
+    pass "no menu row contains a literal escape"
+else
+    fail "a menu row still contains a literal escape"
 fi
 
 # 1c. Esc is the only way out; no Back or Close entries and no Music page.
@@ -56,7 +73,7 @@ fi
 
 # 1d. Spicetify lives in the update page as one button.
 update_block="$(awk '/^update_page\(\)/,/^}/' "$CC")"
-if grep -q 'Spicetify — backup and apply' <<<"$update_block" \
+if grep -q '"Spicetify"' <<<"$update_block" \
     && grep -q 'backup apply' <<<"$update_block" \
     && ! grep -q 'spicetify update' <<<"$update_block"; then
     pass "Spicetify update is a single action inside updates"
@@ -136,7 +153,7 @@ else
     fail "info messages fall back to the default white theme"
 fi
 if grep -q 'launcher.rasi' "$ROOT/modules/rofi/home/.config/rofi/scripts/rofi-dunst-history.sh" \
-    && grep -q 'launcher.rasi' "$ROOT/modules/hypr/home/.config/hypr/hyprland.lua"; then
+    && grep -q 'launcher.rasi' "$ROOT/modules/rofi/home/.local/bin/clipboard-menu.sh"; then
     pass "history and clipboard menus use the launcher theme"
 else
     fail "history or clipboard menus fall back to the default theme"
@@ -149,6 +166,12 @@ if grep -q -- '-no-fixed-num-lines' "$CC" \
     pass "rofi windows size to their contents"
 else
     fail "rofi windows keep a fixed size"
+fi
+if grep -q 'prompt { enabled: false; }' "$CC" \
+    && grep -q 'entry { placeholder:' "$CC"; then
+    pass "page names live inside the search field"
+else
+    fail "page names still draw a separate label"
 fi
 
 # 4. The bind is configurable per host and rendered through a separate Lua file.
@@ -175,8 +198,8 @@ fi
 
 # 5. Docs and configuration expose real data instead of empty pages.
 docs_block="$(awk '/^docs_page\(\)/,/^}/' "$CC")"
-if grep -q 'Versions — kernel, shell, desktop' <<<"$docs_block" \
-    && grep -q 'Links — Arch, Hyprland, Waybar, Fish' <<<"$docs_block" \
+if grep -q '"Versions"' <<<"$docs_block" \
+    && grep -q '"Links"' <<<"$docs_block" \
     && grep -q 'hyprctl version' "$CC" \
     && grep -q 'fish --version' "$CC"; then
     pass "docs cover versions, keybinds and links"
@@ -184,10 +207,10 @@ else
     fail "docs are incomplete"
 fi
 
-if grep -q 'Config files — edit system configs' "$CC" \
-    && grep -q 'Hyprland — window manager' "$CC" \
-    && grep -q 'Fish — shell' "$CC" \
-    && grep -q 'Waybar — bar layout' "$CC"; then
+if grep -q '"Config files"' "$CC" \
+    && grep -q '"Hyprland"' "$CC" \
+    && grep -q '"Fish"' "$CC" \
+    && grep -q '"Waybar layout"' "$CC"; then
     pass "configuration exposes the main text configs"
 else
     fail "configuration does not expose the main configs"
@@ -209,9 +232,9 @@ else
 fi
 
 # 7. The update page covers repos, AUR, mirrors, dotfiles and Spicetify.
-if grep -q 'System — repository packages' <<<"$update_block" \
-    && grep -q 'System — repository and AUR' <<<"$update_block" \
-    && grep -q 'Dotfiles — apply configuration files' <<<"$update_block" \
+if grep -q '"Repositories"' <<<"$update_block" \
+    && grep -q '"Repositories and AUR"' <<<"$update_block" \
+    && grep -q '"Apply configs"' <<<"$update_block" \
     && grep -q 'sudo pacman -Syu' <<<"$update_block" \
     && grep -q 'keyserver hkps://pgp.surf.nl' "$CC"; then
     pass "system and dotfiles updates are wired"
@@ -219,7 +242,7 @@ else
     fail "system or dotfiles updates are incomplete"
 fi
 
-if grep -q 'Mirrors — refresh with reflector' <<<"$update_block" \
+if grep -q '"Mirrors"' <<<"$update_block" \
     && grep -q 'reflector --latest 20 --protocol https --sort rate' <<<"$update_block" \
     && grep -q 'mirrorlist.bak' <<<"$update_block"; then
     pass "mirror refresh is wired to reflector with a backup"

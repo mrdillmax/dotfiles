@@ -60,7 +60,7 @@ entry {
     background-color:           transparent;
     text-color:                 @on-surface;
     cursor:                     text;
-    placeholder:                "Search settings";
+    placeholder:                "Search";
     placeholder-color:          @on-surface-variant;
     vertical-align:             0.5;
 }

@@ -63,7 +63,7 @@ inputbar {
 }
 
 prompt {
-    enabled:                    true;
+    enabled:                    false;
     padding:                    0px;
     background-color:           transparent;
     text-color:                 @primary;
@@ -76,7 +76,7 @@ entry {
     background-color:           transparent;
     text-color:                 @on-surface;
     cursor:                     text;
-    placeholder:                "Пошук...";
+    placeholder:                "Search";
     placeholder-color:          @on-surface-variant;
     vertical-align:             0.5;
 }

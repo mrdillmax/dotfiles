@@ -42,7 +42,7 @@ rofi_pick() {
     local prompt="$1"
     shift
     local input width=440 max=0 line show_icons=0 arg
-    local -a args=(-dmenu -i -p "$prompt" -no-custom -no-fixed-num-lines)
+    local -a args=(-dmenu -i -p "" -no-custom -no-fixed-num-lines)
 
     for arg in "$@"; do
         [[ $arg == -show-icons ]] && show_icons=1
@@ -52,7 +52,6 @@ rofi_pick() {
     cat >"$input"
     if ((show_icons == 0)); then
         while IFS= read -r line; do
-            line="${line#*— }"
             ((${#line} > max)) && max=${#line}
         done <"$input"
         width=$((max * 9 + 140))
@@ -62,7 +61,36 @@ rofi_pick() {
         width=640
     fi
 
-    args+=(-theme-str "window { width: ${width}px; }")
+    args+=(-theme-str "window { width: ${width}px; } prompt { enabled: false; } entry { placeholder: \"$prompt\"; }")
+    if [[ -r $THEME ]]; then
+        args+=(-theme "$THEME")
+    fi
+    rofi "${args[@]}" "$@" <"$input"
+    local rc=$?
+    rm -f -- "$input"
+    return $rc
+}
+
+# Like rofi_pick, but the rows are Pango markup and the index is returned.
+# Used by the main menu so the icons can come from the Nerd Font while the
+# labels stay in Inter.
+rofi_index() {
+    local prompt="$1"
+    shift
+    local input width=440 max=0 line
+    local -a args=(-dmenu -i -p "" -no-custom -no-fixed-num-lines -markup-rows -format i)
+
+    input="$(mktemp)" || die "cannot create a temporary file"
+    cat >"$input"
+    while IFS= read -r line; do
+        line="$(sed -E 's/<[^>]+>//g' <<<"$line")"
+        ((${#line} > max)) && max=${#line}
+    done <"$input"
+    width=$((max * 9 + 160))
+    ((width < 440)) && width=440
+    ((width > 760)) && width=760
+
+    args+=(-theme-str "window { width: ${width}px; } prompt { enabled: false; } entry { placeholder: \"$prompt\"; }")
     if [[ -r $THEME ]]; then
         args+=(-theme "$THEME")
     fi
@@ -74,11 +102,11 @@ rofi_pick() {
 
 ask_text() {
     local prompt="$1"
-    local -a args=(-dmenu -i -p "$prompt" -l 0 -no-fixed-num-lines)
+    local -a args=(-dmenu -i -p "" -l 0 -no-fixed-num-lines)
     if [[ -r $THEME ]]; then
         args+=(-theme "$THEME")
     fi
-    args+=(-theme-str "window { width: 520px; }")
+    args+=(-theme-str "window { width: 520px; } prompt { enabled: false; } entry { placeholder: \"$prompt\"; }")
     printf '\n' | rofi "${args[@]}"
 }
 
@@ -244,12 +272,12 @@ docs_links() {
     local choice
     while :; do
         choice="$(printf '%s\n' \
-            "Arch Wiki — system and packages" \
-            "Hyprland — compositor and Lua config" \
-            "Waybar — status bar modules" \
-            "Fish — shell reference" \
-            "Rofi — theme format" \
-            "Nerd Fonts — icons used in the bar" |
+            "Arch Wiki" \
+            "Hyprland" \
+            "Waybar" \
+            "Fish" \
+            "Rofi" \
+            "Nerd Fonts" |
             rofi_pick "Links")" || return 0
         case "$choice" in
             Arch*) open_url "https://wiki.archlinux.org/" ;;
@@ -267,10 +295,10 @@ docs_page() {
     local choice
     while :; do
         choice="$(printf '%s\n' \
-            "Keybinds — searchable list" \
-            "Versions — kernel, shell, desktop" \
-            "Dotfiles — README" \
-            "Links — Arch, Hyprland, Waybar, Fish" |
+            "Keybinds" \
+            "Versions" \
+            "README" \
+            "Links" |
             rofi_pick "Docs")" || return 0
         case "$choice" in
             "Keybinds"*)
@@ -281,7 +309,7 @@ docs_page() {
                 fi
                 ;;
             "Versions"*) docs_versions ;;
-            "Dotfiles"*)
+            "README")
                 if [[ -n $ROOT && -r $ROOT/README.md ]]; then
                     open_config "$ROOT/README.md"
                 else
@@ -348,42 +376,42 @@ screen_lock() {
 }
 
 menu_page() {
-    local choice waybar_action="Waybar — show"
+    local choice waybar_action="Show Waybar"
     local -a items=()
 
     while :; do
-        waybar_action="Waybar — show"
-        pgrep -x waybar >/dev/null 2>&1 && waybar_action="Waybar — hide"
+        waybar_action="Show Waybar"
+        pgrep -x waybar >/dev/null 2>&1 && waybar_action="Hide Waybar"
         items=(
             "$waybar_action"
-            "Waybar — restart"
-            "Screen — lock"
-            "Hyprland — reload"
+            "Restart Waybar"
+            "Lock"
+            "Reload Hyprland"
         )
-        have dunstctl && items+=("Notifications — pause or resume")
-        have autostart.sh && items+=("Autostart — choose login applications")
+        have dunstctl && items+=("Notifications")
+        have autostart.sh && items+=("Autostart")
         if have idle-tune.sh; then
             items+=(
-                "Idle — status"
-                "Idle — apply the current profile"
-                "Idle — configure timeouts"
-                "Idle — enable or disable"
+                "Idle status"
+                "Apply idle"
+                "Configure idle"
+                "Toggle idle"
             )
         fi
         if host_is_laptop && have lid-handler.sh; then
-            items+=("Lid — status")
+            items+=("Lid status")
         fi
         if have gamemode.sh; then
-            items+=("Game mode — toggle" "Game mode — status")
+            items+=("Toggle game mode" "Game mode status")
         fi
 
         choice="$(printf '%s\n' "${items[@]}" | rofi_pick "Menu")" || return 0
         case "$choice" in
-            "Waybar — show") waybar_show ;;
-            "Waybar — hide") waybar_hide ;;
-            "Waybar — restart") waybar_restart ;;
-            "Screen — lock") screen_lock ;;
-            "Hyprland — reload")
+            "Show Waybar") waybar_show ;;
+            "Hide Waybar") waybar_hide ;;
+            "Restart Waybar") waybar_restart ;;
+            "Lock") screen_lock ;;
+            "Reload Hyprland")
                 if have hyprctl; then
                     hyprctl reload >/dev/null 2>&1 && notify "Hyprland reloaded"
                 else
@@ -392,13 +420,13 @@ menu_page() {
                 ;;
             "Notifications"*) notifications_toggle ;;
             "Autostart"*) autostart.sh pick ;;
-            "Idle — status") run_terminal "idle-tune.sh status" ;;
-            "Idle — apply"*) run_and_notify "Idle profile applied" idle-tune.sh apply ;;
-            "Idle — configure"*) run_terminal "idle-tune.sh configure" ;;
-            "Idle — enable"*) run_and_notify "Idle toggled" idle-tune.sh toggle ;;
-            "Lid — status") run_terminal "lid-handler.sh status" ;;
-            "Game mode — toggle") run_and_notify "Game mode toggled" gamemode.sh toggle ;;
-            "Game mode — status") run_terminal "gamemode.sh status" ;;
+            "Idle status") run_terminal "idle-tune.sh status" ;;
+            "Apply idle") run_and_notify "Idle profile applied" idle-tune.sh apply ;;
+            "Configure idle") run_terminal "idle-tune.sh configure" ;;
+            "Toggle idle") run_and_notify "Idle toggled" idle-tune.sh toggle ;;
+            "Lid status") run_terminal "lid-handler.sh status" ;;
+            "Toggle game mode") run_and_notify "Game mode toggled" gamemode.sh toggle ;;
+            "Game mode status") run_terminal "gamemode.sh status" ;;
             "") return 0 ;;
         esac
     done
@@ -522,10 +550,10 @@ style_page() {
     local choice
     while :; do
         choice="$(printf '%s\n' \
-            "Wallpaper — thumbnails" \
-            "Theme mode — dark, light, smart" \
-            "Color scheme — matugen palette" \
-            "Fonts and icons — current values" |
+            "Wallpaper" \
+            "Theme mode" \
+            "Color scheme" \
+            "Fonts and icons" |
             rofi_pick "Style")" || return 0
         case "$choice" in
             "Wallpaper"*) wallpaper_page ;;
@@ -558,11 +586,11 @@ wifi_connect() {
 wifi_page() {
     local choice connection
     while :; do
-        choice="$(printf '%s\n' "Wi-Fi — connect" "Wi-Fi — disconnect" "Wi-Fi — status" |
+        choice="$(printf '%s\n' "Connect" "Disconnect" "Status" |
             rofi_pick "Wi-Fi")" || return 0
         case "$choice" in
-            "Wi-Fi — connect") wifi_connect ;;
-            "Wi-Fi — disconnect")
+            "Connect") wifi_connect ;;
+            "Disconnect")
                 connection="$(nmcli -t -f NAME connection show --active 2>/dev/null | head -1)"
                 if [[ -n $connection ]]; then
                     run_terminal "nmcli connection down $(printf '%q' "$connection")"
@@ -570,7 +598,7 @@ wifi_page() {
                     notify "No active connection"
                 fi
                 ;;
-            "Wi-Fi — status") run_terminal "nmcli device status" ;;
+            "Status") run_terminal "nmcli device status" ;;
             "") return 0 ;;
         esac
     done
@@ -596,13 +624,13 @@ bluetooth_connect() {
 bluetooth_page() {
     local choice
     while :; do
-        choice="$(printf '%s\n' "Bluetooth — on" "Bluetooth — off" "Bluetooth — connect device" \
-            "Bluetooth — status" | rofi_pick "Bluetooth")" || return 0
+        choice="$(printf '%s\n' "Power on" "Power off" "Connect device" \
+            "Status" | rofi_pick "Bluetooth")" || return 0
         case "$choice" in
-            "Bluetooth — on") run_terminal "bluetoothctl power on" ;;
-            "Bluetooth — off") run_terminal "bluetoothctl power off" ;;
-            "Bluetooth — connect"*) bluetooth_connect ;;
-            "Bluetooth — status") run_terminal "bluetoothctl show" ;;
+            "Power on") run_terminal "bluetoothctl power on" ;;
+            "Power off") run_terminal "bluetoothctl power off" ;;
+            "Connect device") bluetooth_connect ;;
+            "Status") run_terminal "bluetoothctl show" ;;
             "") return 0 ;;
         esac
     done
@@ -611,12 +639,12 @@ bluetooth_page() {
 monitors_page() {
     local choice layout
     while :; do
-        local -a items=("Monitors — status" "Monitors — apply the saved layout")
-        host_is_laptop && items+=("Dock layout — right, left, mirror or ask")
+        local -a items=("Status" "Apply layout")
+        host_is_laptop && items+=("Dock layout")
         choice="$(printf '%s\n' "${items[@]}" | rofi_pick "Monitors")" || return 0
         case "$choice" in
-            "Monitors — status") run_terminal "monitor-profiles.sh status" ;;
-            "Monitors — apply"*) run_and_notify "Monitor layout applied" monitor-profiles.sh apply ;;
+            "Status") run_terminal "monitor-profiles.sh status" ;;
+            "Apply layout") run_and_notify "Monitor layout applied" monitor-profiles.sh apply ;;
             "Dock layout"*)
                 layout="$(printf '%s\n' right left mirror ask | rofi_pick "Dock layout")" || continue
                 [[ -z $layout ]] && continue
@@ -653,16 +681,16 @@ tide_configure() {
 
 config_files_page() {
     local -a labels=(
-        "Hyprland — window manager"
-        "Hyprland — control center bind"
-        "Hyprlock — lock screen"
-        "Hypridle — idle and suspend"
-        "Waybar — bar layout"
-        "Waybar — stylesheet"
-        "Fish — shell"
-        "Kitty — terminal"
-        "Rofi — launcher"
-        "Matugen — colour templates"
+        "Hyprland"
+        "Control center"
+        "Hyprlock"
+        "Hypridle"
+        "Waybar layout"
+        "Waybar style"
+        "Fish"
+        "Kitty"
+        "Rofi"
+        "Matugen"
     )
     local -a files=(
         "$CONFIG_HOME/hypr/hyprland.lua"
@@ -688,26 +716,26 @@ config_files_page() {
 }
 
 configuration_page() {
-    local choice mouse_label="Mouse — live tuner"
-    host_is_laptop && mouse_label="Mouse and touchpad — live tuner"
+    local choice mouse_label="Mouse"
+    host_is_laptop && mouse_label="Mouse and touchpad"
 
     while :; do
         local -a items=()
-        { have pavucontrol || have wpctl || have pactl; } && items+=("Sound — volume control")
-        have nmcli && items+=("Wi-Fi — networks and status")
-        have bluetoothctl && items+=("Bluetooth — devices and power")
-        have monitor-profiles.sh && items+=("Monitors — status and layout")
-        have binds-cheatsheet.sh && items+=("Keybinds — searchable list" "Keybinds — edit bindings")
+        { have pavucontrol || have wpctl || have pactl; } && items+=("Sound")
+        have nmcli && items+=("Wi-Fi")
+        have bluetoothctl && items+=("Bluetooth")
+        have monitor-profiles.sh && items+=("Monitors")
+        have binds-cheatsheet.sh && items+=("Keybinds" "Edit keybinds")
         have mouse-tune.sh && items+=("$mouse_label")
-        have fish && items+=("Tide — configure the prompt")
-        items+=("Config files — edit system configs")
+        have fish && items+=("Tide")
+        items+=("Config files")
         choice="$(printf '%s\n' "${items[@]}" | rofi_pick "Configuration")" || return 0
         case "$choice" in
             "Sound"*) sound_page ;;
             "Wi-Fi"*) wifi_page ;;
             "Bluetooth"*) bluetooth_page ;;
             "Monitors"*) monitors_page ;;
-            "Keybinds — edit"*) open_config "$CONFIG_HOME/hypr/hyprland.lua" ;;
+            "Edit keybinds") open_config "$CONFIG_HOME/hypr/hyprland.lua" ;;
             "Keybinds"*) binds-cheatsheet.sh --rofi ;;
             "Mouse"*) run_terminal "mouse-tune.sh" ;;
             "Tide"*) tide_configure ;;
@@ -791,10 +819,10 @@ install_page() {
     local choice
     while :; do
         local -a items=(
-            "Repositories — search and install"
-            "AUR — search and install"
+            "Repositories"
+            "AUR"
         )
-        have lazydocker && items+=("Docker — open lazydocker")
+        have lazydocker && items+=("Docker")
         choice="$(printf '%s\n' "${items[@]}" | rofi_pick "Install")" || return 0
         case "$choice" in
             "Repositories"*) fzf_install repo ;;
@@ -841,8 +869,8 @@ uninstall_page() {
     local choice
     while :; do
         choice="$(printf '%s\n' \
-            "Remove packages — fzf multi-select" \
-            "Inspect installed package" |
+            "Remove packages" \
+            "Inspect package" |
             rofi_pick "Uninstall")" || return 0
         case "$choice" in
             "Remove packages"*) fzf_remove ;;
@@ -871,23 +899,23 @@ update_page() {
     local choice helper
     while :; do
         local -a items=(
-            "System — repository packages"
-            "System — repository and AUR"
+            "Repositories"
+            "Repositories and AUR"
         )
-        have reflector && items+=("Mirrors — refresh with reflector")
+        have reflector && items+=("Mirrors")
         if [[ -n $ROOT ]]; then
             items+=(
-                "Dotfiles — git pull and apply"
-                "Dotfiles — apply configuration files"
-                "Dotfiles — pull live changes"
-                "Dotfiles — open installer"
+                "Update dotfiles"
+                "Apply configs"
+                "Pull live changes"
+                "Installer"
             )
         fi
-        [[ -n $(spicetify_bin) ]] && items+=("Spicetify — backup and apply")
+        [[ -n $(spicetify_bin) ]] && items+=("Spicetify")
         choice="$(printf '%s\n' "${items[@]}" | rofi_pick "Update")" || return 0
         case "$choice" in
-            "System — repository packages") run_terminal "sudo pacman -Syu" ;;
-            "System — repository and AUR")
+            "Repositories") run_terminal "sudo pacman -Syu" ;;
+            "Repositories and AUR")
                 helper="$(aur_helper)"
                 if [[ -n $helper ]]; then
                     if [[ $helper == yay ]]; then
@@ -905,12 +933,12 @@ update_page() {
                 backup="/etc/pacman.d/mirrorlist.bak.$(date +%Y%m%d-%H%M%S)"
                 run_terminal "sudo cp -a /etc/pacman.d/mirrorlist $(printf '%q' "$backup") && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist"
                 ;;
-            "Dotfiles — git pull"*)
+            "Update dotfiles")
                 run_terminal "git -C $(printf '%q' "$ROOT") pull --ff-only && ./install.sh --all --no-packages"
                 ;;
-            "Dotfiles — apply"*) run_terminal "./install.sh --all --no-packages" ;;
-            "Dotfiles — pull"*) run_terminal "./scripts/sync.sh pull" ;;
-            "Dotfiles — open"*) run_terminal "./install.sh" ;;
+            "Apply configs") run_terminal "./install.sh --all --no-packages" ;;
+            "Pull live changes") run_terminal "./scripts/sync.sh pull" ;;
+            "Installer") run_terminal "./install.sh" ;;
             "Spicetify"*) run_terminal "$(spicetify_bin) backup apply" ;;
             "") return 0 ;;
         esac
@@ -932,29 +960,28 @@ power_page() {
 # ------------------------------------------------------------- main menu ----
 
 main_menu() {
-    local choice
+    local index i
+    local -a icons=($'\uf009' $'\uf02d' $'\uf0c9' $'\uf1fc' $'\uf013' $'\uf019' $'\uf1f8' $'\uf021' $'\uf011')
+    local -a names=(Apps Docs Menu Style Configuration Install Uninstall Update Power)
+    local -a rows=()
+
+    for i in "${!names[@]}"; do
+        rows+=("<span font='JetBrainsMono Nerd Font 13'>${icons[$i]}</span>  ${names[$i]}")
+    done
+
     while :; do
-        choice="$(printf '%s\n' \
-            "\uf009  Apps — launch an application" \
-            "\uf02d  Docs — keybinds, versions, links" \
-            "\uf0c9  Menu — bar, lock, idle, game mode" \
-            "\uf1fc  Style — wallpaper, theme, colors" \
-            "\uf013  Configuration — devices and configs" \
-            "\uf019  Install — repository, AUR, Docker" \
-            "\uf1f8  Uninstall — remove packages" \
-            "\uf021  Update — system, dotfiles, Spicetify" \
-            "\uf011  Power — session menu" | rofi_pick "Control Center")" || return 0
-        case "$choice" in
-            "Apps"*) apps_page ;;
-            "Docs"*) docs_page ;;
-            "Menu"*) menu_page ;;
-            "Style"*) style_page ;;
-            "Configuration"*) configuration_page ;;
-            "Install"*) install_page ;;
-            "Uninstall"*) uninstall_page ;;
-            "Update"*) update_page ;;
-            "Power"*) power_page ;;
-            "") return 0 ;;
+        index="$(printf '%s\n' "${rows[@]}" | rofi_index "Control Center")" || return 0
+        case "$index" in
+            0) apps_page ;;
+            1) docs_page ;;
+            2) menu_page ;;
+            3) style_page ;;
+            4) configuration_page ;;
+            5) install_page ;;
+            6) uninstall_page ;;
+            7) update_page ;;
+            8) power_page ;;
+            *) return 0 ;;
         esac
     done
 }

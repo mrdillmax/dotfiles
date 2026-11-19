@@ -33,5 +33,20 @@ else
     fail "the waybar language is not clickable"
 fi
 
+clipboard="$ROOT/modules/rofi/home/.local/bin/clipboard-menu.sh"
+if grep -q 'clipboard-menu.sh' "$lua" \
+    && [[ -x $clipboard ]] \
+    && grep -q 'launcher.rasi' "$clipboard"; then
+    pass "SUPER+V opens the themed clipboard picker"
+else
+    fail "SUPER+V does not use the clipboard picker"
+fi
+
+if grep -q '"tooltip-format": "{desc}"' "$ROOT/modules/waybar/home/.config/waybar/config.jsonc"; then
+    pass "the microphone tooltip uses the device description"
+else
+    fail "the microphone tooltip is hardcoded"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
