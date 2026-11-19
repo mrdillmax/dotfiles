@@ -139,12 +139,6 @@ app_category_label() {
     printf '%s' "$1"
 }
 
-# Colour and weight are used only in gum; every other backend gets the symbols.
-app_style_picker() {
-    [[ ${DOTFILES_PLAIN:-0} == 1 ]] && return 1
-    [[ $(tui_backend) == gum ]]
-}
-
 app_label() {
     local role="$1" pkg="$2" installed="$3" description="${4:-}"
     local label symbol text
@@ -171,17 +165,10 @@ app_label() {
     fi
     [[ $installed == 1 ]] && label+=" $(tui_symbol check)"
 
-    if app_style_picker; then
-        if [[ $role == main ]]; then
-            printf '\033[1m%s\033[0m' "$label"
-        elif [[ $role == alt ]]; then
-            printf '\033[2m%s\033[0m' "$label"
-        else
-            printf '%s' "$label"
-        fi
-    else
-        printf '%s' "$label"
-    fi
+    # Keep the label plain. gum (and its version) decides whether ANSI in the
+    # input is preserved or stripped; a decorated label would then stop
+    # matching the line it returns, and the selection would be discarded.
+    printf '%s' "$label"
 }
 
 select_categories() {
@@ -295,6 +282,11 @@ select_apps() {
             SELECTED_APPLICATIONS+=("${packages[$index]}")
         done
     done
+
+    if ((${#SELECTED_APPLICATIONS[@]} == 0)) && ((${#labels[@]})); then
+        warn "the $(tui_backend) picker returned no choices"
+        info "run ./scripts/diagnose-picker.sh here and report the last lines"
+    fi
 }
 
 collect_packages() {

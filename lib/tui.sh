@@ -229,6 +229,17 @@ tui_radio() {
     printf '%s\n' "${items[$index]}"
 }
 
+# Pickers may return ANSI colours or the cursor/selected prefix instead of the
+# plain label. Matching must ignore that decoration; labels themselves are plain.
+tui_normalize_choice() {
+    local line="$1"
+    line="$(printf '%s' "$line" | sed $'s/\033\\[[0-9;]*[a-zA-Z]//g')"
+    line="${line#✓ }"
+    line="${line#✔ }"
+    line="${line#> }"
+    printf '%s' "$line"
+}
+
 # Fill TUI_SELECTION_INDEXES with the chosen 0-based indexes. Items listed in
 # TUI_CHECKED_ITEMS start selected.
 tui_checklist_indexes() {
@@ -259,6 +270,7 @@ tui_checklist_indexes() {
         done
 
         while IFS= read -r line; do
+            line="$(tui_normalize_choice "$line")"
             [[ -n $line ]] || continue
             for i in "${!items[@]}"; do
                 if [[ ${items[$i]} == "$line" ]]; then

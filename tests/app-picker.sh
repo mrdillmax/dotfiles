@@ -79,6 +79,23 @@ check_prefix "○ foot" "$alt_label" "Unicode alternative label uses a circle"
 check_prefix "• btop" "$pkg_label" "Unicode package label uses a dot"
 check_contains "✓" "$installed_label" "Unicode installed mark uses a check"
 
+# 2b. Picker labels contain no ANSI, so gum cannot strip them before matching.
+export DOTFILES_PLAIN=0
+tui_backend() { printf 'gum\n'; }
+main_label="$(app_label main kitty 0 'terminal')"
+if [[ $main_label == *$'\033'* ]]; then
+    fail "picker labels contain ANSI escapes"
+else
+    pass "picker labels stay plain for exact matching"
+fi
+
+# 2c. Decoration added by the picker is removed before matching.
+if [[ $(tui_normalize_choice $'\033[1m✓ ★ kitty\033[0m') == '★ kitty' ]]; then
+    pass "picker output is normalised before matching"
+else
+    fail "picker output keeps ANSI or the selection prefix"
+fi
+
 # 3. Legend explains the marks.
 export DOTFILES_ASCII=1
 legend="$(tui_legend)"
