@@ -36,9 +36,11 @@ WALLPAPER_ONLY=0
 ARG_WALLPAPER=""
 ARG_MODE=""
 ARG_TYPE=""
+ARG_SOURCE_INDEX=""
 WALLPAPER=""
 MODE=""
 TYPE=""
+SOURCE_INDEX="auto"
 STATE_DIRTY=0
 
 usage() {
@@ -52,6 +54,7 @@ Non-interactive:
   --wallpaper PATH         record a wallpaper (must exist)
   --mode dark|light|smart  matugen mode
   --type TYPE              matugen color scheme type
+  --source-index N|auto    accent: 0-4 from the wallpaper's source colours
   --apply                  regenerate colors and apply the wallpaper
   --wallpaper-only         apply the wallpaper without regenerating colors
   --print                  print the current settings and exit
@@ -86,11 +89,16 @@ valid_type() {
     return 1
 }
 
+valid_source_index() {
+    [[ $1 == auto || $1 =~ ^[0-4]$ ]]
+}
+
 while (($#)); do
     case "$1" in
         --wallpaper)  ARG_WALLPAPER="${2:?missing value for --wallpaper}"; shift ;;
         --mode)       ARG_MODE="${2:?missing value for --mode}"; shift ;;
         --type)       ARG_TYPE="${2:?missing value for --type}"; shift ;;
+        --source-index) ARG_SOURCE_INDEX="${2:?missing value for --source-index}"; shift ;;
         --apply)      DO_APPLY=1 ;;
         --wallpaper-only) WALLPAPER_ONLY=1 ;;
         --dry-run)    DRY_RUN=1 ;;
@@ -118,6 +126,7 @@ load_state() {
             wallpaper) [[ -z $WALLPAPER ]] && WALLPAPER="$value" ;;
             mode)      [[ -z $MODE ]] && MODE="$value" ;;
             type)      [[ -z $TYPE ]] && TYPE="$value" ;;
+            source_index) [[ -z $ARG_SOURCE_INDEX ]] && SOURCE_INDEX="$value" ;;
         esac
     done <"$STATE_FILE"
 }
@@ -141,6 +150,7 @@ load_state
 [[ -n $ARG_WALLPAPER ]] && { WALLPAPER="$ARG_WALLPAPER"; STATE_DIRTY=1; }
 [[ -n $ARG_MODE ]] && { MODE="$ARG_MODE"; STATE_DIRTY=1; }
 [[ -n $ARG_TYPE ]] && { TYPE="$ARG_TYPE"; STATE_DIRTY=1; }
+[[ -n $ARG_SOURCE_INDEX ]] && { SOURCE_INDEX="$ARG_SOURCE_INDEX"; STATE_DIRTY=1; }
 
 if [[ -z $WALLPAPER ]]; then
     WALLPAPER="$(wallpaper_from_hypr)"
@@ -148,9 +158,11 @@ fi
 
 MODE="${MODE:-dark}"
 TYPE="${TYPE:-scheme-tonal-spot}"
+SOURCE_INDEX="${SOURCE_INDEX:-auto}"
 
 valid_mode "$MODE" || die "invalid mode: $MODE (use dark, light or smart)"
 valid_type "$TYPE" || die "invalid scheme type: $TYPE (see --list-types)"
+valid_source_index "$SOURCE_INDEX" || die "invalid source index: $SOURCE_INDEX (use 0-4 or auto)"
 [[ -z $WALLPAPER || -f $WALLPAPER ]] || die "wallpaper not found: $WALLPAPER"
 
 write_state() {
@@ -167,6 +179,7 @@ write_state() {
         printf 'wallpaper=%s\n' "$WALLPAPER"
         printf 'mode=%s\n' "$MODE"
         printf 'type=%s\n' "$TYPE"
+        printf 'source_index=%s\n' "$SOURCE_INDEX"
     } >"$tmp"
     mv -f -- "$tmp" "$STATE_FILE"
     ok "settings saved to $STATE_FILE"
@@ -176,6 +189,7 @@ print_state() {
     printf 'wallpaper=%s\n' "$WALLPAPER"
     printf 'mode=%s\n' "$MODE"
     printf 'type=%s\n' "$TYPE"
+    printf 'source_index=%s\n' "$SOURCE_INDEX"
 }
 
 # --------------------------------------------------------------- actions ----
@@ -218,16 +232,20 @@ sync_color_scheme() {
 }
 
 apply_colors() {
+    local -a source_args=()
+
     [[ -r $MATUGEN_CONFIG ]] || die "missing matugen config: $MATUGEN_CONFIG (install the matugen module)"
     has matugen || die "matugen is not installed"
     [[ -n $WALLPAPER && -f $WALLPAPER ]] || die "no wallpaper selected; use --wallpaper PATH"
 
+    [[ $SOURCE_INDEX != auto ]] && source_args=(--source-color-index "$SOURCE_INDEX")
+
     if ((DRY_RUN)); then
-        info "[dry-run] matugen image $WALLPAPER --mode $MODE --type $TYPE --config $MATUGEN_CONFIG"
+        info "[dry-run] matugen image $WALLPAPER --mode $MODE --type $TYPE ${source_args[*]:-} --config $MATUGEN_CONFIG"
     else
         matugen image "$WALLPAPER" --mode "$MODE" --type "$TYPE" \
-            --prefer saturation --config "$MATUGEN_CONFIG"
-        ok "colors regenerated from $WALLPAPER ($MODE, $TYPE)"
+            "${source_args[@]}" --prefer saturation --config "$MATUGEN_CONFIG"
+        ok "colors regenerated from $WALLPAPER ($MODE, $TYPE, accent: $SOURCE_INDEX)"
     fi
 
     apply_wallpaper
@@ -353,6 +371,33 @@ pick_type() {
     STATE_DIRTY=1
 }
 
+pick_source_index() {
+    local choice i
+    local -a colors=() labels=("Automatic")
+
+    if ! has matugen || [[ -z $WALLPAPER || ! -f $WALLPAPER ]]; then
+        warn "pick a wallpaper before choosing an accent colour"
+        return 1
+    fi
+    mapfile -t colors < <(matugen image "$WALLPAPER" --show-source-colors 2>/dev/null |
+        grep -E '^#[0-9A-Fa-f]{6}$')
+    ((${#colors[@]})) || { warn "matugen found no source colours in this wallpaper"; return 1; }
+
+    for i in "${!colors[@]}"; do
+        labels+=("$((i + 1)). ${colors[$i]}")
+    done
+    choice="$(menu_choose "Accent colour" "${labels[@]}")" || return 1
+    if [[ $choice == Automatic ]]; then
+        SOURCE_INDEX="auto"
+    else
+        choice="${choice%%.*}"
+        [[ $choice =~ ^[0-9]+$ ]] || return 1
+        SOURCE_INDEX=$((choice - 1))
+    fi
+    STATE_DIRTY=1
+    ok "accent source index: $SOURCE_INDEX"
+}
+
 menu() {
     local choice
     local name
@@ -368,6 +413,7 @@ menu() {
             "Wallpaper: $name" \
             "Mode: $MODE" \
             "Scheme: $TYPE" \
+            "Accent: $SOURCE_INDEX" \
             "Apply now" \
             "Quit")" || break
 
@@ -375,6 +421,7 @@ menu() {
             "Wallpaper:"*) pick_wallpaper ;;
             "Mode:"*)      pick_mode ;;
             "Scheme:"*)    pick_type ;;
+            "Accent:"*)    pick_source_index ;;
             "Apply now")
                 write_state
                 apply_colors

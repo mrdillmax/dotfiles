@@ -49,11 +49,22 @@ else
 fi
 
 bar_config="$ROOT/modules/waybar/home/.config/waybar/config.jsonc"
-if grep -q '"{icon}   {volume}%"' "$bar_config" \
+if grep -q '"{icon}  {volume}%"' "$bar_config" \
     && grep -q '{usage}%' "$bar_config"; then
     pass "waybar leaves space between icons and values"
 else
     fail "waybar values collide with their icons"
+fi
+
+hypr_module="$ROOT/modules/hypr/module.conf"
+if grep -q 'xdg-desktop-portal' "$hypr_module" \
+    && grep -q 'xdg-desktop-portal-hyprland' "$hypr_module" \
+    && grep -q 'hyprpolkitagent' "$hypr_module" \
+    && grep -q 'QT_QUICK_BACKEND=software' "$ROOT/modules/autostart/home/.local/bin/autostart.sh" \
+    && grep -q '^migrate_entries()' "$ROOT/modules/autostart/home/.local/bin/autostart.sh"; then
+    pass "portals and the polkit agent are installed and use software rendering"
+else
+    fail "portal or polkit packages are missing"
 fi
 
 if grep -q 'nwg-look-float' "$lua"; then

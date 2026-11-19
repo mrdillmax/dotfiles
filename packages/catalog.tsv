@@ -126,6 +126,7 @@ wl-clip-persist-git	Hyprland	pkg	yes	any	any	Keep Wayland clipboard even after p
 wl-clipboard	Hyprland	pkg	yes	any	any	Command-line copy/paste utilities for Wayland
 wl-mirror	Hyprland	pkg	yes	any	any	a simple Wayland output mirror client
 wtype	Hyprland	pkg	yes	any	any	xdotool type for wayland
+xdg-desktop-portal	Hyprland	pkg	yes	any	any	Desktop integration portals for sandboxed applications
 xdg-desktop-portal-gtk	Hyprland	pkg	yes	any	any	A backend implementation for xdg-desktop-portal using GTK
 xdg-desktop-portal-hyprland	Hyprland	pkg	yes	any	any	xdg-desktop-portal backend for hyprland
 xorg-xwayland	Hyprland	pkg	yes	any	any	run X clients under wayland

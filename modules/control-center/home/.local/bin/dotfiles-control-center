@@ -10,6 +10,7 @@ REAL_HOME="${HOME:?HOME is not set}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$REAL_HOME/.config}"
 THEME="$CONFIG_HOME/rofi/control-center.rasi"
 CACHE_DIR="${XDG_CACHE_HOME:-$REAL_HOME/.cache}/dotfiles/wallpaper-thumbs"
+STATE_DIR="${XDG_STATE_HOME:-$REAL_HOME/.local/state}/dotfiles"
 
 # Resolve the repository through the installed symlink. A copy without the
 # repository loses only the installer shortcuts.
@@ -50,6 +51,8 @@ rofi_pick() {
 
     input="$(mktemp)" || die "cannot create a temporary file"
     cat >"$input"
+    local rows
+    rows="$(wc -l <"$input")"
     if ((show_icons == 0)); then
         while IFS= read -r line; do
             ((${#line} > max)) && max=${#line}
@@ -61,7 +64,10 @@ rofi_pick() {
         width=640
     fi
 
-    args+=(-theme-str "window { width: ${width}px; } prompt { enabled: false; } entry { placeholder: \"$prompt\"; }")
+    args+=(-theme-str "window { width: ${width}px; } prompt { enabled: false; } listview { lines: 14; } entry { placeholder: \"$prompt\"; }")
+    if ((show_icons == 0 && rows > 14)); then
+        args+=(-theme-str 'listview { fixed-height: true; lines: 14; }')
+    fi
     if [[ -r $THEME ]]; then
         args+=(-theme "$THEME")
     fi
@@ -111,17 +117,33 @@ open_browser() {
     fi
 }
 
-# Obsidian is the markdown viewer on this desktop; Firefox renders the raw
-# file without formatting. Fall back to the browser when Obsidian is absent.
-open_markdown() {
-    local file="$1" uri=""
-    if have obsidian && have python3 && have xdg-open; then
-        uri="obsidian://open?path=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$file" 2>/dev/null || true)"
-    fi
-    if [[ -n $uri ]]; then
-        (xdg-open "$uri" >/dev/null 2>&1 &)
+# README is rendered best by GitHub. Derive the URL from origin so the link
+# follows whichever fork or account cloned the repository.
+github_readme_url() {
+    local remote branch repo
+    [[ -n $ROOT ]] || return 1
+    remote="$(git -C "$ROOT" remote get-url origin 2>/dev/null)" || return 1
+    case "$remote" in
+        git@github.com:*)        repo="${remote#git@github.com:}" ;;
+        ssh://git@github.com/*)  repo="${remote#ssh://git@github.com/}" ;;
+        https://github.com/*)    repo="${remote#https://github.com/}" ;;
+        http://github.com/*)     repo="${remote#http://github.com/}" ;;
+        *) return 1 ;;
+    esac
+    repo="${repo%.git}"
+    branch="$(git -C "$ROOT" branch --show-current 2>/dev/null)"
+    [[ -n $branch ]] || branch="master"
+    printf 'https://github.com/%s/blob/%s/README.md\n' "$repo" "$branch"
+}
+
+open_readme() {
+    local url
+    if url="$(github_readme_url)"; then
+        open_browser "$url"
+    elif [[ -n $ROOT && -r $ROOT/README.md ]]; then
+        open_browser "$ROOT/README.md"
     else
-        open_browser "$file"
+        notify "Repository README not found"
     fi
 }
 
@@ -312,6 +334,10 @@ edit_bind_page() {
     target="$(binds-cheatsheet.sh --rofi-edit)" || return 0
     [[ -n $target ]] || return 0
     open_config_at "$target"
+    if have hyprctl; then
+        hyprctl reload >/dev/null 2>&1 || true
+        notify "Hyprland reloaded"
+    fi
     exit 0
 }
 
@@ -383,14 +409,7 @@ docs_page() {
                 fi
                 ;;
             "Versions") docs_versions ;;
-            "README")
-                if [[ -n $ROOT && -r $ROOT/README.md ]]; then
-                    open_markdown "$ROOT/README.md"
-                else
-                    notify "Repository README not found"
-                fi
-                exit 0
-                ;;
+            "README") open_readme; exit 0 ;;
             "Links") docs_links ;;
             "") return 0 ;;
         esac
@@ -438,6 +457,30 @@ waybar_restart() {
     notify "Waybar restarted"
 }
 
+notifications_label() {
+    if [[ $(dunstctl is-paused 2>/dev/null) == true ]]; then
+        printf 'Resume notifications'
+    else
+        printf 'Pause notifications'
+    fi
+}
+
+idle_label() {
+    if grep -q '^ENABLED=0' "$STATE_DIR/idle.conf" 2>/dev/null; then
+        printf 'Enable idle'
+    else
+        printf 'Disable idle'
+    fi
+}
+
+gamemode_label() {
+    if [[ -r $STATE_DIR/gamemode.conf ]]; then
+        printf 'Disable game mode'
+    else
+        printf 'Enable game mode'
+    fi
+}
+
 notifications_toggle() {
     if ! have dunstctl; then
         notify "dunst is not installed"
@@ -476,19 +519,19 @@ menu_page() {
             $'|Lock'
             $'|Reload Hyprland'
         )
-        have dunstctl && specs+=($'|Toggle notifications')
+        have dunstctl && specs+=($'|'"$(notifications_label)")
         have autostart.sh && specs+=($'|Autostart')
         if have idle-tune.sh; then
             specs+=(
                 $'|Idle status'
                 $'|Configure idle'
-                $'|Toggle idle'
+                $'|'"$(idle_label)"
             )
         fi
         if host_is_laptop && have lid-handler.sh; then
             specs+=($'|Lid status')
         fi
-        have gamemode.sh && specs+=($'|Toggle game mode')
+        have gamemode.sh && specs+=($'|'"$(gamemode_label)")
 
         choice="$(pick_icon "Menu" "${specs[@]}")" || return 0
         case "$choice" in
@@ -504,13 +547,13 @@ menu_page() {
                 fi
                 exit 0
                 ;;
-            "Toggle notifications") notifications_toggle; exit 0 ;;
+            "Pause notifications"|"Resume notifications") notifications_toggle; exit 0 ;;
             "Autostart") autostart.sh pick </dev/null ;;
             "Idle status") run_terminal --hold "idle-tune.sh status"; exit 0 ;;
             "Configure idle") run_terminal "idle-tune.sh configure"; exit 0 ;;
-            "Toggle idle") run_terminal "idle-tune.sh toggle"; exit 0 ;;
+            "Enable idle"|"Disable idle") run_terminal "idle-tune.sh toggle"; exit 0 ;;
             "Lid status") run_terminal --hold "lid-handler.sh status"; exit 0 ;;
-            "Toggle game mode") run_and_notify "Game mode toggled" gamemode.sh toggle; exit 0 ;;
+            "Enable game mode"|"Disable game mode") run_and_notify "Game mode toggled" gamemode.sh toggle; exit 0 ;;
             "") return 0 ;;
         esac
     done
@@ -766,6 +809,43 @@ apply_gtk_theme() {
     notify "GTK theme: $theme"
 }
 
+theme_accent_page() {
+    local wallpaper index number
+    local -a colors=() rows=()
+
+    if ! have matugen || ! require_helper theme-menu.sh; then
+        return 0
+    fi
+    wallpaper="$(theme-menu.sh --print 2>/dev/null | sed -n 's/^wallpaper=//p' | head -n1)"
+    if [[ -z $wallpaper || ! -f $wallpaper ]]; then
+        message "Choose a wallpaper before picking an accent colour."
+        return 0
+    fi
+
+    mapfile -t colors < <(matugen image "$wallpaper" --show-source-colors 2>/dev/null |
+        grep -E '^#[0-9A-Fa-f]{6}$')
+    if ((${#colors[@]} == 0)); then
+        message "matugen found no source colours in this wallpaper."
+        return 0
+    fi
+
+    rows+=("<span font='JetBrainsMono Nerd Font 13'></span>  Automatic")
+    for index in "${!colors[@]}"; do
+        rows+=("<span foreground='${colors[$index]}' font='JetBrainsMono Nerd Font 13'>●</span>  Accent $((index + 1))  ${colors[$index]}")
+    done
+
+    index="$(printf '%s\n' "${rows[@]}" | rofi_index "Accent color")" || return 0
+    [[ $index =~ ^[0-9]+$ ]] || return 0
+    if ((index == 0)); then
+        run_and_notify "Accent: automatic" theme-menu.sh --source-index auto --apply
+    else
+        number=$((index - 1))
+        ((number < ${#colors[@]})) || return 0
+        run_and_notify "Accent: ${colors[$number]}" theme-menu.sh --source-index "$number" --apply
+    fi
+    exit 0
+}
+
 appearance_status() {
     local gtk icon font cursor scheme
     gtk="$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d "'" || printf 'unknown')"
@@ -821,11 +901,13 @@ style_page() {
             $'|Wallpaper' \
             $'|Theme mode' \
             $'|Color scheme' \
+            $'|Accent color' \
             $'|Fonts and icons')" || return 0
         case "$choice" in
             "Wallpaper") wallpaper_page ;;
             "Theme mode") theme_mode_page ;;
             "Color scheme") theme_scheme_page ;;
+            "Accent color") theme_accent_page ;;
             "Fonts and icons") appearance_page ;;
             "") return 0 ;;
         esac
@@ -1107,27 +1189,63 @@ EOF
     run_terminal --hold "$script"
 }
 
+docker_ready() {
+    local user
+    user="${USER:-$(id -un)}"
+
+    if ! have docker; then
+        notify "Docker is not installed"
+        return 1
+    fi
+    if have systemctl && ! systemctl is-active --quiet docker 2>/dev/null; then
+        if ask_confirm "Docker service is not running. Start it now?"; then
+            run_terminal --hold "sudo systemctl start docker"
+        else
+            return 1
+        fi
+    fi
+
+    if docker info >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if ! id -nG "$user" 2>/dev/null | tr ' ' '\n' | grep -qx docker; then
+        if ask_confirm "Add $user to the docker group? A re-login is required."; then
+            run_terminal --hold "sudo usermod -aG docker $(printf '%q' "$user")"
+            notify "Docker group added. Log out and back in, then retry."
+        fi
+    else
+        notify "Docker is not reachable (service or permissions)"
+    fi
+    return 1
+}
+
+docker_pull() {
+    local image
+    image="$(ask_text "Docker image (for example archlinux:latest)")" || return 0
+    [[ -n $image ]] || return 0
+    run_terminal --hold "docker pull $(printf '%q' "$image")"
+}
+
 docker_page() {
+    local choice
+
     if ! have lazydocker; then
         notify "LazyDocker is not installed"
         return 0
     fi
-    if ! have docker; then
-        notify "Docker is not installed"
-        return 0
-    fi
-    if ! systemctl is-active --quiet docker 2>/dev/null; then
-        if ask_confirm "Docker service is not running. Start it now?"; then
-            run_terminal --hold "sudo systemctl start docker"
-        else
-            return 0
-        fi
-    fi
-    if ! docker info >/dev/null 2>&1; then
-        notify "Docker is not reachable (service or permissions)"
-        return 0
-    fi
-    run_terminal "lazydocker"
+    docker_ready || return 0
+
+    while :; do
+        choice="$(pick_icon "Docker" \
+            $'|LazyDocker' \
+            $'|Pull image')" || return 0
+        case "$choice" in
+            LazyDocker) run_terminal "lazydocker"; exit 0 ;;
+            "Pull image") docker_pull; exit 0 ;;
+            *) return 0 ;;
+        esac
+    done
 }
 
 install_page() {
@@ -1142,7 +1260,7 @@ install_page() {
         case "$choice" in
             "Repositories") fzf_install repo; exit 0 ;;
             AUR) fzf_install aur; exit 0 ;;
-            Docker) docker_page; exit 0 ;;
+            Docker) docker_page ;;
             *) return 0 ;;
         esac
     done
@@ -1218,23 +1336,22 @@ update_page() {
     local choice helper
     while :; do
         local -a specs=(
-            $'|Repositories'
-            $'|Repositories and AUR'
+            $'|Update repo + AUR'
         )
         have reflector && specs+=($'|Mirrors')
         if [[ -n $ROOT ]]; then
             specs+=(
-                $'|Update dotfiles'
+                $'|Pull repo and apply'
                 $'|Apply configs'
-                $'|Pull live changes'
+                $'|Import live edits'
                 $'|Installer'
             )
         fi
+        specs+=($'|Maintenance help')
         [[ -n $(spicetify_bin) ]] && specs+=($'|Spicetify')
         choice="$(pick_icon "Update" "${specs[@]}")" || return 0
         case "$choice" in
-            "Repositories") run_terminal --hold "sudo pacman -Syu"; exit 0 ;;
-            "Repositories and AUR")
+            "Update repo + AUR")
                 helper="$(aur_helper)"
                 if [[ -n $helper ]]; then
                     if [[ $helper == yay ]]; then
@@ -1254,13 +1371,19 @@ update_page() {
                 run_terminal --hold "sudo cp -a /etc/pacman.d/mirrorlist $(printf '%q' "$backup") && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist"
                 exit 0
                 ;;
-            "Update dotfiles")
-                run_terminal --hold "git -C $(printf '%q' "$ROOT") pull --ff-only && ./install.sh --all --no-packages"
+            "Pull repo and apply")
+                run_terminal --hold "git -C $(printf '%q' "$ROOT") pull --ff-only && ./install.sh --all --no-packages --yes"
                 exit 0
                 ;;
-            "Apply configs") run_terminal --hold "./install.sh --all --no-packages"; exit 0 ;;
-            "Pull live changes") run_terminal --hold "./scripts/sync.sh pull"; exit 0 ;;
+            "Apply configs") run_terminal --hold "./install.sh --all --no-packages --yes"; exit 0 ;;
+            "Import live edits") run_terminal --hold "./scripts/sync.sh pull"; exit 0 ;;
             Installer) run_terminal --hold "./install.sh"; exit 0 ;;
+            "Maintenance help")
+                show_info "Dotfiles maintenance" \
+                    "<b>Pull repo and apply</b> · git pull, then install the repository configs" \
+                    "<b>Apply configs</b> · install the configs already in this clone" \
+                    "<b>Import live edits</b> · copy changes made on this machine back into the clone"
+                ;;
             Spicetify) run_terminal --hold "$(spicetify_bin) backup apply"; exit 0 ;;
             "") return 0 ;;
         esac

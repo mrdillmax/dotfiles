@@ -228,11 +228,15 @@ fi
 
 # 5a. Menu wording and the leaf actions that should close the panel.
 menu_block="$(awk '/^menu_page\(\)/,/^}/' "$CC")"
-if grep -q 'Toggle notifications' <<<"$menu_block" \
+if grep -q 'Pause notifications' <<<"$menu_block" \
+    && grep -q 'Resume notifications' <<<"$menu_block" \
+    && grep -q 'Enable idle' <<<"$menu_block" \
+    && grep -q 'Disable idle' <<<"$menu_block" \
+    && grep -q 'Enable game mode' <<<"$menu_block" \
+    && grep -q 'Disable game mode' <<<"$menu_block" \
     && ! grep -q 'Apply idle' <<<"$menu_block" \
-    && ! grep -q 'Game mode status' <<<"$menu_block" \
     && grep -q 'Autostart") autostart.sh pick' <<<"$menu_block"; then
-    pass "menu entries are toggles and autostart stays in rofi"
+    pass "menu toggles say enable, disable, pause or resume"
 else
     fail "menu wording is stale"
 fi
@@ -295,14 +299,15 @@ else
     fail "fonts and icons are still read-only"
 fi
 
-# 5h. README opens as formatted markdown in Obsidian.
+# 5h. README opens on GitHub, where markdown is rendered.
 # shellcheck disable=SC2016 # literal source text is being checked
-if grep -q '^open_markdown()' "$CC" \
-    && grep -q 'obsidian://open?path=' "$CC" \
-    && grep -q 'open_markdown "$ROOT/README.md"' "$CC"; then
-    pass "README opens in Obsidian"
+if grep -q '^open_readme()' "$CC" \
+    && grep -q '^github_readme_url()' "$CC" \
+    && grep -q "https://github.com/%s/blob/%s/README.md" "$CC" \
+    && ! grep -q 'obsidian://' "$CC"; then
+    pass "README opens on GitHub"
 else
-    fail "README still opens as raw markdown in Firefox"
+    fail "README still uses a local or Obsidian viewer"
 fi
 
 # 5i. Toggling notifications refreshes the waybar module.
@@ -319,13 +324,15 @@ else
     fail "package details still wrap in a narrow side preview"
 fi
 
-# 5k. Docker checks the daemon and offers to start it.
-if grep -q '^docker_page()' "$CC" \
+# 5k. Docker checks the daemon, offers the group fix and can pull images.
+if grep -q '^docker_ready()' "$CC" \
     && grep -q 'systemctl is-active --quiet docker' "$CC" \
-    && grep -q 'Docker service is not running' "$CC"; then
-    pass "LazyDocker starts or explains the Docker service"
+    && grep -q 'usermod -aG docker' "$CC" \
+    && grep -q '^docker_pull()' "$CC" \
+    && grep -q 'docker pull' "$CC"; then
+    pass "Docker checks the daemon, group and image pull"
 else
-    fail "LazyDocker opens without checking the Docker service"
+    fail "Docker still fails without a service or group check"
 fi
 
 # 5l. Only one Keybinds entry remains in configuration.
@@ -334,6 +341,24 @@ if [[ $(grep -c 'specs+=.*|Keybinds' <<<"$config_block") -eq 1 ]] \
     pass "configuration has a single Keybinds entry"
 else
     fail "configuration still lists Keybinds twice"
+fi
+
+# 5m. The accent colour is chosen from the wallpaper's source colours.
+if grep -q '^theme_accent_page()' "$CC" \
+    && grep -q 'show-source-colors' "$CC" \
+    && grep -q 'source-index' "$CC" \
+    && grep -q 'Accent color' "$CC"; then
+    pass "the colour scheme exposes an accent picker"
+else
+    fail "matugen still picks the accent without asking"
+fi
+
+# 5n. Long pickers stay inside the screen.
+if grep -q 'listview { lines: 14; }' "$CC" \
+    && grep -q 'listview { fixed-height: true; lines: 14; }' "$CC"; then
+    pass "long rofi lists are capped to fourteen rows"
+else
+    fail "a long font or package list can overflow the screen"
 fi
 
 # 6. Install and uninstall use fzf when it is available.
@@ -347,13 +372,15 @@ else
     fail "fzf install, removal or inspection is missing"
 fi
 
-# 7. The update page covers repos, AUR, mirrors, dotfiles and Spicetify.
-if grep -q '"Repositories"' <<<"$update_block" \
-    && grep -q '"Repositories and AUR"' <<<"$update_block" \
+# 7. The update page has one atomic system update and quiet dotfile applies.
+if grep -q '"Update repo + AUR"' <<<"$update_block" \
+    && ! grep -q '"Repositories and AUR"' <<<"$update_block" \
+    && ! grep -q '"Repositories")' <<<"$update_block" \
     && grep -q '"Apply configs"' <<<"$update_block" \
+    && grep -q 'install.sh --all --no-packages --yes' <<<"$update_block" \
     && grep -q 'sudo pacman -Syu' <<<"$update_block" \
     && grep -q 'keyserver hkps://pgp.surf.nl' "$CC"; then
-    pass "system and dotfiles updates are wired"
+    pass "system update is atomic and dotfile applies are non-interactive"
 else
     fail "system or dotfiles updates are incomplete"
 fi

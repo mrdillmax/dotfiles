@@ -13,6 +13,8 @@ CONFIG="${HYPRLAND_CONFIG:-$REAL_HOME/.config/hypr/hyprland.lua}"
 
 MODE="plain"
 CHECK_DUPLICATES=0
+ADD_KEY=""
+ADD_COMMAND=""
 
 usage() {
     cat <<'EOF'
@@ -23,6 +25,7 @@ Usage: binds-cheatsheet.sh [options]
   --json          JSON array of {keybind, action, dynamic}
   --rofi          show the table in rofi (falls back to plain)
   --rofi-edit     pick a bind and print "<config>:<line>" for an editor
+  --add KEY CMD   append a bind using "SUPER + KEY" (e.g. "SHIFT + X")
   --duplicates    print duplicate keybinds and exit 1 when any exist
   --file PATH     parse another Hyprland Lua config
   -h, --help      this help
@@ -30,6 +33,7 @@ EOF
 }
 
 die() { printf 'binds-cheatsheet: %s\n' "$*" >&2; exit 1; }
+ok() { printf 'ok %s\n' "$*" >&2; }
 
 while (($#)); do
     case "$1" in
@@ -38,6 +42,7 @@ while (($#)); do
         --json)       MODE="json" ;;
         --rofi)       MODE="rofi" ;;
         --rofi-edit)  MODE="rofi-edit" ;;
+        --add)        MODE="add"; ADD_KEY="${2:?missing key for --add}"; ADD_COMMAND="${3:?missing command for --add}"; shift 2 ;;
         --duplicates) CHECK_DUPLICATES=1 ;;
         --file)       CONFIG="${2:?missing value for --file}"; shift ;;
         -h|--help)    usage; exit 0 ;;
@@ -249,6 +254,63 @@ if ((${#KEYS[@]} == 0)); then
     die "no hl.bind() lines found in $CONFIG"
 fi
 
+add_bind() {
+    local suffix command candidate escaped line_no i
+
+    suffix="$(trim "$1")"
+    command="$(trim "$2")"
+    [[ -n $suffix ]] || die "missing key after SUPER"
+    [[ $suffix =~ ^[A-Za-z0-9_+.[:space:]-]+$ ]] || die "invalid key: $suffix (use letters, digits, +, ., _ or -)"
+    [[ -n $command && $command != *$'\n'* ]] || die "the command must be a single non-empty line"
+
+    candidate="SUPER + $suffix"
+    candidate="$(printf '%s' "$candidate" | sed 's/[[:space:]]*+[[:space:]]*/ + /g; s/[[:space:]][[:space:]]*/ /g')"
+    for i in "${!KEYS[@]}"; do
+        [[ ${KEYS[$i]} == "$candidate" ]] && die "keybind already exists: $candidate"
+    done
+
+    escaped="${command//\\/\\\\}"
+    escaped="${escaped//\"/\\\"}"
+    if [[ -s $CONFIG && -n "$(tail -c1 "$CONFIG")" ]]; then
+        printf '\n' >>"$CONFIG"
+    fi
+    {
+        printf '\n# Added by binds-cheatsheet on %s\n' "$(date +%F)"
+        printf 'hl.bind(mainMod .. " + %s", hl.dsp.exec_cmd("%s"))\n' "$suffix" "$escaped"
+    } >>"$CONFIG"
+
+    line_no="$(wc -l <"$CONFIG")"
+    ok "added $candidate"
+    printf '%s:%s\n' "$CONFIG" "$line_no"
+}
+
+add_bind_prompt() {
+    local suffix command
+    local theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/launcher.rasi"
+
+    if command -v rofi >/dev/null 2>&1 && [[ -n ${WAYLAND_DISPLAY:-}${DISPLAY:-} ]]; then
+        suffix="$(printf '\n' | rofi -theme "$theme" -dmenu -p "" -l 0 \
+            -no-fixed-num-lines \
+            -theme-str 'entry { placeholder: "Key after SUPER (e.g. SHIFT + X)"; }')" || return 1
+        command="$(printf '\n' | rofi -theme "$theme" -dmenu -p "" -l 0 \
+            -no-fixed-num-lines \
+            -theme-str 'entry { placeholder: "Command"; }')" || return 1
+    elif [[ -t 0 ]]; then
+        printf 'Key after SUPER (e.g. SHIFT + X): '
+        read -r suffix || return 1
+        printf 'Command: '
+        read -r command || return 1
+    else
+        return 1
+    fi
+    add_bind "$suffix" "$command"
+}
+
+if [[ $MODE == add ]]; then
+    add_bind "$ADD_KEY" "$ADD_COMMAND"
+    exit $?
+fi
+
 # ------------------------------------------------------------- duplicates ----
 
 find_duplicates() {
@@ -333,8 +395,8 @@ print_rofi() {
 }
 
 print_rofi_edit() {
-    local i index
-    local -a rows=()
+    local i index bind_index
+    local -a rows=("<span font='JetBrainsMono Nerd Font 13'></span>  Add keybind")
 
     for i in "${!KEYS[@]}"; do
         rows+=("<span font='JetBrainsMono Nerd Font 13'></span>  $(printf '%-28s %s' "${KEYS[$i]}" "${ACTIONS[$i]}")")
@@ -345,10 +407,16 @@ print_rofi_edit() {
     fi
     index="$(printf '%s\n' "${rows[@]}" | rofi \
         -theme "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/launcher.rasi" \
-        -dmenu -p "" -no-custom -no-fixed-num-lines -markup-rows -format i \
+        -dmenu -p "" -no-fixed-num-lines -markup-rows -format i \
         -theme-str 'window { width: 820px; } entry { placeholder: "Keybinds — pick one to edit"; }')" || return 1
     [[ $index =~ ^[0-9]+$ ]] || return 1
-    printf '%s:%s\n' "$CONFIG" "${LINES[$index]}"
+    if ((index == 0)); then
+        add_bind_prompt || return 1
+        return 0
+    fi
+    bind_index=$((index - 1))
+    ((bind_index < ${#KEYS[@]})) || return 1
+    printf '%s:%s\n' "$CONFIG" "${LINES[$bind_index]}"
 }
 
 case "$MODE" in

@@ -3,6 +3,24 @@
 [[ -n ${_DOTFILES_THEME:-} ]] && return 0
 _DOTFILES_THEME=1
 
+theme_source_index() {
+    local state="$REAL_HOME/.local/state/dotfiles/theme.conf" value="auto"
+
+    if [[ -r $state ]]; then
+        value="$(sed -n 's/^source_index=//p' "$state" | tail -n1)"
+    fi
+    [[ $value =~ ^[0-4]$ ]] && printf '%s' "$value"
+}
+
+theme_source_args() {
+    local index
+    if index="$(theme_source_index)" && [[ -n $index ]]; then
+        printf '%s\n' --source-color-index "$index"
+    else
+        printf '%s\n' --prefer saturation
+    fi
+}
+
 theme_wallpaper_path() {
     local candidate=""
 
@@ -25,8 +43,11 @@ generate_theme() {
         die "no wallpaper found; run ./install.sh --wallpaper PATH first"
     fi
 
+    local -a source_args
+    mapfile -t source_args < <(theme_source_args)
+
     info "generating colours from $wallpaper"
-    run matugen image "$wallpaper" --prefer saturation \
+    run matugen image "$wallpaper" "${source_args[@]}" \
         --config "$REAL_HOME/.config/matugen/config.toml"
     if (( !DRY_RUN )) && command -v pkill >/dev/null 2>&1; then
         pkill -SIGUSR2 waybar 2>/dev/null || true
@@ -50,8 +71,11 @@ generate_theme_if_possible() {
         warn "no wallpaper recorded; colours were not generated"
         return 0
     fi
+    local -a source_args
+    mapfile -t source_args < <(theme_source_args)
+
     info "generating colours from $wallpaper"
-    run matugen image "$wallpaper" --config "$REAL_HOME/.config/matugen/config.toml"
+    run matugen image "$wallpaper" "${source_args[@]}" --config "$REAL_HOME/.config/matugen/config.toml"
     if (( !DRY_RUN )) && command -v pkill >/dev/null 2>&1; then
         pkill -SIGUSR2 waybar 2>/dev/null || true
     fi

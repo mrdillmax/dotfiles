@@ -25,7 +25,7 @@ DEFAULTS=(
     "waybar|uwsm app -- waybar"
     "dunst|uwsm app -- dunst"
     "awww-daemon|uwsm app -- awww-daemon"
-    "hyprpolkitagent|uwsm app -- /usr/lib/hyprpolkitagent/hyprpolkitagent"
+    "hyprpolkitagent|uwsm app -- env QT_QUICK_BACKEND=software /usr/lib/hyprpolkitagent/hyprpolkitagent"
     "cliphist-text|uwsm app -- wl-paste --type text --watch cliphist store"
     "cliphist-image|uwsm app -- wl-paste --type image --watch cliphist store"
     "wl-clip-persist|uwsm app -- wl-clip-persist --clipboard regular"
@@ -302,9 +302,26 @@ launch() {
     fi
 }
 
+# The polkit agent needs software rendering on GPU-less VMs, where Qt Quick
+# otherwise crashes while creating a GBM buffer. Migrate the old command once.
+migrate_entries() {
+    local line enabled name cmd i changed=0
+    load_entries
+    for i in "${!ENTRIES[@]}"; do
+        IFS=$'\t' read -r enabled name cmd <<<"${ENTRIES[$i]}"
+        if [[ $name == hyprpolkitagent && $cmd == 'uwsm app -- /usr/lib/hyprpolkitagent/hyprpolkitagent' ]]; then
+            ENTRIES[i]="$(printf '%s\t%s\t%s' "$enabled" "$name" \
+                'uwsm app -- env QT_QUICK_BACKEND=software /usr/lib/hyprpolkitagent/hyprpolkitagent')"
+            changed=1
+        fi
+    done
+    ((changed)) && save_entries
+}
+
 run_entries() {
     local line enabled name cmd started=0 failed=0 skipped=0
 
+    migrate_entries
     load_entries
     if ((${#ENTRIES[@]} == 0)); then
         info "no autostart entries"
@@ -557,6 +574,7 @@ remove_fzf() {
 pick_entries() {
     local line enabled name _cmd labels=() choice chosen state
 
+    migrate_entries
     load_entries
     while true; do
         labels=("+ Add a program" "- Remove a program")

@@ -187,6 +187,29 @@ else
     fi
 fi
 
+# 10b. --add appends a working bind and returns its line.
+cp "$base/clean.lua" "$base/add.lua"
+add_out="$(run_binds --file "$base/add.lua" --add "SHIFT + X" "notify-send added" 2>/dev/null)"
+add_line="${add_out##*:}"
+if [[ $add_line =~ ^[0-9]+$ ]] \
+    && sed -n "${add_line}p" "$base/add.lua" | grep -q 'mainMod .. " + SHIFT + X"' \
+    && sed -n "${add_line}p" "$base/add.lua" | grep -q 'notify-send added'; then
+    pass "--add appends a bind and returns its line"
+else
+    fail "--add did not append the bind"
+    cat "$base/add.lua"
+fi
+if run_binds --file "$base/add.lua" --add "SHIFT + X" "other" >/dev/null 2>&1; then
+    fail "a duplicate keybind was accepted"
+else
+    pass "adding a duplicate keybind is rejected"
+fi
+if grep -q 'Add keybind' "$SCRIPT" && grep -q 'add_bind_prompt' "$SCRIPT"; then
+    pass "the rofi editor offers Add keybind"
+else
+    fail "the rofi editor cannot add keybinds"
+fi
+
 # 11. Rofi mode falls back to the plain table without a display.
 rofi_out="$(env -u WAYLAND_DISPLAY -u DISPLAY bash "$SCRIPT" --file "$base/clean.lua" --rofi)"
 if grep -q '^KEYBIND' <<<"$rofi_out" && grep -qE '^SUPER \+ T[[:space:]]+exec: kitty$' <<<"$rofi_out"; then

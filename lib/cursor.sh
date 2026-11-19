@@ -64,6 +64,8 @@ cursor_install_repo_theme() {
     info "cursor theme from repository: $src"
     if (( DRY_RUN )); then
         log "${C_DIM}[dry-run]${C_RESET} cp -a $src $dest"
+    elif [[ -d $dest ]] && diff -qr -- "$src" "$dest" >/dev/null 2>&1; then
+        info "cursor theme already up to date: $dest"
     else
         mkdir -p -- "$REAL_HOME/.local/share/icons"
         rm -rf -- "$dest"

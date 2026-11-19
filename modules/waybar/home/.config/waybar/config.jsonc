@@ -107,7 +107,7 @@
     "modules": ["pulseaudio#output", "pulseaudio#input"]
   },
     "pulseaudio#output": {
-    "format": "{icon}   {volume}%",
+    "format": "{icon}  {volume}%",
     "format-muted": " ",
     "format-icons": {
       "headphone": "",
@@ -117,7 +117,7 @@
   },
   "pulseaudio#input": {
     "format": "{format_source}",
-    "format-source": "   {volume}%",
+    "format-source": "  {volume}%",
     "format-source-muted": " ",
     "tooltip-format": "{desc}",
     "on-click": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
@@ -134,18 +134,18 @@
     "modules": ["cpu", "memory", "temperature"]
   },
     "cpu": {
-    "format": "   {usage}%",
+    "format": "  {usage}%",
     "tooltip": false
   },
   "memory": {
-    "format": "   {percentage}%"
+    "format": "  {percentage}%"
   },
   "temperature": {
     "hwmon-path-abs": "/sys/devices/platform/coretemp.0/hwmon",
     "input-filename": "temp1_input",
     "critical-threshold": 80,
-    "format": "    {temperatureC}°C",
-    "format-critical": "    {temperatureC}°C",
+    "format": "   {temperatureC}°C",
+    "format-critical": "   {temperatureC}°C",
     "tooltip": false
   },
 

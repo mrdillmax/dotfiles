@@ -83,6 +83,7 @@ fi
 defaults="$(run_theme --print)"
 if grep -qx 'mode=dark' <<<"$defaults" \
     && grep -qx 'type=scheme-tonal-spot' <<<"$defaults" \
+    && grep -qx 'source_index=auto' <<<"$defaults" \
     && grep -qx 'wallpaper=' <<<"$defaults"; then
     pass "defaults are dark + scheme-tonal-spot"
 else
@@ -127,6 +128,17 @@ if grep -q 'color-scheme prefer-light' "$gsettings_log" \
 else
     fail "portal color scheme was not updated"
     cat "$gsettings_log"
+fi
+
+# 4b. An explicit accent index is passed to matugen and stored.
+: >"$matugen_log"
+run_theme --source-index 2 --apply >/dev/null
+if grep -q -- '--source-color-index 2' "$matugen_log" \
+    && grep -qx 'source_index=2' "$state_file"; then
+    pass "the accent source index is passed to matugen"
+else
+    fail "the accent source index is ignored"
+    cat "$matugen_log"
 fi
 
 # 5. A partial update keeps the other stored values.
