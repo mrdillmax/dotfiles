@@ -787,6 +787,18 @@ install_selected_modules() {
                 ;;
         esac
     done
+
+    # fish_plugins lists Tide; fisher installs the prompt plugins.
+    if [[ " ${MODULES[*]} " == *" fish "* ]]; then
+        if (( DRY_RUN )); then
+            log "${C_DIM}[dry-run]${C_RESET} fish -c 'fisher update'"
+        elif command -v fish >/dev/null 2>&1 && fish -c 'type -q fisher' >/dev/null 2>&1; then
+            info "installing fish plugins (fisher update)"
+            fish -c 'fisher update' || warn "fisher update failed; run 'fish -c fisher update' later"
+        else
+            warn "fish/fisher not installed; Tide was not installed"
+        fi
+    fi
 }
 
 user_unit_exists() {

@@ -371,8 +371,8 @@ merge_makepkg_conf() {
 
 enable_system_services() {
     local conf="$DOTFILES_DIR/system/services/services.conf"
-    local service package note
-    local -a labels=() picked=()
+    local service package note label
+    local -a labels=() picked=() checked=()
 
     [[ -r $conf ]] || return 0
 
@@ -383,12 +383,18 @@ enable_system_services() {
 
     while IFS=$'\t' read -r service package note; do
         [[ -z $service || $service == \#* ]] && continue
-        labels+=("$service — $note (package: $package)")
+        label="$service — $note (package: $package)"
+        labels+=("$label")
+        case "$service" in
+            irqbalance|ananicy-cpp) checked+=("$label") ;;
+        esac
     done <"$conf"
 
     ((${#labels[@]})) || return 0
 
-    tui_checklist "System services to enable (not started)" "${labels[@]}"
+    # shellcheck disable=SC2034 # read by tui_checklist_indexes
+    TUI_CHECKED_ITEMS=("${checked[@]}")
+    tui_checklist "System services to enable and start" "${labels[@]}"
     ((${#TUI_SELECTION[@]})) || { info "no system services selected"; return 0; }
 
     local line
@@ -396,7 +402,7 @@ enable_system_services() {
         picked+=("${line%% — *}")
     done
 
-    if ! tui_confirm "Enable ${#picked[@]} system service(s)? They will not be started." no; then
+    if ! tui_confirm "Enable and start ${#picked[@]} system service(s)?" no; then
         warn "system services not enabled"
         return 0
     fi
@@ -406,8 +412,36 @@ enable_system_services() {
             warn "unit not found, skipping: $service"
             continue
         fi
-        run systemctl enable "$service"
+        run systemctl enable --now "$service"
     done
+}
+
+# Use fish as the login shell, so getty autologin reaches the tty1 block in
+# config.fish and starts Hyprland. Safe to run repeatedly.
+set_login_shell_fish() {
+    local user="${1:-}" shell current
+
+    if [[ -z $user ]]; then
+        user="$(resolve_autologin_user)" || return 0
+    fi
+    shell="$(command -v fish 2>/dev/null || true)"
+    if [[ -z $shell ]]; then
+        warn "fish is not installed; login shell unchanged"
+        return 1
+    fi
+    current="$(getent passwd "$user" 2>/dev/null | cut -d: -f7)"
+    if [[ $current == "$shell" ]]; then
+        ok "login shell is already fish"
+        return 0
+    fi
+    if (( !DRY_RUN )) && (( !ASSUME_YES )); then
+        if ! tui_confirm "Make fish the login shell for $user?" yes; then
+            warn "login shell unchanged"
+            return 1
+        fi
+    fi
+    run chsh -s "$shell" "$user" || { warn "could not change the login shell"; return 1; }
+    ok "login shell set to $shell for $user"
 }
 
 install_system_configs() {
@@ -416,7 +450,7 @@ install_system_configs() {
     fi
 
     local src dst mode tmp_src iface user
-    local count=0 dns_ok=1 dns_skipped=0
+    local count=0 dns_ok=1 dns_skipped=0 boot_changed=0 dns_changed=0
     local rows=()
 
     mapfile -t rows < <(system_file_map)
@@ -512,6 +546,10 @@ install_system_configs() {
             ok "installed $dst"
         fi
         [[ -n $tmp_src ]] && rm -f -- "$tmp_src"
+        case "$dst" in
+            /etc/default/grub|/etc/mkinitcpio.conf) boot_changed=1 ;;
+        esac
+        dns_is_dns_file "$dst" && dns_changed=1
         count=$((count + 1))
     done
 
@@ -526,33 +564,40 @@ install_system_configs() {
     fi
     if system_component_wanted services; then
         enable_system_services
-    fi
-
-    if (( DRY_RUN )); then
-        return 0
+        set_login_shell_fish || true
     fi
 
     printf '\n'
-    info "Not run automatically (review and run manually):"
-    printf '  sudo systemctl daemon-reload\n'
+    info "Applying the changes"
+    run systemctl daemon-reload || warn "daemon-reload failed"
+
     if system_component_wanted zram; then
-        printf '  sudo systemctl start systemd-zram-setup@zram0.service   # zram\n'
+        run systemctl start systemd-zram-setup@zram0.service \
+            || warn "could not start zram; check /etc/systemd/zram-generator.conf"
     fi
     if system_component_wanted cpupower; then
-        printf '  sudo systemctl enable --now cpupower                    # CPU governor\n'
+        run systemctl enable --now cpupower || warn "could not enable cpupower"
     fi
-    if system_component_wanted dns; then
-        printf '  sudo systemctl restart NetworkManager                   # only after DNS safety check\n'
-        printf '  sudo unbound-checkconf /etc/unbound/unbound.conf\n'
-        printf '  sudo pihole restartdns                      # only if Pi-hole DNS was changed\n'
+    if (( dns_changed )); then
+        run systemctl restart NetworkManager || warn "could not restart NetworkManager"
+        if systemctl list-unit-files unbound.service >/dev/null 2>&1; then
+            run systemctl restart unbound || warn "could not restart unbound"
+        fi
+        if command -v pihole >/dev/null 2>&1; then
+            run pihole restartdns || warn "could not restart Pi-hole DNS"
+        fi
     fi
-    if system_component_wanted services; then
-        printf '  sudo systemctl enable --now irqbalance ananicy-cpp preload lactd\n'
-        printf '  sudo systemctl enable --now paccache.timer fstrim.timer\n'
-    fi
-    if system_component_wanted grub; then
-        printf '  sudo grub-mkconfig -o /boot/grub/grub.cfg   # only if GRUB was changed\n'
-        printf '  sudo mkinitcpio -P                          # only if mkinitcpio was changed\n'
+    if (( boot_changed )); then
+        if command -v grub-mkconfig >/dev/null 2>&1; then
+            run grub-mkconfig -o /boot/grub/grub.cfg || warn "grub-mkconfig failed"
+        else
+            warn "grub-mkconfig is not installed; GRUB was not regenerated"
+        fi
+        if command -v mkinitcpio >/dev/null 2>&1; then
+            run mkinitcpio -P || warn "mkinitcpio failed"
+        else
+            warn "mkinitcpio is not installed; initramfs was not rebuilt"
+        fi
     fi
 
     # Backups created as root should remain readable by the invoking user.
