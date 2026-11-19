@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Rofi control center for the daily settings.
+# Rofi control center for daily settings.
 #
-# Installation and updates stay in install.sh. This menu calls the small
-# per-feature helpers directly, so changing a setting does not run the
-# installer.
+# Nine top-level pages: apps, docs, menu toggles, style, configuration,
+# install, uninstall, updates and power. Installation and updates run through
+# small helpers or a terminal, so this menu never edits the system silently.
 set -uo pipefail
 
 REAL_HOME="${HOME:?HOME is not set}"
-THEME="$REAL_HOME/.config/rofi/control-center.rasi"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$REAL_HOME/.config}"
+THEME="$CONFIG_HOME/rofi/control-center.rasi"
 CACHE_DIR="${XDG_CACHE_HOME:-$REAL_HOME/.cache}/dotfiles/wallpaper-thumbs"
 
 # Resolve the repository through the installed symlink. A copy without the
@@ -35,18 +36,49 @@ notify() {
     fi
 }
 
+# Read stdin, then size the window to the longest row. Height follows the item
+# count because every dmenu call disables the fixed line count.
 rofi_pick() {
     local prompt="$1"
     shift
-    local -a args=(-dmenu -i -p "$prompt" -no-custom)
-    [[ -r $THEME ]] && args+=(-theme "$THEME")
-    rofi "${args[@]}" "$@"
+    local input width=440 max=0 line show_icons=0 arg
+    local -a args=(-dmenu -i -p "$prompt" -no-custom -no-fixed-num-lines)
+
+    for arg in "$@"; do
+        [[ $arg == -show-icons ]] && show_icons=1
+    done
+
+    input="$(mktemp)" || die "cannot create a temporary file"
+    cat >"$input"
+    if ((show_icons == 0)); then
+        while IFS= read -r line; do
+            line="${line#*— }"
+            ((${#line} > max)) && max=${#line}
+        done <"$input"
+        width=$((max * 9 + 140))
+        ((width < 440)) && width=440
+        ((width > 760)) && width=760
+    else
+        width=640
+    fi
+
+    args+=(-theme-str "window { width: ${width}px; }")
+    if [[ -r $THEME ]]; then
+        args+=(-theme "$THEME")
+    fi
+    rofi "${args[@]}" "$@" <"$input"
+    local rc=$?
+    rm -f -- "$input"
+    return $rc
 }
 
 ask_text() {
     local prompt="$1"
-    local -a args=(-dmenu -i -p "$prompt" -l 0)
-    [[ -r $THEME ]] && args+=(-theme "$THEME")
+    local -a args=(-dmenu -i -p "$prompt" -l 0 -no-fixed-num-lines)
+    if [[ -r $THEME ]]; then
+        args+=(-theme "$THEME")
+    fi
+    args+=(-theme-str "window { width: 520px; }")
     printf '\n' | rofi "${args[@]}"
 }
 
@@ -59,11 +91,19 @@ ask_confirm() {
 host_is_laptop() {
     local chassis=""
     compgen -G "/sys/class/power_supply/BAT*" >/dev/null 2>&1 && return 0
-    [[ -r /sys/class/dmi/id/chassis_type ]] && chassis="$(< /sys/class/dmi/id/chassis_type)"
+    [[ -r /sys/class/dmi/id/chassis_type ]] && chassis="$(</sys/class/dmi/id/chassis_type)"
     case "$chassis" in
         8|9|10|14) return 0 ;;
     esac
     return 1
+}
+
+spicetify_bin() {
+    if have spicetify; then
+        printf 'spicetify'
+    elif [[ -x $REAL_HOME/.spicetify/spicetify ]]; then
+        printf '%s' "$REAL_HOME/.spicetify/spicetify"
+    fi
 }
 
 aur_helper() {
@@ -82,7 +122,9 @@ message() {
     local text="$1"
     if have rofi; then
         local -a args=(-e "$text")
-        [[ -r $THEME ]] && args=(-theme "$THEME" "${args[@]}")
+        if [[ -r $THEME ]]; then
+            args=(-theme "$THEME" "${args[@]}")
+        fi
         rofi "${args[@]}"
     else
         printf '%s\n' "$text"
@@ -123,6 +165,246 @@ require_helper() {
     fi
     return 0
 }
+
+open_url() {
+    local url="$1"
+    if have xdg-open; then
+        xdg-open "$url" >/dev/null 2>&1 || notify "Could not open $url"
+    else
+        notify "$url"
+    fi
+}
+
+editor_command() {
+    local candidate
+    if [[ -n ${EDITOR:-} ]] && have "${EDITOR%% *}"; then
+        printf '%s' "$EDITOR"
+        return 0
+    fi
+    for candidate in micro nano vim vi; do
+        if have "$candidate"; then
+            printf '%s' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+open_config() {
+    local file="$1" editor
+    if [[ ! -r $file ]]; then
+        notify "Missing config: $file"
+        return 0
+    fi
+    if ! editor="$(editor_command)"; then
+        notify "No terminal editor found (set \$EDITOR)"
+        return 0
+    fi
+    run_terminal "$editor $(printf '%q' "$file")"
+}
+
+# ---------------------------------------------------------------- apps -------
+
+apps_page() {
+    exec rofi -show drun
+}
+
+# ---------------------------------------------------------------- docs -------
+
+docs_versions() {
+    local os kernel shell compositor bar launcher term total explicit
+    os="$(. /etc/os-release 2>/dev/null && printf '%s' "${PRETTY_NAME:-Arch Linux}")"
+    kernel="$(uname -r)"
+    shell="$(fish --version 2>/dev/null || printf 'not installed')"
+    compositor="$(hyprctl version 2>/dev/null | head -n1 || printf 'not running')"
+    bar="$(waybar --version 2>/dev/null | head -n1 || printf 'not installed')"
+    launcher="$(rofi -v 2>/dev/null | head -n1 || printf 'not installed')"
+    term="$(kitty --version 2>/dev/null | head -n1 || printf 'not installed')"
+    total="$(pacman -Qq 2>/dev/null | wc -l)"
+    explicit="$(pacman -Qqe 2>/dev/null | wc -l)"
+
+    message "System
+${os}
+Kernel: ${kernel}
+
+Shell
+${shell}
+
+Desktop
+${compositor}
+${bar}
+${launcher}
+${term}
+
+Packages
+${total} installed, ${explicit} explicit"
+}
+
+docs_links() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Arch Wiki — system and packages" \
+            "Hyprland — compositor and Lua config" \
+            "Waybar — status bar modules" \
+            "Fish — shell reference" \
+            "Rofi — theme format" \
+            "Nerd Fonts — icons used in the bar" |
+            rofi_pick "Links")" || return 0
+        case "$choice" in
+            Arch*) open_url "https://wiki.archlinux.org/" ;;
+            Hyprland*) open_url "https://wiki.hypr.land/" ;;
+            Waybar*) open_url "https://github.com/Alexays/Waybar/wiki" ;;
+            Fish*) open_url "https://fishshell.com/docs/current/" ;;
+            Rofi*) open_url "https://github.com/davatorium/rofi/blob/next/doc/rofi-theme.5.markdown" ;;
+            Nerd*) open_url "https://www.nerdfonts.com/cheat-sheet" ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
+docs_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Keybinds — searchable list" \
+            "Versions — kernel, shell, desktop" \
+            "Dotfiles — README" \
+            "Links — Arch, Hyprland, Waybar, Fish" |
+            rofi_pick "Docs")" || return 0
+        case "$choice" in
+            "Keybinds"*)
+                if have binds-cheatsheet.sh; then
+                    binds-cheatsheet.sh --rofi
+                else
+                    message "binds-cheatsheet.sh is not installed."
+                fi
+                ;;
+            "Versions"*) docs_versions ;;
+            "Dotfiles"*)
+                if [[ -n $ROOT && -r $ROOT/README.md ]]; then
+                    open_config "$ROOT/README.md"
+                else
+                    notify "Repository README not found"
+                fi
+                ;;
+            Links*) docs_links ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
+# ---------------------------------------------------------------- menu -------
+
+waybar_start() {
+    if have uwsm; then
+        (uwsm app -- waybar >/dev/null 2>&1 &)
+    else
+        (waybar >/dev/null 2>&1 &)
+    fi
+}
+
+waybar_show() {
+    have autostart.sh && autostart.sh enable waybar >/dev/null 2>&1
+    waybar_start
+    notify "Waybar shown"
+}
+
+waybar_hide() {
+    pkill -x waybar >/dev/null 2>&1 || true
+    have autostart.sh && autostart.sh disable waybar >/dev/null 2>&1
+    notify "Waybar hidden"
+}
+
+waybar_restart() {
+    pkill -x waybar >/dev/null 2>&1 || true
+    sleep 0.2
+    waybar_start
+    notify "Waybar restarted"
+}
+
+notifications_toggle() {
+    if ! have dunstctl; then
+        notify "dunst is not installed"
+        return 0
+    fi
+    if [[ $(dunstctl is-paused 2>/dev/null) == true ]]; then
+        dunstctl set-paused false
+        notify "Notifications resumed"
+    else
+        dunstctl set-paused true
+        printf 'Notifications paused\n'
+    fi
+}
+
+screen_lock() {
+    if have hyprlock; then
+        hyprlock
+    elif have loginctl; then
+        loginctl lock-session
+    else
+        notify "No lock helper found"
+    fi
+}
+
+menu_page() {
+    local choice waybar_action="Waybar — show"
+    local -a items=()
+
+    while :; do
+        waybar_action="Waybar — show"
+        pgrep -x waybar >/dev/null 2>&1 && waybar_action="Waybar — hide"
+        items=(
+            "$waybar_action"
+            "Waybar — restart"
+            "Screen — lock"
+            "Hyprland — reload"
+        )
+        have dunstctl && items+=("Notifications — pause or resume")
+        have autostart.sh && items+=("Autostart — choose login applications")
+        if have idle-tune.sh; then
+            items+=(
+                "Idle — status"
+                "Idle — apply the current profile"
+                "Idle — configure timeouts"
+                "Idle — enable or disable"
+            )
+        fi
+        if host_is_laptop && have lid-handler.sh; then
+            items+=("Lid — status")
+        fi
+        if have gamemode.sh; then
+            items+=("Game mode — toggle" "Game mode — status")
+        fi
+
+        choice="$(printf '%s\n' "${items[@]}" | rofi_pick "Menu")" || return 0
+        case "$choice" in
+            "Waybar — show") waybar_show ;;
+            "Waybar — hide") waybar_hide ;;
+            "Waybar — restart") waybar_restart ;;
+            "Screen — lock") screen_lock ;;
+            "Hyprland — reload")
+                if have hyprctl; then
+                    hyprctl reload >/dev/null 2>&1 && notify "Hyprland reloaded"
+                else
+                    notify "hyprctl is not available"
+                fi
+                ;;
+            "Notifications"*) notifications_toggle ;;
+            "Autostart"*) autostart.sh pick ;;
+            "Idle — status") run_terminal "idle-tune.sh status" ;;
+            "Idle — apply"*) run_and_notify "Idle profile applied" idle-tune.sh apply ;;
+            "Idle — configure"*) run_terminal "idle-tune.sh configure" ;;
+            "Idle — enable"*) run_and_notify "Idle toggled" idle-tune.sh toggle ;;
+            "Lid — status") run_terminal "lid-handler.sh status" ;;
+            "Game mode — toggle") run_and_notify "Game mode toggled" gamemode.sh toggle ;;
+            "Game mode — status") run_terminal "gamemode.sh status" ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
+# --------------------------------------------------------------- style -------
 
 wallpaper_apply() {
     local path="$1"
@@ -203,7 +485,7 @@ theme_mode_page() {
     local choice
     choice="$(printf '%s\n' Dark Light Smart | rofi_pick "Theme mode")" || return 0
     case "$choice" in
-        Dark)  run_and_notify "Dark theme applied" theme-menu.sh --mode dark --apply ;;
+        Dark) run_and_notify "Dark theme applied" theme-menu.sh --mode dark --apply ;;
         Light) run_and_notify "Light theme applied" theme-menu.sh --mode light --apply ;;
         Smart) run_and_notify "Smart theme applied" theme-menu.sh --mode smart --apply ;;
         "") ;;
@@ -227,363 +509,35 @@ appearance_status() {
     font="$(gsettings get org.gnome.desktop.interface font-name 2>/dev/null || printf 'unknown')"
     cursor="$(gsettings get org.gnome.desktop.interface cursor-theme 2>/dev/null || printf 'unknown')"
     scheme="$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || printf 'unknown')"
-    message "GTK: ${gtk}
+    message "Fonts and icons
 
+GTK: ${gtk}
 Icons: ${icon}
 Font: ${font}
 Cursor: ${cursor}
 Color scheme: ${scheme}"
 }
 
-appearance_page() {
-    local choice
-    local -a items=()
-    while :; do
-        items=()
-        if have theme-menu.sh; then
-            items+=(
-                "Wallpaper — choose with thumbnails"
-                "Theme mode — dark, light or smart"
-                "Color scheme — matugen palette"
-            )
-        fi
-        items+=("Appearance status — fonts, icons, cursor")
-        choice="$(printf '%s
-' "${items[@]}" | rofi_pick "Appearance")" || return 0
-        case "$choice" in
-            Wallpaper*) wallpaper_page ;;
-            "Theme mode"*) theme_mode_page ;;
-            "Color scheme"*) theme_scheme_page ;;
-            "Appearance status"*) appearance_status ;;
-            "") return 0 ;;
-        esac
-    done
-}
-
-desktop_page() {
-    local choice
-    local -a items=()
-    while :; do
-        items=()
-        if have monitor-profiles.sh; then
-            items+=(
-                "Monitors — status"
-                "Monitors — apply the saved layout"
-            )
-            if host_is_laptop; then
-                items+=("Dock layout — right, left, mirror or ask")
-            fi
-        fi
-        ((${#items[@]})) || items+=("No monitor helper is installed")
-        choice="$(printf '%s
-' "${items[@]}" | rofi_pick "Desktop")" || return 0
-        case "$choice" in
-            "Monitors — status")
-                require_helper monitor-profiles.sh && run_terminal "monitor-profiles.sh status"
-                ;;
-            "Monitors — apply"*)
-                require_helper monitor-profiles.sh && run_and_notify "Monitor layout applied" monitor-profiles.sh apply
-                ;;
-            "Dock layout"*)
-                if require_helper monitor-profiles.sh; then
-                    local layout
-                    layout="$(printf '%s\n' right left mirror ask | rofi_pick "Dock layout")" || continue
-                    [[ -z $layout ]] && continue
-                    run_and_notify "Dock layout: $layout" monitor-profiles.sh set-layout "$layout"
-                fi
-                ;;
-            "") return 0 ;;
-        esac
-    done
-}
-
-input_page() {
-    local choice mouse_label="Mouse — live tuner"
-    local -a items=()
-    host_is_laptop && mouse_label="Mouse and touchpad — live tuner"
-    while :; do
-        items=()
-        have mouse-tune.sh && items+=("$mouse_label")
-        have binds-cheatsheet.sh && items+=("Keybinds — searchable cheatsheet")
-        ((${#items[@]})) || items+=("No input helper is installed")
-        choice="$(printf '%s
-' "${items[@]}" | rofi_pick "Input")" || return 0
-        case "$choice" in
-            "Mouse"*)
-                require_helper mouse-tune.sh && run_terminal "mouse-tune.sh"
-                ;;
-            "Keybinds"*)
-                if require_helper binds-cheatsheet.sh; then
-                    binds-cheatsheet.sh --rofi
-                fi
-                ;;
-            "") return 0 ;;
-        esac
-    done
-}
-
-session_page() {
-    local choice
-    local -a items=()
-    while :; do
-        items=()
-        have autostart.sh && items+=("Autostart — choose login applications")
-        if have idle-tune.sh; then
-            items+=(
-                "Idle — status"
-                "Idle — apply the current profile"
-                "Idle — configure timeouts"
-                "Idle — enable or disable"
-            )
-        fi
-        if host_is_laptop && have lid-handler.sh; then
-            items+=("Lid — status")
-        fi
-        if have gamemode.sh; then
-            items+=("Game mode — toggle" "Game mode — status")
-        fi
-        ((${#items[@]})) || items+=("No session helper is installed")
-        choice="$(printf '%s
-' "${items[@]}" | rofi_pick "Session")" || return 0
-        case "$choice" in
-            "Autostart"*)
-                require_helper autostart.sh && autostart.sh pick
-                ;;
-            "Idle — status")
-                require_helper idle-tune.sh && run_terminal "idle-tune.sh status"
-                ;;
-            "Idle — apply"*)
-                require_helper idle-tune.sh && run_and_notify "Idle profile applied" idle-tune.sh apply
-                ;;
-            "Idle — configure"*)
-                require_helper idle-tune.sh && run_terminal "idle-tune.sh configure"
-                ;;
-            "Idle — enable"*)
-                require_helper idle-tune.sh && run_and_notify "Idle toggled" idle-tune.sh toggle
-                ;;
-            "Lid — status")
-                require_helper lid-handler.sh && run_terminal "lid-handler.sh status"
-                ;;
-            "Game mode — toggle")
-                require_helper gamemode.sh && run_and_notify "Game mode toggled" gamemode.sh toggle
-                ;;
-            "Game mode — status")
-                require_helper gamemode.sh && run_terminal "gamemode.sh status"
-                ;;
-            "") return 0 ;;
-        esac
-    done
-}
-
-package_search_install() {
-    local query choice helper pkg
-    local -a repo=() aur=() labels=()
-
-    query="$(ask_text "Search repositories and AUR")" || return 0
-    [[ -n $query ]] || return 0
-
-    mapfile -t repo < <(pacman -Ssq -- "$query" 2>/dev/null | head -100)
-    for pkg in "${repo[@]}"; do
-        labels+=("repo/$pkg")
-    done
-
-    helper="$(aur_helper)"
-    if [[ -n $helper ]]; then
-        mapfile -t aur < <("$helper" -Ssq -- "$query" 2>/dev/null | head -100)
-        for pkg in "${aur[@]}"; do
-            printf '%s\n' "${repo[@]}" | grep -Fxq -- "$pkg" && continue
-            labels+=("aur/$pkg")
-        done
-    fi
-
-    if ((${#labels[@]} == 0)); then
-        notify "No packages found for: $query"
-        return 0
-    fi
-
-    choice="$(printf '%s\n' "${labels[@]}" | rofi_pick "Install package")" || return 0
-    pkg="${choice#*/}"
-    case "$choice" in
-        repo/*) run_terminal "sudo pacman -S --needed $(printf '%q' "$pkg")" ;;
-        aur/*)
-            if [[ -n $helper ]]; then
-                if [[ $helper == yay ]]; then
-                    run_terminal "$helper $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-S --needed $(printf '%q' "$pkg")"
-                else
-                    run_terminal "$helper -S --needed $(printf '%q' "$pkg")"
-                fi
-            else
-                notify "No AUR helper; install $pkg manually"
-            fi
-            ;;
-    esac
-}
-
-package_search_installed() {
-    local query choice pkg
-    local -a packages=()
-
-    query="$(ask_text "Filter installed packages")" || return 0
-    [[ -n $query ]] || return 0
-    mapfile -t packages < <(pacman -Qq 2>/dev/null | grep -iF -- "$query" | head -100)
-    if ((${#packages[@]} == 0)); then
-        notify "No installed package matches: $query"
-        return 0
-    fi
-    choice="$(printf '%s\n' "${packages[@]}" | rofi_pick "Installed package")" || return 0
-    pkg="$choice"
-    run_terminal "pacman -Qi $(printf '%q' "$pkg")"
-}
-
-package_remove() {
-    local query choice pkg helper
-    local -a packages=()
-
-    query="$(ask_text "Filter packages to remove")" || return 0
-    [[ -n $query ]] || return 0
-    mapfile -t packages < <(pacman -Qqe 2>/dev/null | grep -iF -- "$query" | head -100)
-    if ((${#packages[@]} == 0)); then
-        notify "No explicitly installed package matches: $query"
-        return 0
-    fi
-    choice="$(printf '%s\n' "${packages[@]}" | rofi_pick "Remove package")" || return 0
-    pkg="$choice"
-    ask_confirm "Remove $pkg and its unused dependencies?" || return 0
-    helper="$(aur_helper)"
-    if [[ -n $helper ]]; then
-        run_terminal "$helper -Rns $(printf '%q' "$pkg")"
-    else
-        run_terminal "sudo pacman -Rns $(printf '%q' "$pkg")"
-    fi
-}
-
-system_page() {
-    local choice
-    local -a items=()
-    while :; do
-        items=(
-            "Update — repository packages"
-            "Update — repository and AUR"
-            "Packages — search and install"
-            "Packages — search installed"
-            "Packages — remove"
-        )
-        have reflector && items+=("Update — repository mirrors (reflector)")
-        if [[ -n $ROOT ]]; then
-            items+=(
-                "Doctor — read-only health check"
-                "DNS — check the resolver chain"
-                "Packages — catalog drift"
-            )
-        fi
-        have ramcache && items+=("RAM cache — status" "RAM cache — warm configured directories")
-        if [[ -n $ROOT ]]; then
-            items+=(
-                "Sync — files that differ from the repository"
-                "Sync — unified diffs"
-                "Sync — pull live changes back"
-                "Restore — list and restore backups"
-            )
-        fi
-        choice="$(printf '%s
-' "${items[@]}" | rofi_pick "System")" || return 0
-        case "$choice" in
-            "Update — repository packages")
-                run_terminal "sudo pacman -Syu"
-                ;;
-            "Update — repository and AUR")
-                if [[ -n $(aur_helper) ]]; then
-                    if [[ $(aur_helper) == yay ]]; then
-                        run_terminal "yay $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-Syu"
-                    else
-                        run_terminal "$(aur_helper) -Syu"
-                    fi
-                else
-                    notify "No AUR helper; updating repository packages only"
-                    run_terminal "sudo pacman -Syu"
-                fi
-                ;;
-            "Update — repository mirrors (reflector)")
-                if have reflector; then
-                    local backup
-                    backup="/etc/pacman.d/mirrorlist.bak.$(date +%Y%m%d-%H%M%S)"
-                    run_terminal "sudo cp -a /etc/pacman.d/mirrorlist $(printf '%q' "$backup") && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist"
-                else
-                    notify "reflector is not installed"
-                fi
-                ;;
-            "Packages — search and install")
-                package_search_install
-                ;;
-            "Packages — search installed")
-                package_search_installed
-                ;;
-            "Packages — remove")
-                package_remove
-                ;;
-            "Doctor"*)
-                [[ -n $ROOT ]] && run_terminal "./install.sh --doctor"
-                ;;
-            "DNS"*)
-                if [[ -n $ROOT ]]; then
-                    run_terminal "./scripts/dns-check.sh"
-                fi
-                ;;
-            "Packages — catalog drift"*)
-                if [[ -n $ROOT ]]; then
-                    run_terminal "./scripts/pkg-sync.sh status"
-                fi
-                ;;
-            "RAM cache — status")
-                require_helper ramcache && run_terminal "ramcache status"
-                ;;
-            "RAM cache — warm"*)
-                require_helper ramcache && run_terminal "ramcache warm"
-                ;;
-            "Sync — files"*)
-                if [[ -n $ROOT ]]; then
-                    run_terminal "./scripts/sync.sh status"
-                fi
-                ;;
-            "Sync — unified"*)
-                if [[ -n $ROOT ]]; then
-                    run_terminal "./scripts/sync.sh diff"
-                fi
-                ;;
-            "Sync — pull"*)
-                if [[ -n $ROOT ]]; then
-                    run_terminal "./scripts/sync.sh pull"
-                fi
-                ;;
-            "Restore"*)
-                [[ -n $ROOT ]] && run_terminal "./install.sh --restore"
-                ;;
-            "") return 0 ;;
-        esac
-    done
-}
-
-install_page() {
+style_page() {
     local choice
     while :; do
         choice="$(printf '%s\n' \
-            "Spicetify — backup and apply" \
-            "Open the installer" \
-            "Update configuration files" | rofi_pick "Install and update")" || return 0
+            "Wallpaper — thumbnails" \
+            "Theme mode — dark, light, smart" \
+            "Color scheme — matugen palette" \
+            "Fonts and icons — current values" |
+            rofi_pick "Style")" || return 0
         case "$choice" in
-            "Spicetify — backup"*)
-                require_helper spicetify && run_terminal "spicetify backup apply"
-                ;;
-            "Open the installer")
-                [[ -n $ROOT ]] && run_terminal "./install.sh"
-                ;;
-            "Update configuration"*)
-                [[ -n $ROOT ]] && run_terminal "./install.sh --sync pull"
-                ;;
+            "Wallpaper"*) wallpaper_page ;;
+            "Theme mode"*) theme_mode_page ;;
+            "Color scheme"*) theme_scheme_page ;;
+            "Fonts and icons"*) appearance_status ;;
             "") return 0 ;;
         esac
     done
 }
+
+# --------------------------------------------------------- configuration ----
 
 wifi_connect() {
     local ssid
@@ -654,38 +608,352 @@ bluetooth_page() {
     done
 }
 
-network_page() {
-    local choice
+monitors_page() {
+    local choice layout
     while :; do
-        choice="$(printf '%s\n' "Wi-Fi — networks and status" "Bluetooth — devices and power" |
-            rofi_pick "Network")" || return 0
+        local -a items=("Monitors — status" "Monitors — apply the saved layout")
+        host_is_laptop && items+=("Dock layout — right, left, mirror or ask")
+        choice="$(printf '%s\n' "${items[@]}" | rofi_pick "Monitors")" || return 0
         case "$choice" in
-            Wi-Fi*) wifi_page ;;
-            Bluetooth*) bluetooth_page ;;
+            "Monitors — status") run_terminal "monitor-profiles.sh status" ;;
+            "Monitors — apply"*) run_and_notify "Monitor layout applied" monitor-profiles.sh apply ;;
+            "Dock layout"*)
+                layout="$(printf '%s\n' right left mirror ask | rofi_pick "Dock layout")" || continue
+                [[ -z $layout ]] && continue
+                run_and_notify "Dock layout: $layout" monitor-profiles.sh set-layout "$layout"
+                ;;
             "") return 0 ;;
         esac
     done
 }
 
+sound_page() {
+    if have pavucontrol; then
+        (pavucontrol >/dev/null 2>&1 &)
+    elif have wpctl; then
+        run_terminal "wpctl status"
+    elif have pactl; then
+        run_terminal "pactl info"
+    else
+        notify "No audio control tool found"
+    fi
+}
+
+tide_configure() {
+    if ! have fish; then
+        notify "fish is not installed"
+        return 0
+    fi
+    if ! fish -c 'functions -q tide' >/dev/null 2>&1; then
+        notify "Tide is not installed"
+        return 0
+    fi
+    run_terminal "fish -c 'tide configure'"
+}
+
+config_files_page() {
+    local -a labels=(
+        "Hyprland — window manager"
+        "Hyprland — control center bind"
+        "Hyprlock — lock screen"
+        "Hypridle — idle and suspend"
+        "Waybar — bar layout"
+        "Waybar — stylesheet"
+        "Fish — shell"
+        "Kitty — terminal"
+        "Rofi — launcher"
+        "Matugen — colour templates"
+    )
+    local -a files=(
+        "$CONFIG_HOME/hypr/hyprland.lua"
+        "$CONFIG_HOME/hypr/control-center.lua"
+        "$CONFIG_HOME/hypr/hyprlock.conf"
+        "$CONFIG_HOME/hypr/hypridle.conf"
+        "$CONFIG_HOME/waybar/config.jsonc"
+        "$CONFIG_HOME/waybar/style.css"
+        "$CONFIG_HOME/fish/config.fish"
+        "$CONFIG_HOME/kitty/kitty.conf"
+        "$CONFIG_HOME/rofi/launcher.rasi"
+        "$CONFIG_HOME/matugen/config.toml"
+    )
+    local choice index
+    choice="$(printf '%s\n' "${labels[@]}" | rofi_pick "Config files")" || return 0
+    [[ -z $choice ]] && return 0
+    for index in "${!labels[@]}"; do
+        if [[ ${labels[$index]} == "$choice" ]]; then
+            open_config "${files[$index]}"
+            return 0
+        fi
+    done
+}
+
+configuration_page() {
+    local choice mouse_label="Mouse — live tuner"
+    host_is_laptop && mouse_label="Mouse and touchpad — live tuner"
+
+    while :; do
+        local -a items=()
+        { have pavucontrol || have wpctl || have pactl; } && items+=("Sound — volume control")
+        have nmcli && items+=("Wi-Fi — networks and status")
+        have bluetoothctl && items+=("Bluetooth — devices and power")
+        have monitor-profiles.sh && items+=("Monitors — status and layout")
+        have binds-cheatsheet.sh && items+=("Keybinds — searchable list" "Keybinds — edit bindings")
+        have mouse-tune.sh && items+=("$mouse_label")
+        have fish && items+=("Tide — configure the prompt")
+        items+=("Config files — edit system configs")
+        choice="$(printf '%s\n' "${items[@]}" | rofi_pick "Configuration")" || return 0
+        case "$choice" in
+            "Sound"*) sound_page ;;
+            "Wi-Fi"*) wifi_page ;;
+            "Bluetooth"*) bluetooth_page ;;
+            "Monitors"*) monitors_page ;;
+            "Keybinds — edit"*) open_config "$CONFIG_HOME/hypr/hyprland.lua" ;;
+            "Keybinds"*) binds-cheatsheet.sh --rofi ;;
+            "Mouse"*) run_terminal "mouse-tune.sh" ;;
+            "Tide"*) tide_configure ;;
+            "Config files"*) config_files_page ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
+# ------------------------------------------------------------- install ------
+
+package_search_install() {
+    local query choice helper pkg
+    local -a repo=() aur=() labels=()
+
+    query="$(ask_text "Search repositories and AUR")" || return 0
+    [[ -n $query ]] || return 0
+
+    mapfile -t repo < <(pacman -Ssq -- "$query" 2>/dev/null | head -100)
+    for pkg in "${repo[@]}"; do
+        labels+=("repo/$pkg")
+    done
+
+    helper="$(aur_helper)"
+    if [[ -n $helper ]]; then
+        mapfile -t aur < <("$helper" -Ssq -- "$query" 2>/dev/null | head -100)
+        for pkg in "${aur[@]}"; do
+            printf '%s\n' "${repo[@]}" | grep -Fxq -- "$pkg" && continue
+            labels+=("aur/$pkg")
+        done
+    fi
+
+    if ((${#labels[@]} == 0)); then
+        notify "No packages found for: $query"
+        return 0
+    fi
+
+    choice="$(printf '%s\n' "${labels[@]}" | rofi_pick "Install package")" || return 0
+    pkg="${choice#*/}"
+    case "$choice" in
+        repo/*) run_terminal "sudo pacman -S --needed $(printf '%q' "$pkg")" ;;
+        aur/*)
+            if [[ -n $helper ]]; then
+                if [[ $helper == yay ]]; then
+                    run_terminal "$helper $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-S --needed $(printf '%q' "$pkg")"
+                else
+                    run_terminal "$helper -S --needed $(printf '%q' "$pkg")"
+                fi
+            else
+                notify "No AUR helper; install $pkg manually"
+            fi
+            ;;
+    esac
+}
+
+fzf_install() {
+    local kind="$1" helper query
+    if ! have fzf; then
+        package_search_install
+        return 0
+    fi
+
+    if [[ $kind == repo ]]; then
+        run_terminal "pacman -Slq | fzf --multi --height=80% --prompt='repo> ' --preview='pacman -Si {1}' | xargs -r sudo pacman -S --needed"
+        return 0
+    fi
+
+    helper="$(aur_helper)"
+    if [[ -z $helper ]]; then
+        notify "No AUR helper; install paru or yay first"
+        return 0
+    fi
+    query="$(ask_text "AUR search")" || return 0
+    [[ -n $query ]] || return 0
+    local flags=""
+    [[ $helper == yay ]] && flags="$(printf '%q ' "${AUR_GPG_FLAGS[@]}")"
+    run_terminal "$helper -Ssq $(printf '%q' "$query") | fzf --multi --height=80% --prompt='AUR> ' | xargs -r $helper $flags -S --needed"
+}
+
+install_page() {
+    local choice
+    while :; do
+        local -a items=(
+            "Repositories — search and install"
+            "AUR — search and install"
+        )
+        have lazydocker && items+=("Docker — open lazydocker")
+        choice="$(printf '%s\n' "${items[@]}" | rofi_pick "Install")" || return 0
+        case "$choice" in
+            "Repositories"*) fzf_install repo ;;
+            "AUR"*) fzf_install aur ;;
+            "Docker"*) run_terminal "lazydocker" ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
+# ------------------------------------------------------------ uninstall -----
+
+package_remove() {
+    local query choice pkg helper
+    local -a packages=()
+
+    query="$(ask_text "Filter packages to remove")" || return 0
+    [[ -n $query ]] || return 0
+    mapfile -t packages < <(pacman -Qqe 2>/dev/null | grep -iF -- "$query" | head -100)
+    if ((${#packages[@]} == 0)); then
+        notify "No explicitly installed package matches: $query"
+        return 0
+    fi
+    choice="$(printf '%s\n' "${packages[@]}" | rofi_pick "Remove package")" || return 0
+    pkg="$choice"
+    ask_confirm "Remove $pkg and its unused dependencies?" || return 0
+    helper="$(aur_helper)"
+    if [[ -n $helper ]]; then
+        run_terminal "$helper -Rns $(printf '%q' "$pkg")"
+    else
+        run_terminal "sudo pacman -Rns $(printf '%q' "$pkg")"
+    fi
+}
+
+fzf_remove() {
+    if ! have fzf; then
+        package_remove
+        return 0
+    fi
+    run_terminal "pacman -Qqe | fzf --multi --height=80% --prompt='remove> ' --preview='pacman -Qi {1}' | xargs -r sudo pacman -Rns"
+}
+
+uninstall_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' \
+            "Remove packages — fzf multi-select" \
+            "Inspect installed package" |
+            rofi_pick "Uninstall")" || return 0
+        case "$choice" in
+            "Remove packages"*) fzf_remove ;;
+            "Inspect"*)
+                local query
+                query="$(ask_text "Filter installed packages")" || return 0
+                [[ -n $query ]] || return 0
+                local -a packages=()
+                mapfile -t packages < <(pacman -Qq 2>/dev/null | grep -iF -- "$query" | head -100)
+                if ((${#packages[@]} == 0)); then
+                    notify "No installed package matches: $query"
+                    continue
+                fi
+                local pkg
+                pkg="$(printf '%s\n' "${packages[@]}" | rofi_pick "Installed package")" || continue
+                [[ -n $pkg ]] && run_terminal "pacman -Qi $(printf '%q' "$pkg")"
+                ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
+# --------------------------------------------------------------- update -----
+
+update_page() {
+    local choice helper
+    while :; do
+        local -a items=(
+            "System — repository packages"
+            "System — repository and AUR"
+        )
+        have reflector && items+=("Mirrors — refresh with reflector")
+        if [[ -n $ROOT ]]; then
+            items+=(
+                "Dotfiles — git pull and apply"
+                "Dotfiles — apply configuration files"
+                "Dotfiles — pull live changes"
+                "Dotfiles — open installer"
+            )
+        fi
+        [[ -n $(spicetify_bin) ]] && items+=("Spicetify — backup and apply")
+        choice="$(printf '%s\n' "${items[@]}" | rofi_pick "Update")" || return 0
+        case "$choice" in
+            "System — repository packages") run_terminal "sudo pacman -Syu" ;;
+            "System — repository and AUR")
+                helper="$(aur_helper)"
+                if [[ -n $helper ]]; then
+                    if [[ $helper == yay ]]; then
+                        run_terminal "yay $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-Syu"
+                    else
+                        run_terminal "$helper -Syu"
+                    fi
+                else
+                    notify "No AUR helper; updating repository packages only"
+                    run_terminal "sudo pacman -Syu"
+                fi
+                ;;
+            "Mirrors"*)
+                local backup
+                backup="/etc/pacman.d/mirrorlist.bak.$(date +%Y%m%d-%H%M%S)"
+                run_terminal "sudo cp -a /etc/pacman.d/mirrorlist $(printf '%q' "$backup") && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist"
+                ;;
+            "Dotfiles — git pull"*)
+                run_terminal "git -C $(printf '%q' "$ROOT") pull --ff-only && ./install.sh --all --no-packages"
+                ;;
+            "Dotfiles — apply"*) run_terminal "./install.sh --all --no-packages" ;;
+            "Dotfiles — pull"*) run_terminal "./scripts/sync.sh pull" ;;
+            "Dotfiles — open"*) run_terminal "./install.sh" ;;
+            "Spicetify"*) run_terminal "$(spicetify_bin) backup apply" ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
+# ---------------------------------------------------------------- power -----
+
+power_page() {
+    if have powermenu.sh; then
+        exec powermenu.sh
+    elif [[ -x $CONFIG_HOME/rofi/scripts/powermenu.sh ]]; then
+        exec "$CONFIG_HOME/rofi/scripts/powermenu.sh"
+    else
+        notify "powermenu.sh is not installed"
+    fi
+}
+
+# ------------------------------------------------------------- main menu ----
+
 main_menu() {
     local choice
     while :; do
         choice="$(printf '%s\n' \
-            "Appearance — wallpaper, theme, fonts" \
-            "Desktop — monitors and dock" \
-            "Input — mouse and keybinds" \
-            "Session — autostart, idle, game mode" \
-            "Network — Wi-Fi and Bluetooth" \
-            "System — doctor, DNS, packages, backups" \
-            "Install and update — installer, Spicetify" | rofi_pick "Control Center")" || return 0
+            "\uf009  Apps — launch an application" \
+            "\uf02d  Docs — keybinds, versions, links" \
+            "\uf0c9  Menu — bar, lock, idle, game mode" \
+            "\uf1fc  Style — wallpaper, theme, colors" \
+            "\uf013  Configuration — devices and configs" \
+            "\uf019  Install — repository, AUR, Docker" \
+            "\uf1f8  Uninstall — remove packages" \
+            "\uf021  Update — system, dotfiles, Spicetify" \
+            "\uf011  Power — session menu" | rofi_pick "Control Center")" || return 0
         case "$choice" in
-            "Appearance"*) appearance_page ;;
-            "Desktop"*) desktop_page ;;
-            "Input"*) input_page ;;
-            "Session"*) session_page ;;
-            "Network"*) network_page ;;
-            "System"*) system_page ;;
+            "Apps"*) apps_page ;;
+            "Docs"*) docs_page ;;
+            "Menu"*) menu_page ;;
+            "Style"*) style_page ;;
+            "Configuration"*) configuration_page ;;
             "Install"*) install_page ;;
+            "Uninstall"*) uninstall_page ;;
+            "Update"*) update_page ;;
+            "Power"*) power_page ;;
             "") return 0 ;;
         esac
     done
@@ -696,12 +964,15 @@ case "${1:-}" in
         cat <<'EOF'
 Usage: dotfiles-control-center
 
-Opens the rofi control center for daily settings. Installation and updates
-stay in ./install.sh.
+Opens the rofi control center: apps, docs, menu toggles, style,
+configuration, install, uninstall, updates and power.
+
+Esc closes the current page. Run a single action from the installer flags
+instead when scripting.
 EOF
         ;;
     --list-actions)
-        printf '%s\n' Appearance Desktop Input Session Network System "Install and update"
+        printf '%s\n' Apps Docs Menu Style Configuration Install Uninstall Update Power
         ;;
     "")
         have rofi || die "rofi is not installed"

@@ -328,7 +328,7 @@ ask_line() {
     if command -v rofi >/dev/null 2>&1 \
         && [[ -n ${WAYLAND_DISPLAY:-} || -n ${DISPLAY:-} ]]; then
         value="$(printf '\n' | rofi -theme "$HOME/.config/rofi/launcher.rasi" \
-            -dmenu -l 0 -p "$prompt" 2>/dev/null)" || return 1
+            -dmenu -l 0 -p "$prompt" -no-fixed-num-lines 2>/dev/null)" || return 1
     elif command -v gum >/dev/null 2>&1; then
         value="$(gum input --prompt "$prompt: ")" || return 1
     elif [[ -t 0 ]]; then
@@ -348,7 +348,7 @@ choose_line() {
 
     if command -v rofi >/dev/null 2>&1 \
         && [[ -n ${WAYLAND_DISPLAY:-} || -n ${DISPLAY:-} ]]; then
-        printf '%s\n' "${items[@]}" | rofi -theme "$HOME/.config/rofi/launcher.rasi" -dmenu -i -p "$title" 2>/dev/null
+        printf '%s\n' "${items[@]}" | rofi -theme "$HOME/.config/rofi/launcher.rasi" -dmenu -i -p "$title" -no-fixed-num-lines 2>/dev/null
         return
     fi
     if command -v gum >/dev/null 2>&1; then

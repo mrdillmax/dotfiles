@@ -205,7 +205,7 @@ render_config() {
         printf '# 0 disables a stage. Tune with: idle-tune.sh set --help\n\n'
         printf 'general {\n'
         printf '    lock_cmd = pidof hyprlock || hyprlock\n'
-        printf '    before_sleep_cmd = loginctl lock-session\n'
+        printf '    before_sleep_cmd = pidof hyprlock || hyprlock\n'
         printf '    after_sleep_cmd = hyprctl dispatch dpms on\n'
         printf '}\n\n'
 
@@ -219,7 +219,7 @@ render_config() {
         if ((lock > 0)); then
             printf 'listener {\n'
             printf '    timeout = %s\n' "$lock"
-            printf '    on-timeout = loginctl lock-session\n'
+            printf '    on-timeout = pidof hyprlock || hyprlock\n'
             printf '}\n\n'
         fi
         if ((off > 0)); then

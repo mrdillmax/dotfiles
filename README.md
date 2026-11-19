@@ -497,26 +497,27 @@ dotfiles-control-center
 
 Press `SUPER + Space` or launch **Control Center** from rofi. Pages cover:
 
-- **Appearance**: wallpapers with magick thumbnails, dark/light/smart mode,
-  matugen colour schemes, fonts/icons/cursor status
-- **Desktop**: monitor status and saved layout; the dock entry appears only on
-  laptops
-- **Input**: mouse tuner (named for touchpads on laptops), searchable keybind
-  cheatsheet
-- **Session**: autostart (toggle, add or remove a program), idle, lid on
-  laptops, game mode
-- **Network**: Wi-Fi networks through `nmcli`, Bluetooth through `bluetoothctl`
-- **System**: updates, repository mirror refresh (reflector), package
-  search/install/remove, doctor, DNS check, package drift, sync and restore
-- **Install and update**: `spicetify backup apply`, opens `install.sh` in a
-  terminal, updates configuration files
+- **Apps**: opens the drun launcher
+- **Docs**: keybinds, kernel/shell/desktop versions, README and upstream links
+- **Menu**: show, hide or restart Waybar; lock; reload Hyprland; notifications;
+  autostart; idle, lid and game mode
+- **Style**: wallpapers with thumbnails, dark/light/smart mode, matugen
+  schemes, font and icon status
+- **Configuration**: sound, Wi-Fi, Bluetooth, monitors, keybinds,
+  mouse/touchpad, Tide and the main text configs in an editor
+- **Install**: repository and AUR packages through `fzf`; lazydocker when
+  Docker is present
+- **Uninstall**: `fzf` multi-select removal and package inspection
+- **Update**: pacman/AUR, reflector mirrors, dotfiles and
+  `spicetify backup apply`
+- **Power**: opens the power menu
 
 Entries for missing helpers and laptop-only features are hidden, not greyed.
 
-The menu uses the matugen palette (`colors.rasi`), Inter and
-`JetBrainsMono Nerd Font`, with no separate theme to keep in sync. It calls the
-feature helpers directly. `install.sh` stays for installing, updating and rare
-one-shot actions.
+The menu uses the matugen palette (`colors.rasi`) and Inter, with no
+separate theme to keep in sync. Rofi windows shrink to their contents. It
+calls the feature helpers directly. `install.sh` stays for installing,
+updating and rare one-shot actions.
 
 The bind is stored in `hosts/<host>/control-center.conf` and rendered into the
 optional `~/.config/hypr/control-center.lua`.

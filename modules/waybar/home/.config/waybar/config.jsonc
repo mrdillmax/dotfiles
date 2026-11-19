@@ -1,3 +1,12 @@
+// Waybar layout for the Hyprland session.
+//
+// Left:   workspaces, focused window, notification state.
+// Centre: date and the 24-hour clock.
+// Right:  privacy indicators, keyboard layout, volume, hardware, tray.
+//
+// Clicking the keyboard layout switches it. The dunst module greys out when
+// notifications are paused. Module details live below the layout lists.
+
 {
   "position": "top",
   "margin-left": 0,
@@ -6,16 +15,19 @@
 
 
   
+  // Left: workspaces, focused window, notification state.
   "modules-left": [
     "hyprland/workspaces",
     "hyprland/window",
     "custom/dunst"
   ],
   
+  // Centre: date and the 24-hour clock.
   "modules-center": [
     "group/time"
   ],
   
+  // Right: privacy indicators, keyboard layout, volume, hardware, tray.
   "modules-right": [
     "privacy",
     "hyprland/language",
@@ -26,6 +38,8 @@
 
 
   
+  // Focused window. Empty titles fall back to "Hyprland"; kitty shows as
+  // "Terminal" so the bar stays readable.
   "hyprland/window": {
     "format": "{initialTitle}",
     "max-length": 35,
@@ -38,6 +52,8 @@
 
 
 
+  // Notification state. Clicking pauses or resumes dunst and refreshes the
+  // module through its realtime signal.
   "custom/dunst": {
     "exec": "~/.config/waybar/scripts/dunst.sh",
     "return-type": "json",
@@ -49,6 +65,7 @@
 
 
 
+  // Date and clock. The calendar appears in the tooltip.
   "group/time": {
     "modules": ["clock", "clock#simple"],
     "orientation": "horizontal"
@@ -66,6 +83,7 @@
 
 
 
+  // Screen sharing and recording indicators.
   "privacy": {
     "icon-size": 15,
     "icon-spacing": 8
@@ -73,6 +91,7 @@
 
 
   
+  // Keyboard layout. Clicking cycles every device to the next layout.
   "hyprland/language": {
     "format": "  {}",
     "format-en": "EN",
@@ -82,6 +101,7 @@
 
 
 
+  // Volume. Clicking the sink or source icon mutes it; scrolling changes it.
   "group/zvuk": {
     "orientation": "horizontal",
     "modules": ["pulseaudio#output", "pulseaudio#input"]
@@ -107,6 +127,8 @@
 
 
 
+  // CPU, memory and package temperature. The temperature turns critical at
+  // 80 C, matching the idle and fan profile.
   "group/hardware": {
     "orientation": "horizontal",
     "modules": ["cpu", "memory", "temperature"]
@@ -129,6 +151,7 @@
 
 
 
+  // Status icons from other applications.
   "tray": {
     "spacing": 10
   }

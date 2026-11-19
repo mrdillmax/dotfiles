@@ -19,14 +19,14 @@ else
     fail "control center is not executable"
 fi
 
-if "$CC" --help | grep -q 'Installation and updates'; then
+if "$CC" --help | grep -q 'apps, docs, menu toggles'; then
     pass "--help explains the scope"
 else
     fail "--help does not explain the scope"
 fi
 
 actions="$("$CC" --list-actions)"
-for action in Appearance Desktop Input Session Network System "Install and update"; do
+for action in Apps Docs Menu Style Configuration Install Uninstall Update Power; do
     if grep -qx "$action" <<<"$actions"; then
         pass "action listed: $action"
     else
@@ -34,7 +34,15 @@ for action in Appearance Desktop Input Session Network System "Install and updat
     fi
 done
 
-# 1b. Esc is the only way out; no Back or Close entries and no Music page.
+# 1b. Every top-level entry has an icon and a short hint.
+main_block="$(awk '/^main_menu\(\)/,/^}/' "$CC")"
+if [[ $(grep -c '^            "\\uf' <<<"$main_block") -eq 9 ]]; then
+    pass "the main menu has nine icon rows"
+else
+    fail "the main menu is missing icons or rows"
+fi
+
+# 1c. Esc is the only way out; no Back or Close entries and no Music page.
 if grep -Eq '"(Back|Close)"|Back\|"")' "$CC"; then
     fail "control center still has Back or Close entries"
 else
@@ -46,36 +54,42 @@ else
     pass "the Music page is gone"
 fi
 
-# 1c. Spicetify update is one button in the updates page.
-if grep -q 'Spicetify — backup and apply' "$CC" \
-    && grep -q 'spicetify backup apply' "$CC" \
-    && ! grep -q 'spicetify update' "$CC"; then
-    pass "Spicetify update is a single backup-and-apply action"
+# 1d. Spicetify lives in the update page as one button.
+update_block="$(awk '/^update_page\(\)/,/^}/' "$CC")"
+if grep -q 'Spicetify — backup and apply' <<<"$update_block" \
+    && grep -q 'backup apply' <<<"$update_block" \
+    && ! grep -q 'spicetify update' <<<"$update_block"; then
+    pass "Spicetify update is a single action inside updates"
 else
-    fail "Spicetify update is not a single action"
+    fail "Spicetify update is not a single action inside updates"
 fi
 
-# 1d. A terminal opened by the control center waits for a key press.
+# 1e. A terminal opened by the control center waits for a key press.
 if ! grep -q -- '--hold' "$CC" && grep -q 'read -rsn1' "$CC"; then
     pass "the action terminal waits for a key press and closes"
 else
     fail "the action terminal closes immediately or stays forever"
 fi
 
-# 1e. Host-specific entries are gated: no dock layout on a desktop, no lid
+# 1f. Host-specific entries are gated: no dock layout on a desktop, no lid
 # entry without a laptop chassis.
-desktop_block="$(awk '/^desktop_page\(\)/,/^input_page\(\)/' "$CC")"
-if grep -q 'if host_is_laptop; then' <<<"$desktop_block" \
-    && grep -q 'Dock layout' <<<"$desktop_block"; then
-    pass "dock layout is only offered on laptops"
+config_block="$(awk '/^configuration_page\(\)/,/^}/' "$CC")"
+if grep -q 'host_is_laptop' <<<"$config_block"; then
+    pass "touchpad wording follows the host type"
 else
-    fail "desktop still offers laptop-only dock entries"
+    fail "touchpad wording ignores the host type"
 fi
-session_block="$(awk '/^session_page\(\)/,/^music_page|^package_search/' "$CC")"
-if grep -q 'host_is_laptop && have lid-handler.sh' <<<"$session_block"; then
+menu_block="$(awk '/^menu_page\(\)/,/^}/' "$CC")"
+if grep -q 'host_is_laptop && have lid-handler.sh' <<<"$menu_block"; then
     pass "the lid entry is laptop-only"
 else
     fail "the lid entry is not gated by host"
+fi
+monitor_block="$(awk '/^monitors_page\(\)/,/^}/' "$CC")"
+if grep -q 'host_is_laptop && items+=' <<<"$monitor_block"; then
+    pass "dock layout is only offered on laptops"
+else
+    fail "desktop still offers laptop-only dock entries"
 fi
 
 # 2. The desktop entry launches the same command.
@@ -85,24 +99,23 @@ else
     fail "desktop entry has the wrong Exec"
 fi
 
-# 3. The theme uses matugen colors and the installed fonts.
+# 3. The theme uses matugen colors, the installed font and flat rows.
 if grep -q '@import "colors.rasi"' "$RASI" \
-    && grep -q 'Inter' "$RASI" \
+    && grep -q 'Inter 13' "$RASI" \
     && grep -q '@primary' "$RASI"; then
-    pass "rofi theme uses matugen colors and Inter"
+    pass "rofi theme uses matugen colors and Inter 13"
 else
     fail "rofi theme is not wired to colors.rasi"
 fi
 
-# 3b. Rows use an explicit surface colour, not "transparent", which some rofi
-# versions render as white.
-if grep -A4 'element normal.normal' "$RASI" | grep -q 'background-color: *@surface'; then
-    pass "rofi rows use an explicit surface colour"
+if grep -A4 'element normal.normal' "$RASI" | grep -q 'background-color: *transparent' \
+    && grep -A4 'element alternate.normal' "$RASI" | grep -q 'background-color: *transparent'; then
+    pass "rows are flat like the other rofi menus"
 else
-    fail "rofi rows still rely on transparent"
+    fail "rows still draw their own fill"
 fi
 
-# 3c. Rofi 2.x paints element-text white unless the theme overrides it, so every
+# 3b. Rofi 2.x paints element-text white unless the theme overrides it, so every
 # themed menu needs an explicit transparent background.
 for theme in \
     "$ROOT/modules/rofi/home/.config/rofi/launcher.rasi" \
@@ -115,7 +128,7 @@ for theme in \
     fi
 done
 
-# 3d. Message and history popups reuse the same palette.
+# 3c. Message and history popups reuse the same palette.
 # shellcheck disable=SC2016 # literal shell text is being checked
 if grep -q 'args=(-theme "$THEME"' "$CC"; then
     pass "info messages use the control center theme"
@@ -127,6 +140,15 @@ if grep -q 'launcher.rasi' "$ROOT/modules/rofi/home/.config/rofi/scripts/rofi-du
     pass "history and clipboard menus use the launcher theme"
 else
     fail "history or clipboard menus fall back to the default theme"
+fi
+
+# 3d. Rofi windows shrink to their contents.
+if grep -q -- '-no-fixed-num-lines' "$CC" \
+    && grep -q 'fixed-height: *false' "$RASI" \
+    && grep -q 'max \* 9 + 140' "$CC"; then
+    pass "rofi windows size to their contents"
+else
+    fail "rofi windows keep a fixed size"
 fi
 
 # 4. The bind is configurable per host and rendered through a separate Lua file.
@@ -151,30 +173,66 @@ else
     fail "control center Lua template is incomplete"
 fi
 
-# 5. System page covers updates, package search and removal.
-if grep -q 'Update — repository packages' "$CC" \
-    && grep -q 'Packages — search and install' "$CC" \
-    && grep -q 'Packages — remove' "$CC" \
-    && grep -q 'sudo pacman -Syu' "$CC" \
-    && grep -q 'keyserver hkps://pgp.surf.nl' "$CC"; then
-    pass "system updates and package management are wired"
+# 5. Docs and configuration expose real data instead of empty pages.
+docs_block="$(awk '/^docs_page\(\)/,/^}/' "$CC")"
+if grep -q 'Versions — kernel, shell, desktop' <<<"$docs_block" \
+    && grep -q 'Links — Arch, Hyprland, Waybar, Fish' <<<"$docs_block" \
+    && grep -q 'hyprctl version' "$CC" \
+    && grep -q 'fish --version' "$CC"; then
+    pass "docs cover versions, keybinds and links"
 else
-    fail "system package management is incomplete"
+    fail "docs are incomplete"
 fi
 
-if grep -q 'Update — repository mirrors (reflector)' "$CC" \
-    && grep -q 'reflector --latest 20 --protocol https --sort rate' "$CC" \
-    && grep -q 'mirrorlist.bak' "$CC"; then
+if grep -q 'Config files — edit system configs' "$CC" \
+    && grep -q 'Hyprland — window manager' "$CC" \
+    && grep -q 'Fish — shell' "$CC" \
+    && grep -q 'Waybar — bar layout' "$CC"; then
+    pass "configuration exposes the main text configs"
+else
+    fail "configuration does not expose the main configs"
+fi
+
+if grep -q 'tide configure' "$CC"; then
+    pass "Tide is configured on the machine"
+else
+    fail "Tide configuration is missing"
+fi
+
+# 6. Install and uninstall use fzf when it is available.
+if grep -q 'pacman -Slq | fzf' "$CC" \
+    && grep -q 'pacman -Qqe | fzf' "$CC" \
+    && grep -q 'lazydocker' "$CC"; then
+    pass "install and uninstall use fzf, Docker opens lazydocker"
+else
+    fail "fzf install or removal is missing"
+fi
+
+# 7. The update page covers repos, AUR, mirrors, dotfiles and Spicetify.
+if grep -q 'System — repository packages' <<<"$update_block" \
+    && grep -q 'System — repository and AUR' <<<"$update_block" \
+    && grep -q 'Dotfiles — apply configuration files' <<<"$update_block" \
+    && grep -q 'sudo pacman -Syu' <<<"$update_block" \
+    && grep -q 'keyserver hkps://pgp.surf.nl' "$CC"; then
+    pass "system and dotfiles updates are wired"
+else
+    fail "system or dotfiles updates are incomplete"
+fi
+
+if grep -q 'Mirrors — refresh with reflector' <<<"$update_block" \
+    && grep -q 'reflector --latest 20 --protocol https --sort rate' <<<"$update_block" \
+    && grep -q 'mirrorlist.bak' <<<"$update_block"; then
     pass "mirror refresh is wired to reflector with a backup"
 else
     fail "mirror refresh is missing"
 fi
 
-# 6. Daily actions call helpers directly, not the installer menu.
+# 8. Daily actions call helpers directly, not the installer menu.
 if grep -q 'autostart.sh pick' "$CC" \
     && grep -q 'gamemode.sh toggle' "$CC" \
     && grep -q 'idle-tune.sh' "$CC" \
-    && grep -q 'monitor-profiles.sh' "$CC"; then
+    && grep -q 'monitor-profiles.sh' "$CC" \
+    && grep -q 'powermenu.sh' "$CC"; then
     pass "daily actions use the per-feature helpers"
 else
     fail "a daily action is not wired to its helper"

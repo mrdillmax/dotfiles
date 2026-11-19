@@ -53,17 +53,29 @@ else
     fail "an existing fish login shell is changed again (rc $rc)"
 fi
 
-# 4. The Tide prompt configuration ships with the module and parses.
+# 4. The Tide prompt is configured on the machine; the module only repairs
+# values written by an older dotfiles version.
 tide="$ROOT/modules/fish/home/.config/fish/conf.d/0-tide.fish"
 if [[ -f $tide ]] && fish -n "$tide"; then
-    pass "the Tide prompt configuration is present and valid"
+    pass "the Tide repair file is present and valid"
 else
-    fail "the Tide prompt configuration is missing or invalid"
+    fail "the Tide repair file is missing or invalid"
 fi
-if grep -q '^set -U tide_left_prompt_items ' "$tide"; then
-    pass "the Tide prompt items are configured"
+if grep -q 'tide_git_truncation_strategy' "$tide" \
+    && grep -q "string shorten -''m24" "$tide"; then
+    pass "the broken truncation strategy is repaired"
 else
-    fail "the Tide prompt items are not configured"
+    fail "the broken truncation strategy is not repaired"
+fi
+if grep -q '^set -U tide_' "$tide"; then
+    fail "the module still copies a full Tide configuration"
+else
+    pass "Tide settings stay local to the machine"
+fi
+if grep -q 'tide configure' "$ROOT/modules/control-center/home/.local/bin/dotfiles-control-center"; then
+    pass "the control center opens tide configure"
+else
+    fail "the control center has no tide configure entry"
 fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"

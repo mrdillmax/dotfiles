@@ -1,3 +1,9 @@
+# Interactive fish configuration.
+#
+# Sourced after ~/.config/fish/conf.d/*.fish. Sections are grouped: aliases
+# that replace core utils, small helpers, then tool initialisation. Machine
+# specific paths belong in conf.d/ or a local file, not here.
+
 if status is-interactive
     set -g fish_greeting
     zoxide init fish | source

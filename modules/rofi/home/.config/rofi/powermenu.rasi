@@ -1,3 +1,10 @@
+/*
+ * Power menu: shutdown, reboot and logout.
+ *
+ * Three large glyph buttons, then a two-button confirmation. Colours come
+ * from colors.rasi.
+ */
+
 configuration {
     show-icons:                 false;
 }
@@ -5,7 +12,7 @@ configuration {
 @import                         "colors.rasi"
 
 * {
-    font:                       "Inter 12";
+    font:                       "Inter 13";
 }
 
 window {
@@ -20,7 +27,7 @@ window {
     margin:                     0px;
     padding:                    0px;
     border:                     2px solid;
-    border-radius:              16px;
+    border-radius:              14px;
     border-color:               @outline;
     cursor:                     "default";
     background-color:           @surface;
