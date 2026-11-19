@@ -64,6 +64,10 @@ aur_helper() {
     fi
 }
 
+# yay 13 ignores --pgpfetch and imports missing keys from gpg's default
+# keyserver under --noconfirm. Some kernel build keys are not served there.
+AUR_GPG_FLAGS=(--gpgflags "--keyserver hkps://keyserver.ubuntu.com --keyserver hkps://pgp.surf.nl")
+
 message() {
     local text="$1"
     if have rofi; then
@@ -383,7 +387,7 @@ package_search_install() {
         aur/*)
             if [[ -n $helper ]]; then
                 if [[ $helper == yay ]]; then
-                    run_terminal "$helper --pgpfetch=false -S --needed $(printf '%q' "$pkg")"
+                    run_terminal "$helper $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-S --needed $(printf '%q' "$pkg")"
                 else
                     run_terminal "$helper -S --needed $(printf '%q' "$pkg")"
                 fi
@@ -458,7 +462,7 @@ system_page() {
             "Update — repository and AUR")
                 if [[ -n $(aur_helper) ]]; then
                     if [[ $(aur_helper) == yay ]]; then
-                        run_terminal "yay --pgpfetch=false -Syu"
+                        run_terminal "yay $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-Syu"
                     else
                         run_terminal "$(aur_helper) -Syu"
                     fi

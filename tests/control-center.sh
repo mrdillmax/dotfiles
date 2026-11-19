@@ -76,7 +76,8 @@ fi
 if grep -q 'Update — repository packages' "$CC" \
     && grep -q 'Packages — search and install' "$CC" \
     && grep -q 'Packages — remove' "$CC" \
-    && grep -q 'sudo pacman -Syu' "$CC"; then
+    && grep -q 'sudo pacman -Syu' "$CC" \
+    && grep -q 'keyserver hkps://pgp.surf.nl' "$CC"; then
     pass "system updates and package management are wired"
 else
     fail "system package management is incomplete"

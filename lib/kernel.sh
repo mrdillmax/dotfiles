@@ -214,10 +214,9 @@ kernel_install_package() {
     fi
     [[ -n $helper ]] || die "no AUR helper found for $package"
     if [[ $helper == yay ]]; then
-        # The keyring already has the build keys on a normal install. Letting
-        # yay fetch again makes it fail on unavailable keyservers, so disable
-        # that prompt and let makepkg verify against the existing keyring.
-        run "$helper" --pgpfetch=false -S --needed --noconfirm "$package"
+        # Some PKGBUILDs list a key that the default keyserver does not serve.
+        # Use a server that has it so the one-time import succeeds.
+        run "$helper" "${AUR_GPG_FLAGS[@]}" -S --needed --noconfirm "$package"
     else
         run "$helper" -S --needed --noconfirm "$package"
     fi

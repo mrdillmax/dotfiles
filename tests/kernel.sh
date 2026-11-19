@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Kernel AUR installs must not ask yay to fetch keys again.
+# Kernel AUR installs must point gpg at a keyserver that serves build keys.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -49,10 +49,10 @@ YAY_LOG="$base/yay.log" bash -c '
     kernel_install_package test-kernel
 ' _ "$base" "$base/yay.log" "$ROOT"
 
-if grep -q -- '--pgpfetch=false -S --needed --noconfirm test-kernel' "$base/yay.log"; then
-    pass "kernel AUR install disables the key-fetch prompt"
+if grep -q -- '--gpgflags --keyserver hkps://keyserver.ubuntu.com --keyserver hkps://pgp.surf.nl -S --needed --noconfirm test-kernel' "$base/yay.log"; then
+    pass "kernel AUR install imports keys from a working keyserver"
 else
-    fail "kernel AUR install still asks yay to fetch keys"
+    fail "kernel AUR install does not configure the keyserver"
     cat "$base/yay.log"
 fi
 

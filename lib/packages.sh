@@ -360,7 +360,7 @@ install_packages() {
                 fi
                 if [[ -n $helper ]]; then
                     if [[ $helper == yay ]]; then
-                        run "$helper" --pgpfetch=false -S --needed --noconfirm "${aur[@]}"
+                        run "$helper" "${AUR_GPG_FLAGS[@]}" -S --needed --noconfirm "${aur[@]}"
                     else
                         run "$helper" -S --needed --noconfirm "${aur[@]}"
                     fi

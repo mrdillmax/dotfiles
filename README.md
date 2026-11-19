@@ -633,9 +633,12 @@ NVIDIA DKMS always gets matching headers. The installer prints
 `mkinitcpio`/`grub-mkconfig` commands and never runs them.
 `./install.sh --doctor` compares the CPU level with the installed kernel level.
 
-yay runs with `--pgpfetch=false` for AUR kernels. Build keys are expected in the
-user keyring; import a missing key once with `gpg --recv-keys`, then the install
-does not stop on a keyserver timeout or ask again.
+yay 13 accepts `--pgpfetch=false` but never reads it: with `--noconfirm` it
+imports every key from `validpgpkeys` that is missing from the user keyring.
+Some kernel build keys are not served by the default keyserver, so the
+installer points gpg at `keyserver.ubuntu.com` and `pgp.surf.nl`. The import
+happens once; later installs reuse the keyring. Source files are still checked
+against `sha256sums`; signatures are never skipped.
 
 ## Theming
 
