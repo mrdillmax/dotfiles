@@ -53,6 +53,25 @@ else
     fail "the default wallpaper replaced the user choice"
 fi
 
+# 3b. A wallpaper already present in colors.lua is not replaced either.
+rm -f -- "$state"
+mkdir -p "$base/.config/hypr"
+printf 'keep\n' >"$base/keep.jpg"
+printf 'image = "%s"\n' "$base/keep.jpg" >"$base/.config/hypr/colors.lua"
+DOTFILES_DIR="$ROOT" REAL_HOME="$base" BACKUP_DIR="$base/backup" \
+    DRY_RUN=0 ASSUME_YES=1 bash -c '
+        source "$DOTFILES_DIR/lib/common.sh"
+        source "$DOTFILES_DIR/lib/wallpaper.sh"
+        source "$DOTFILES_DIR/lib/theme.sh"
+        install_default_wallpaper
+    ' >/dev/null 2>&1
+if [[ ! -e $state ]]; then
+    pass "an existing colors.lua wallpaper is preserved"
+else
+    fail "the default wallpaper overrode colors.lua"
+fi
+rm -f -- "$base/.config/hypr/colors.lua"
+
 # 4. The cursor installer prefers the repository copy.
 curs="$(DOTFILES_DIR="$ROOT" REAL_HOME="$base" bash -c '
     source "$DOTFILES_DIR/lib/common.sh"

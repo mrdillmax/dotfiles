@@ -56,6 +56,11 @@ install_default_wallpaper() {
     if [[ -r $state ]] && [[ -n $(<"$state") ]]; then
         return 0
     fi
+    # The generated Hyprland config also records a wallpaper; respect it.
+    if declare -F theme_wallpaper_path >/dev/null 2>&1 \
+        && theme_wallpaper_path >/dev/null 2>&1; then
+        return 0
+    fi
 
     dest="$REAL_HOME/.local/share/wallpapers/dotfiles/example.jpg"
     if (( DRY_RUN )); then
