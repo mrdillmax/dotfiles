@@ -378,6 +378,7 @@ pick_entries() {
         choice="$(choose_line "Autostart (pick to toggle)" "${labels[@]}")" || return 0
         [[ -n $choice ]] || return 0
         chosen="${choice#\[?\] }"
+        chosen="${chosen% (not installed)}"
 
         if ! index="$(entry_index "$chosen")"; then
             warn "unknown selection: $chosen"
