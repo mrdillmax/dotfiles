@@ -158,13 +158,13 @@ window#waybar > box {
   margin-right: 5px;
 }
 #cpu {
-  padding: 0 11px;
+  padding: 0 5px;
 }
 #memory {
-  padding: 0 11px;
+  padding: 0 5px;
 }
 #temperature {
-  padding: 0 11px;
+  padding: 0 5px;
 }
 
 #temperature.critical {
