@@ -427,8 +427,8 @@ run_setup() {
 
     setup_stage "Step 1/4: packages?" \
         bash "$DOTFILES_DIR/install.sh" --only-packages "${common[@]}" || return $?
-    setup_stage "Step 2/4: configuration files?" \
-        bash "$DOTFILES_DIR/install.sh" --no-packages "${common[@]}" || return $?
+    setup_stage "Step 2/4: configuration files and their packages?" \
+        bash "$DOTFILES_DIR/install.sh" --module-packages "${common[@]}" || return $?
 
     local -a system_cmd=(--system)
     (( DRY_RUN )) && system_cmd+=(--dry-run)
@@ -454,8 +454,10 @@ if (( SETUP )); then
 fi
 ```
 
-This leaves the normal flag flow untouched. `--setup` is rejected with `--yes`,
-without a TTY, or together with `--only-packages`/`--no-packages`.
+`--module-packages` selects modules and installs their package requirements
+before linking files, without opening the catalogue picker. This leaves the
+normal flag flow untouched. `--setup` is rejected with `--yes`, without a TTY,
+or together with `--only-packages`/`--no-packages`.
 
 - [ ] **Step 6: Reorder `lib/menu.sh`**
 

@@ -54,6 +54,7 @@ CATEGORY_ARG=""
 APPS_ARG=""
 PACKAGES_ARG=""
 ONLY_PACKAGES=0
+MODULE_PACKAGES_ONLY=0
 SETUP=0
 DO_THEME=0
 DO_THEME_MENU=0
@@ -109,6 +110,8 @@ Installation:
   --packages a,b        install exactly these packages (no app picker)
   --no-packages         skip package installation
   --only-packages       install packages without touching configuration files
+  --module-packages     install the packages required by the selected modules
+                        (used by --setup; no category picker)
   --setup               interactive first run: packages, configuration,
                         system (/etc, sudo) and kernel, in that order
   --host desktop|laptop override host detection
@@ -181,6 +184,7 @@ while (($#)); do
         --yes|-y)     ASSUME_YES=1 ;;
         --no-packages) DO_PACKAGES=0; HAS_ACTION=1 ;;
         --only-packages) ONLY_PACKAGES=1; HAS_ACTION=1 ;;
+        --module-packages) MODULE_PACKAGES_ONLY=1; HAS_ACTION=1 ;;
         --setup)      SETUP=1; HAS_ACTION=1 ;;
         --modules)    MODULES_ARG="${2:?missing value for --modules}"; HAS_ACTION=1; shift ;;
         --category)   CATEGORY_ARG="${2:?missing value for --category}"; HAS_ACTION=1; shift ;;
@@ -264,9 +268,13 @@ if (( ONLY_PACKAGES )); then
         die "--only-packages needs --packages, --category or --apps"
     fi
 fi
+if (( MODULE_PACKAGES_ONLY )); then
+    (( ONLY_PACKAGES )) && die "--module-packages and --only-packages are mutually exclusive"
+    (( !DO_PACKAGES )) && die "--module-packages and --no-packages are mutually exclusive"
+fi
 if (( SETUP )); then
     (( ASSUME_YES )) && die "--setup is interactive; do not combine it with --yes"
-    (( !DRY_RUN )) && [[ ! -t 0 ]] && die "--setup needs an interactive terminal"
+    [[ ! -t 0 ]] && die "--setup needs an interactive terminal"
     if (( ONLY_PACKAGES )) || (( !DO_PACKAGES )); then
         die "--setup runs every stage; do not combine it with --only-packages or --no-packages"
     fi
@@ -834,8 +842,8 @@ run_setup() {
     info "First-time setup: packages -> configuration -> system -> kernel"
     setup_stage "Step 1/4: packages — choose categories and applications?" \
         bash "$DOTFILES_DIR/install.sh" --only-packages "${common[@]}" || return $?
-    setup_stage "Step 2/4: configuration files — link dotfiles and enable user services?" \
-        bash "$DOTFILES_DIR/install.sh" --no-packages "${common[@]}" || return $?
+    setup_stage "Step 2/4: configuration files — packages, dotfiles and user services?" \
+        bash "$DOTFILES_DIR/install.sh" --module-packages "${common[@]}" || return $?
 
     local -a system_cmd=(--system)
     (( DRY_RUN )) && system_cmd+=(--dry-run)
@@ -861,6 +869,19 @@ if (( SETUP )); then
         exit $?
     fi
 fi
+
+add_module_packages() {
+    local name pkg
+    for name in "${MODULES[@]}"; do
+        load_module_conf "$DOTFILES_DIR/modules/$name/module.conf"
+        for pkg in "${PACKAGES[@]:-}"; do
+            [[ -n $pkg ]] || continue
+            if ! printf '%s\n' "${SELECTED_APPLICATIONS[@]:-}" | grep -Fxq -- "$pkg"; then
+                SELECTED_APPLICATIONS+=("$pkg")
+            fi
+        done
+    done
+}
 
 if (( ONLY_PACKAGES )); then
     info "installing packages only; configuration files are not touched"
@@ -888,25 +909,22 @@ else
         fi
     done
 
+    if (( MODULE_PACKAGES_ONLY && DO_PACKAGES )); then
+        add_module_packages
+        install_packages
+    fi
+
     maybe_create_snapshot
     install_selected_modules
 fi
 
-if (( DO_PACKAGES )); then
+if (( DO_PACKAGES && !MODULE_PACKAGES_ONLY )); then
     select_categories
     select_apps
 
     # A selected module carries its own package requirements. This keeps
     # --modules ram-cache (or idle) useful without a second package pick.
-    for name in "${MODULES[@]}"; do
-        load_module_conf "$DOTFILES_DIR/modules/$name/module.conf"
-        for pkg in "${PACKAGES[@]:-}"; do
-            [[ -n $pkg ]] || continue
-            if ! printf '%s\n' "${SELECTED_APPLICATIONS[@]:-}" | grep -Fxq -- "$pkg"; then
-                SELECTED_APPLICATIONS+=("$pkg")
-            fi
-        done
-    done
+    add_module_packages
 
     install_packages
 fi

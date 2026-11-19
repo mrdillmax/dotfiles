@@ -174,6 +174,13 @@ else
     fail "--setup is missing from --help"
 fi
 
+if grep -q -- '--module-packages' <<<"$help_text" \
+    && grep -q -- '--module-packages.*common' "$ROOT/install.sh"; then
+    pass "the setup wizard installs module packages in the configuration stage"
+else
+    fail "the setup wizard does not install module packages"
+fi
+
 if grep -q '^user_unit_exists()' "$ROOT/install.sh" \
     && grep -q "user_unit_exists \"\$service\"" "$ROOT/install.sh"; then
     pass "services are gated on installed units"
