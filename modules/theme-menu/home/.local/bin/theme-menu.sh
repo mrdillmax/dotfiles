@@ -245,7 +245,7 @@ menu_choose() {
     ((${#items[@]})) || return 1
 
     if has rofi && [[ -n ${WAYLAND_DISPLAY:-}${DISPLAY:-} ]]; then
-        printf '%s\n' "${items[@]}" | rofi -dmenu -p "$prompt" -no-custom
+        printf '%s\n' "${items[@]}" | rofi -theme "$REAL_HOME/.config/rofi/launcher.rasi" -dmenu -p "$prompt" -no-custom
         return
     fi
 
@@ -287,7 +287,7 @@ prompt_path() {
     local prompt="$1"
 
     if has rofi && [[ -n ${WAYLAND_DISPLAY:-}${DISPLAY:-} ]]; then
-        rofi -dmenu -p "$prompt" -no-custom
+        rofi -theme "$REAL_HOME/.config/rofi/launcher.rasi" -dmenu -p "$prompt" -no-custom
     elif has gum; then
         gum input --prompt "$prompt: "
     elif [[ -t 0 ]]; then

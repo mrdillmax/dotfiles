@@ -86,7 +86,7 @@ element {
 }
 
 element normal.normal {
-    background-color:           transparent;
+    background-color:           @surface;
     text-color:                 @on-surface;
 }
 

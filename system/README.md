@@ -10,8 +10,11 @@ Each file is shown and confirmed separately. Every replaced file is backed up
 under `~/.dotfiles-backup/<timestamp>/` for the invoking user (resolved via
 `SUDO_USER`) and listed in `manifest.tsv`.
 
-The installer never starts or restarts a service and never runs
-`grub-mkconfig` or `mkinitcpio -P`. It prints the commands to review manually.
+Selected services are enabled and started with `systemctl enable --now`
+(`irqbalance` and `ananicy-cpp` are preselected); `cpupower` is enabled when
+its component runs. After a GRUB or mkinitcpio file is installed, the system
+step runs `grub-mkconfig` and `mkinitcpio -P`. Failures warn; they do not abort
+the run.
 
 The GRUB, mkinitcpio and `modprobe/nvidia.conf` files are installed only when
 the selected GPU profile is `nvidia` or `hybrid`. Other GPU profiles skip them
@@ -25,7 +28,7 @@ or the invoking login. It always requires a separate confirmation.
 | Source | Destination | Notes |
 |--------|-------------|-------|
 | `zram/zram-generator.conf` | `/etc/systemd/zram-generator.conf` | zram swap, `ram / 2`, zstd |
-| `cpupower/cpupower` | `/etc/default/cpupower` | `governor='performance'` |
+| `cpupower/cpupower` | `/etc/default/cpupower` | `governor='performance'`; `cpupower.service` is enabled |
 | `networkmanager/dns.conf` | `/etc/NetworkManager/conf.d/dns.conf` | only with Pi-hole + Unbound |
 | `networkmanager/rc-manager.conf` | `/etc/NetworkManager/conf.d/rc-manager.conf` | only with Pi-hole + Unbound |
 | `pihole/dnsmasq.conf` | `/etc/pihole/dnsmasq.conf` | `@IFACE@` is rendered from the default route or `--iface` |

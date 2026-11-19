@@ -11,7 +11,9 @@ values and links the rest into `$HOME`.
 - **Session:** uwsm
 - **Shell:** fish
 - **Bar / launcher / notifications:** waybar, rofi, dunst
-- **Theming:** matugen templates (generated colors are never committed)
+- **Theming:** one UI font (Inter) and one mono font (JetBrainsMono Nerd
+  Font) across GTK/Qt/KDE, rofi, waybar, dunst and hyprlock; matugen templates
+  (generated colors are never committed)
 - **Packages:** pacman + an AUR helper (`yay` or `paru`)
 - **Checks:** shell test suite under `tests/`, run in CI on an Arch container
 
@@ -67,8 +69,11 @@ and are optional.
   confirmation; other profiles keep their boot and initramfs configuration.
 - The default GRUB template does not disable CPU mitigations or the TPM. The
   file contains a commented block that explains both options.
-- The installer never runs `grub-mkconfig` or `mkinitcpio`.
-- No service is started or restarted automatically.
+- With `--system`, the installer runs `grub-mkconfig` and `mkinitcpio -P`
+  after the matching boot file was installed, and starts the selected
+  services. Each action warns instead of failing the run.
+- With `--system`, fish becomes the login shell (after confirmation), so the
+  getty autologin reaches the tty1 block and starts Hyprland.
 - Secrets are excluded from git: `pihole.toml`, rclone, RustDesk and OpenCode
   configs, `.env`, keys and the whole `personal/` directory.
 - Generated matugen output is excluded; only templates and
@@ -679,8 +684,11 @@ Colours are generated with matugen from a wallpaper:
 
 Without `--wallpaper`, `./install.sh --theme` first reads
 `~/.config/hypr/wallpaper.path` (written by `./install.sh --wallpaper`) and
-falls back to the `image` field in `~/.config/hypr/colors.lua`. The image itself
-is never committed. The generated files are ignored by git:
+falls back to the `image` field in `~/.config/hypr/colors.lua`. A first run
+installs the repository copy `assets/wallpapers/example.jpg` to
+`~/.local/share/wallpapers/dotfiles/example.jpg` and records it only when no
+wallpaper was chosen. Other images are never committed. The generated files
+are ignored by git:
 
 - `~/.config/hypr/colors.lua`
 - waybar/rofi/kitty/dunst colours
@@ -759,8 +767,8 @@ Manifest:
 
 `pacman.conf` and `makepkg.conf` are merged, not copied: the installer shows a
 diff, asks for confirmation and creates a backup. The merge is skipped with
-`--yes`. Optional services are enabled with `systemctl enable` only, never
-started or restarted.
+`--yes`. Selected services are enabled and started with `systemctl enable
+--now`; `irqbalance` and `ananicy-cpp` are preselected.
 
 ### NVIDIA boot files
 
@@ -775,9 +783,9 @@ block with a warning: they weaken CPU vulnerability mitigations and break
 TPM-based measured boot or disk unlocking. Add them only if you accept that
 tradeoff.
 
-The installer never runs `grub-mkconfig` or `mkinitcpio -P`; it prints the
-commands to review manually. Kernel work belongs to `./install.sh --kernel`;
-`--system` only reports CPU/kernel drift.
+When the GRUB or mkinitcpio file was installed, `--system` also runs
+`grub-mkconfig -o /boot/grub/grub.cfg` and `mkinitcpio -P`, printing a warning
+on failure. Kernel work belongs to `./install.sh --kernel`.
 
 UFW is documentation only. The repository does not change firewall state or
 rules; see `system/ufw/README.md` for general guidance.

@@ -26,13 +26,57 @@ else
 fi
 
 actions="$("$CC" --list-actions)"
-for action in Appearance Desktop Input Session Music System "Install and update"; do
+for action in Appearance Desktop Input Session System "Install and update"; do
     if grep -qx "$action" <<<"$actions"; then
         pass "action listed: $action"
     else
         fail "action missing: $action"
     fi
 done
+
+# 1b. Esc is the only way out; no Back or Close entries and no Music page.
+if grep -Eq '"(Back|Close)"|Back\|"")' "$CC"; then
+    fail "control center still has Back or Close entries"
+else
+    pass "control center closes with Esc only"
+fi
+if grep -q 'music_page' "$CC"; then
+    fail "the Music page still exists"
+else
+    pass "the Music page is gone"
+fi
+
+# 1c. Spicetify update is one button in the updates page.
+if grep -q 'Spicetify — backup and apply' "$CC" \
+    && grep -q 'spicetify backup apply' "$CC" \
+    && ! grep -q 'spicetify update' "$CC"; then
+    pass "Spicetify update is a single backup-and-apply action"
+else
+    fail "Spicetify update is not a single action"
+fi
+
+# 1d. A terminal opened by the control center waits for a key press.
+if ! grep -q -- '--hold' "$CC" && grep -q 'read -rsn1' "$CC"; then
+    pass "the action terminal waits for a key press and closes"
+else
+    fail "the action terminal closes immediately or stays forever"
+fi
+
+# 1e. Host-specific entries are gated: no dock layout on a desktop, no lid
+# entry without a laptop chassis.
+desktop_block="$(awk '/^desktop_page\(\)/,/^input_page\(\)/' "$CC")"
+if grep -q 'if host_is_laptop; then' <<<"$desktop_block" \
+    && grep -q 'Dock layout' <<<"$desktop_block"; then
+    pass "dock layout is only offered on laptops"
+else
+    fail "desktop still offers laptop-only dock entries"
+fi
+session_block="$(awk '/^session_page\(\)/,/^music_page|^package_search/' "$CC")"
+if grep -q 'host_is_laptop && have lid-handler.sh' <<<"$session_block"; then
+    pass "the lid entry is laptop-only"
+else
+    fail "the lid entry is not gated by host"
+fi
 
 # 2. The desktop entry launches the same command.
 if grep -qx 'Exec=dotfiles-control-center' "$DESKTOP"; then
@@ -48,6 +92,14 @@ if grep -q '@import "colors.rasi"' "$RASI" \
     pass "rofi theme uses matugen colors and Inter"
 else
     fail "rofi theme is not wired to colors.rasi"
+fi
+
+# 3b. Rows use an explicit surface colour, not "transparent", which some rofi
+# versions render as white.
+if grep -A4 'element normal.normal' "$RASI" | grep -q 'background-color: *@surface'; then
+    pass "rofi rows use an explicit surface colour"
+else
+    fail "rofi rows still rely on transparent"
 fi
 
 # 4. The bind is configurable per host and rendered through a separate Lua file.

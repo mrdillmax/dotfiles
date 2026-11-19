@@ -7,7 +7,7 @@ HISTORY=$(dunstctl history | jq -r '
 if [ -z "$HISTORY" ] || [ "$HISTORY" = "" ]; then
     rofi -e "History clear"
 else
-    SELECTED=$(echo "$HISTORY" | rofi -dmenu -i -p "History")
+    SELECTED=$(echo "$HISTORY" | rofi -theme "$HOME/.config/rofi/launcher.rasi" -dmenu -i -p "History")
     if [ -n "$SELECTED" ]; then
         echo "$SELECTED" | wl-copy
     fi

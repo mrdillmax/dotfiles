@@ -321,6 +321,25 @@ run_entries() {
     ((failed == 0)) || warn "$failed entries could not be started"
 }
 
+# Free-text prompt for adding an entry.
+ask_line() {
+    local prompt="$1" value
+
+    if command -v rofi >/dev/null 2>&1 \
+        && [[ -n ${WAYLAND_DISPLAY:-} || -n ${DISPLAY:-} ]]; then
+        value="$(printf '\n' | rofi -theme "$HOME/.config/rofi/launcher.rasi" \
+            -dmenu -l 0 -p "$prompt" 2>/dev/null)" || return 1
+    elif command -v gum >/dev/null 2>&1; then
+        value="$(gum input --prompt "$prompt: ")" || return 1
+    elif [[ -t 0 ]]; then
+        printf '%s: ' "$prompt"
+        read -r value || return 1
+    else
+        return 1
+    fi
+    printf '%s\n' "$value"
+}
+
 # Interactive single-choice toggle loop.
 choose_line() {
     local title="$1"
@@ -329,7 +348,7 @@ choose_line() {
 
     if command -v rofi >/dev/null 2>&1 \
         && [[ -n ${WAYLAND_DISPLAY:-} || -n ${DISPLAY:-} ]]; then
-        printf '%s\n' "${items[@]}" | rofi -dmenu -i -p "$title" 2>/dev/null
+        printf '%s\n' "${items[@]}" | rofi -theme "$HOME/.config/rofi/launcher.rasi" -dmenu -i -p "$title" 2>/dev/null
         return
     fi
     if command -v gum >/dev/null 2>&1; then
@@ -375,8 +394,19 @@ pick_entries() {
             labels+=("$state $name$missing")
         done
 
+        labels+=("+ Add a program")
         choice="$(choose_line "Autostart (pick to toggle)" "${labels[@]}")" || return 0
         [[ -n $choice ]] || return 0
+        if [[ $choice == '+ Add a program' ]]; then
+            local new_name new_command
+            new_name="$(ask_line 'Program name')" || continue
+            [[ -n $new_name ]] || continue
+            new_command="$(ask_line 'Command')" || continue
+            [[ -n $new_command ]] || continue
+            add_entry "$new_name" "$new_command" || true
+            load_entries
+            continue
+        fi
         chosen="${choice#\[?\] }"
         chosen="${chosen% (not installed)}"
 

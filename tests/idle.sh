@@ -275,5 +275,13 @@ else
     pass "configure requires a terminal"
 fi
 
+# shellcheck disable=SC2016 # literal shell text is being checked
+# 15. Hyprlock supports $USER but not $HOST; the literal used to leak through.
+if ! grep -q '\$HOST' "$ROOT/modules/idle/home/.config/hypr/hyprlock.conf"; then
+    pass "hyprlock does not use the unsupported \$HOST variable"
+else
+    fail "hyprlock renders a literal \$HOST"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

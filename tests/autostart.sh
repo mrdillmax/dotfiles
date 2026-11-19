@@ -259,5 +259,13 @@ else
     pass "an unknown option is rejected"
 fi
 
+# 9. The pick menu can add a program, not only toggle existing entries.
+AUTO="$ROOT/modules/autostart/home/.local/bin/autostart.sh"
+if grep -q 'Add a program' "$AUTO" && grep -q '^ask_line()' "$AUTO"; then
+    pass "the autostart picker can add a program"
+else
+    fail "the autostart picker cannot add a program"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

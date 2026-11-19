@@ -1,6 +1,13 @@
 [General]
 ColorScheme=Matugen
 widgetStyle=Fusion
+font=@QT_UI_FONT5@
+menuFont=@QT_UI_FONT5@
+toolBarFont=@QT_UI_FONT5@
+smallFont=@QT_UI_FONT5@
+activeFont=@QT_UI_FONT5@
+TerminalApplication=@TERMINAL_APP@
+TerminalService=@TERMINAL_SERVICE@
 
 [Icons]
 Theme=@ICON_THEME@

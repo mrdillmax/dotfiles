@@ -56,6 +56,16 @@ ask_confirm() {
     [[ $choice == Yes ]]
 }
 
+host_is_laptop() {
+    local chassis=""
+    compgen -G "/sys/class/power_supply/BAT*" >/dev/null 2>&1 && return 0
+    [[ -r /sys/class/dmi/id/chassis_type ]] && chassis="$(< /sys/class/dmi/id/chassis_type)"
+    case "$chassis" in
+        8|9|10|14) return 0 ;;
+    esac
+    return 1
+}
+
 aur_helper() {
     if have paru; then
         printf 'paru'
@@ -80,11 +90,12 @@ message() {
 run_terminal() {
     local command="$1"
     local workdir="${ROOT:-$REAL_HOME}"
+    local script
+    script="cd $(printf '%q' "$workdir") && $command; rc=\$?; printf '\n[exit %s] Press any key to close.' \"\$rc\"; read -rsn1"
     if have kitty; then
-        kitty --hold --class dotfiles-control-center \
-            -e bash -lc "cd $(printf '%q' "$workdir") && $command"
+        kitty --class dotfiles-control-center -e bash -lc "$script"
     elif have x-terminal-emulator; then
-        x-terminal-emulator -e bash -lc "cd $(printf '%q' "$workdir") && $command"
+        x-terminal-emulator -e bash -lc "$script"
     else
         notify "No terminal found for: $command"
     fi
@@ -186,12 +197,12 @@ wallpaper_page() {
 
 theme_mode_page() {
     local choice
-    choice="$(printf '%s\n' Dark Light Smart Back | rofi_pick "Theme mode")" || return 0
+    choice="$(printf '%s\n' Dark Light Smart | rofi_pick "Theme mode")" || return 0
     case "$choice" in
         Dark)  run_and_notify "Dark theme applied" theme-menu.sh --mode dark --apply ;;
         Light) run_and_notify "Light theme applied" theme-menu.sh --mode light --apply ;;
         Smart) run_and_notify "Smart theme applied" theme-menu.sh --mode smart --apply ;;
-        Back|"") ;;
+        "") ;;
     esac
 }
 
@@ -200,8 +211,8 @@ theme_scheme_page() {
     local choice
     mapfile -t types < <(theme-menu.sh --list-types 2>/dev/null)
     ((${#types[@]})) || { message "theme-menu.sh is not installed."; return 0; }
-    choice="$(printf '%s\n' "${types[@]}" Back | rofi_pick "Color scheme")" || return 0
-    [[ -z $choice || $choice == Back ]] && return 0
+    choice="$(printf '%s\n' "${types[@]}" | rofi_pick "Color scheme")" || return 0
+    [[ -z $choice ]] && return 0
     run_and_notify "Color scheme applied" theme-menu.sh --type "$choice" --apply
 }
 
@@ -222,31 +233,46 @@ Color scheme: ${scheme}"
 
 appearance_page() {
     local choice
+    local -a items=()
     while :; do
-        choice="$(printf '%s\n' \
-            "Wallpaper — choose with thumbnails" \
-            "Theme mode — dark, light or smart" \
-            "Color scheme — matugen palette" \
-            "Appearance status — fonts, icons, cursor" \
-            "Back" | rofi_pick "Appearance")" || return 0
+        items=()
+        if have theme-menu.sh; then
+            items+=(
+                "Wallpaper — choose with thumbnails"
+                "Theme mode — dark, light or smart"
+                "Color scheme — matugen palette"
+            )
+        fi
+        items+=("Appearance status — fonts, icons, cursor")
+        choice="$(printf '%s
+' "${items[@]}" | rofi_pick "Appearance")" || return 0
         case "$choice" in
             Wallpaper*) wallpaper_page ;;
             "Theme mode"*) theme_mode_page ;;
             "Color scheme"*) theme_scheme_page ;;
             "Appearance status"*) appearance_status ;;
-            Back|"") return 0 ;;
+            "") return 0 ;;
         esac
     done
 }
 
 desktop_page() {
     local choice
+    local -a items=()
     while :; do
-        choice="$(printf '%s\n' \
-            "Monitors — status" \
-            "Monitors — apply the saved layout" \
-            "Dock layout — right, left, mirror or ask" \
-            "Back" | rofi_pick "Desktop")" || return 0
+        items=()
+        if have monitor-profiles.sh; then
+            items+=(
+                "Monitors — status"
+                "Monitors — apply the saved layout"
+            )
+            if host_is_laptop; then
+                items+=("Dock layout — right, left, mirror or ask")
+            fi
+        fi
+        ((${#items[@]})) || items+=("No monitor helper is installed")
+        choice="$(printf '%s
+' "${items[@]}" | rofi_pick "Desktop")" || return 0
         case "$choice" in
             "Monitors — status")
                 require_helper monitor-profiles.sh && run_terminal "monitor-profiles.sh status"
@@ -257,23 +283,27 @@ desktop_page() {
             "Dock layout"*)
                 if require_helper monitor-profiles.sh; then
                     local layout
-                    layout="$(printf '%s\n' right left mirror ask Back | rofi_pick "Dock layout")" || continue
-                    [[ -z $layout || $layout == Back ]] && continue
+                    layout="$(printf '%s\n' right left mirror ask | rofi_pick "Dock layout")" || continue
+                    [[ -z $layout ]] && continue
                     run_and_notify "Dock layout: $layout" monitor-profiles.sh set-layout "$layout"
                 fi
                 ;;
-            Back|"") return 0 ;;
+            "") return 0 ;;
         esac
     done
 }
 
 input_page() {
-    local choice
+    local choice mouse_label="Mouse — live tuner"
+    local -a items=()
+    host_is_laptop && mouse_label="Mouse and touchpad — live tuner"
     while :; do
-        choice="$(printf '%s\n' \
-            "Mouse and touchpad — live tuner" \
-            "Keybinds — searchable cheatsheet" \
-            "Back" | rofi_pick "Input")" || return 0
+        items=()
+        have mouse-tune.sh && items+=("$mouse_label")
+        have binds-cheatsheet.sh && items+=("Keybinds — searchable cheatsheet")
+        ((${#items[@]})) || items+=("No input helper is installed")
+        choice="$(printf '%s
+' "${items[@]}" | rofi_pick "Input")" || return 0
         case "$choice" in
             "Mouse"*)
                 require_helper mouse-tune.sh && run_terminal "mouse-tune.sh"
@@ -283,24 +313,34 @@ input_page() {
                     binds-cheatsheet.sh --rofi
                 fi
                 ;;
-            Back|"") return 0 ;;
+            "") return 0 ;;
         esac
     done
 }
 
 session_page() {
     local choice
+    local -a items=()
     while :; do
-        choice="$(printf '%s\n' \
-            "Autostart — choose login applications" \
-            "Idle — status" \
-            "Idle — apply the current profile" \
-            "Idle — configure timeouts" \
-            "Idle — enable or disable" \
-            "Lid — status" \
-            "Game mode — toggle" \
-            "Game mode — status" \
-            "Back" | rofi_pick "Session")" || return 0
+        items=()
+        have autostart.sh && items+=("Autostart — choose login applications")
+        if have idle-tune.sh; then
+            items+=(
+                "Idle — status"
+                "Idle — apply the current profile"
+                "Idle — configure timeouts"
+                "Idle — enable or disable"
+            )
+        fi
+        if host_is_laptop && have lid-handler.sh; then
+            items+=("Lid — status")
+        fi
+        if have gamemode.sh; then
+            items+=("Game mode — toggle" "Game mode — status")
+        fi
+        ((${#items[@]})) || items+=("No session helper is installed")
+        choice="$(printf '%s
+' "${items[@]}" | rofi_pick "Session")" || return 0
         case "$choice" in
             "Autostart"*)
                 require_helper autostart.sh && autostart.sh pick
@@ -326,30 +366,7 @@ session_page() {
             "Game mode — status")
                 require_helper gamemode.sh && run_terminal "gamemode.sh status"
                 ;;
-            Back|"") return 0 ;;
-        esac
-    done
-}
-
-music_page() {
-    local choice
-    while :; do
-        choice="$(printf '%s\n' \
-            "Spicetify — update" \
-            "Spicetify — backup and apply" \
-            "Spicetify — restore backup" \
-            "Back" | rofi_pick "Music")" || return 0
-        case "$choice" in
-            "Spicetify — update")
-                require_helper spicetify && run_terminal "spicetify update"
-                ;;
-            "Spicetify — backup"*)
-                require_helper spicetify && run_terminal "spicetify backup apply"
-                ;;
-            "Spicetify — restore"*)
-                require_helper spicetify && run_terminal "spicetify restore backup"
-                ;;
-            Back|"") return 0 ;;
+            "") return 0 ;;
         esac
     done
 }
@@ -438,24 +455,34 @@ package_remove() {
 
 system_page() {
     local choice
+    local -a items=()
     while :; do
-        choice="$(printf '%s\n' \
-            "Update — repository packages" \
-            "Update — repository and AUR" \
-            "Update — repository mirrors (reflector)" \
-            "Packages — search and install" \
-            "Packages — search installed" \
-            "Packages — remove" \
-            "Doctor — read-only health check" \
-            "DNS — check the resolver chain" \
-            "Packages — catalog drift" \
-            "RAM cache — status" \
-            "RAM cache — warm configured directories" \
-            "Sync — files that differ from the repository" \
-            "Sync — unified diffs" \
-            "Sync — pull live changes back" \
-            "Restore — list and restore backups" \
-            "Back" | rofi_pick "System")" || return 0
+        items=(
+            "Update — repository packages"
+            "Update — repository and AUR"
+            "Packages — search and install"
+            "Packages — search installed"
+            "Packages — remove"
+        )
+        have reflector && items+=("Update — repository mirrors (reflector)")
+        if [[ -n $ROOT ]]; then
+            items+=(
+                "Doctor — read-only health check"
+                "DNS — check the resolver chain"
+                "Packages — catalog drift"
+            )
+        fi
+        have ramcache && items+=("RAM cache — status" "RAM cache — warm configured directories")
+        if [[ -n $ROOT ]]; then
+            items+=(
+                "Sync — files that differ from the repository"
+                "Sync — unified diffs"
+                "Sync — pull live changes back"
+                "Restore — list and restore backups"
+            )
+        fi
+        choice="$(printf '%s
+' "${items[@]}" | rofi_pick "System")" || return 0
         case "$choice" in
             "Update — repository packages")
                 run_terminal "sudo pacman -Syu"
@@ -474,7 +501,8 @@ system_page() {
                 ;;
             "Update — repository mirrors (reflector)")
                 if have reflector; then
-                    local backup="/etc/pacman.d/mirrorlist.bak.$(date +%Y%m%d-%H%M%S)"
+                    local backup
+                    backup="/etc/pacman.d/mirrorlist.bak.$(date +%Y%m%d-%H%M%S)"
                     run_terminal "sudo cp -a /etc/pacman.d/mirrorlist $(printf '%q' "$backup") && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist"
                 else
                     notify "reflector is not installed"
@@ -526,7 +554,7 @@ system_page() {
             "Restore"*)
                 [[ -n $ROOT ]] && run_terminal "./install.sh --restore"
                 ;;
-            Back|"") return 0 ;;
+            "") return 0 ;;
         esac
     done
 }
@@ -535,17 +563,20 @@ install_page() {
     local choice
     while :; do
         choice="$(printf '%s\n' \
+            "Spicetify — backup and apply" \
             "Open the installer" \
-            "Update configuration files" \
-            "Back" | rofi_pick "Install and update")" || return 0
+            "Update configuration files" | rofi_pick "Install and update")" || return 0
         case "$choice" in
+            "Spicetify — backup"*)
+                require_helper spicetify && run_terminal "spicetify backup apply"
+                ;;
             "Open the installer")
                 [[ -n $ROOT ]] && run_terminal "./install.sh"
                 ;;
             "Update configuration"*)
                 [[ -n $ROOT ]] && run_terminal "./install.sh --sync pull"
                 ;;
-            Back|"") return 0 ;;
+            "") return 0 ;;
         esac
     done
 }
@@ -558,19 +589,16 @@ main_menu() {
             "Desktop — monitors and dock" \
             "Input — mouse and keybinds" \
             "Session — autostart, idle, game mode" \
-            "Music — Spicetify update and backups" \
             "System — doctor, DNS, packages, backups" \
-            "Install and update — run install.sh" \
-            "Close" | rofi_pick "Control Center")" || return 0
+            "Install and update — run install.sh" | rofi_pick "Control Center")" || return 0
         case "$choice" in
             "Appearance"*) appearance_page ;;
             "Desktop"*) desktop_page ;;
             "Input"*) input_page ;;
             "Session"*) session_page ;;
-            "Music"*) music_page ;;
             "System"*) system_page ;;
             "Install"*) install_page ;;
-            Close|"") return 0 ;;
+            "") return 0 ;;
         esac
     done
 }
@@ -585,7 +613,7 @@ stay in ./install.sh.
 EOF
         ;;
     --list-actions)
-        printf '%s\n' Appearance Desktop Input Session Music System "Install and update"
+        printf '%s\n' Appearance Desktop Input Session System "Install and update"
         ;;
     "")
         have rofi || die "rofi is not installed"

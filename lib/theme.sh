@@ -31,3 +31,27 @@ generate_theme() {
         pkill -SIGUSR2 waybar 2>/dev/null || true
     fi
 }
+
+# Generate colours during the install step when the pieces exist. Missing
+# pieces warn; they do not abort the configuration step.
+generate_theme_if_possible() {
+    local wallpaper
+
+    if ! command -v matugen >/dev/null 2>&1; then
+        warn "matugen is not installed; colours were not generated"
+        return 0
+    fi
+    if [[ ! -r $REAL_HOME/.config/matugen/config.toml ]]; then
+        warn "matugen config is missing; colours were not generated"
+        return 0
+    fi
+    if ! wallpaper="$(theme_wallpaper_path)"; then
+        warn "no wallpaper recorded; colours were not generated"
+        return 0
+    fi
+    info "generating colours from $wallpaper"
+    run matugen image "$wallpaper" --config "$REAL_HOME/.config/matugen/config.toml"
+    if (( !DRY_RUN )) && command -v pkill >/dev/null 2>&1; then
+        pkill -SIGUSR2 waybar 2>/dev/null || true
+    fi
+}

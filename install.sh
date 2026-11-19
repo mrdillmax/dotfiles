@@ -700,6 +700,32 @@ install_module_files() {
     done
 }
 
+terminal_service_for() {
+    case "$1" in
+        kitty)     printf 'kitty.desktop' ;;
+        foot)      printf 'foot.desktop' ;;
+        ghostty)   printf 'com.mitchellh.ghostty.desktop' ;;
+        alacritty) printf 'Alacritty.desktop' ;;
+        wezterm)   printf 'org.wezfurlong.wezterm.desktop' ;;
+        *)         printf '' ;;
+    esac
+}
+
+selected_terminal() {
+    local name
+    if [[ " ${MODULES[*]} " == *" kitty "* || -n $(command -v kitty 2>/dev/null) ]]; then
+        printf 'kitty'
+        return 0
+    fi
+    for name in foot ghostty alacritty wezterm; do
+        if command -v "$name" >/dev/null 2>&1; then
+            printf '%s' "$name"
+            return 0
+        fi
+    done
+    return 1
+}
+
 render_template() {
     local src="$1" dst="$2"
     local content tmp
@@ -721,6 +747,8 @@ render_template() {
     content="${content//@QT_MONO_FONT5@/$QT_MONO_FONT5}"
     content="${content//@QT_UI_FONT6@/$QT_UI_FONT6}"
     content="${content//@QT_MONO_FONT6@/$QT_MONO_FONT6}"
+    content="${content//@TERMINAL_APP@/$TERMINAL_APP}"
+    content="${content//@TERMINAL_SERVICE@/$TERMINAL_SERVICE}"
 
     tmp="$(mktemp)"
     printf '%s\n' "$content" >"$tmp"
@@ -768,6 +796,15 @@ render_uwsm() {
 install_selected_modules() {
     local name
 
+    TERMINAL_APP=""
+    TERMINAL_SERVICE=""
+    if TERMINAL_APP="$(selected_terminal)"; then
+        TERMINAL_SERVICE="$(terminal_service_for "$TERMINAL_APP")"
+    else
+        TERMINAL_APP=""
+        warn "no supported terminal found; KDE TerminalApplication is left empty"
+    fi
+
     # Cursor settings must be written before uwsm/theming render their templates.
     if [[ " ${MODULES[*]} " == *" cursor "* ]]; then
         install_cursor
@@ -787,6 +824,13 @@ install_selected_modules() {
                 ;;
         esac
     done
+
+    if [[ " ${MODULES[*]} " == *" hypr "* ]]; then
+        install_default_wallpaper || true
+    fi
+    if [[ " ${MODULES[*]} " == *" matugen "* ]]; then
+        generate_theme_if_possible || true
+    fi
 
     # fish_plugins lists Tide; fisher installs the prompt plugins.
     if [[ " ${MODULES[*]} " == *" fish "* ]]; then

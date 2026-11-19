@@ -59,6 +59,13 @@ else
     fail "kdeglobals is not unified"
 fi
 
+if grep -q '^TerminalApplication=@TERMINAL_APP@' "$THEME/home/.config/kdeglobals.in" \
+    && grep -q '^TerminalService=@TERMINAL_SERVICE@' "$THEME/home/.config/kdeglobals.in"; then
+    pass "kdeglobals records the default terminal"
+else
+    fail "kdeglobals does not record the default terminal"
+fi
+
 # 4. Portal backends are explicit.
 portal="$THEME/home/.config/xdg-desktop-portal/portals.conf.in"
 if grep -q '^default=hyprland;gtk' "$portal" \
@@ -95,6 +102,48 @@ if grep -q 'export PATH="\$HOME/.spicetify:\$HOME/.local/bin:\$PATH"' "$ROOT/mod
 else
     fail "the user bin directory is not on the session PATH"
 fi
+
+# 7. One UI font everywhere; the mono face stays in terminals and editors.
+if grep -q '^font=@QT_UI_FONT5@' "$THEME/home/.config/kdeglobals.in"; then
+    pass "KDE applications inherit the shared UI font"
+else
+    fail "kdeglobals has no shared font"
+fi
+for file in \
+    "$ROOT/modules/rofi/home/.config/rofi/launcher.rasi" \
+    "$ROOT/modules/rofi/home/.config/rofi/powermenu.rasi" \
+    "$ROOT/modules/control-center/home/.config/rofi/control-center.rasi"; do
+    if grep -q '"Inter' "$file"; then
+        pass "$(basename "$file") uses Inter"
+    else
+        fail "$(basename "$file") uses a different font"
+    fi
+done
+if grep -q '"Inter", "JetBrainsMono Nerd Font"' "$ROOT/modules/waybar/home/.config/waybar/style.css"; then
+    pass "waybar uses Inter with Nerd Font glyphs"
+else
+    fail "waybar does not use the UI font"
+fi
+if grep -q '^    font = Inter 11' "$ROOT/modules/matugen/home/.config/matugen/templates/dunstrc"; then
+    pass "notifications use the UI font"
+else
+    fail "notifications use a different font"
+fi
+if grep -q 'font_family = Inter' "$ROOT/modules/idle/home/.config/hypr/hyprlock.conf"; then
+    pass "the lock screen uses the UI font"
+else
+    fail "the lock screen does not use the UI font"
+fi
+for script in \
+    "$ROOT/modules/theme-menu/home/.local/bin/theme-menu.sh" \
+    "$ROOT/modules/autostart/home/.local/bin/autostart.sh" \
+    "$ROOT/modules/binds-cheatsheet/home/.local/bin/binds-cheatsheet.sh"; do
+    if grep -q 'rofi/launcher.rasi' "$script"; then
+        pass "$(basename "$script") menus use the shared rofi theme"
+    else
+        fail "$(basename "$script") menus use the default rofi font"
+    fi
+done
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

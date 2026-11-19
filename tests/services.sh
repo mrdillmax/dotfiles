@@ -8,6 +8,7 @@ FAIL=0
 pass() { PASS=$((PASS + 1)); printf 'PASS %s\n' "$*"; }
 fail() { FAIL=$((FAIL + 1)); printf 'FAIL %s\n' "$*"; }
 
+# shellcheck disable=SC2016 # literal shell text is being checked
 # 1. Selected services are enabled and started in one command.
 if grep -q 'systemctl enable --now "\$service"' "$ROOT/lib/system.sh"; then
     pass "selected services are enabled and started"
