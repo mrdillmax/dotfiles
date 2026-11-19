@@ -40,3 +40,30 @@ wallpaper_from_state() {
     [[ -n $image ]] || return 1
     printf '%s\n' "$image"
 }
+
+default_wallpaper_source() {
+    printf '%s\n' "$DOTFILES_DIR/assets/wallpapers/example.jpg"
+}
+
+# Install the repository wallpaper on a first run. An existing choice wins.
+install_default_wallpaper() {
+    local src dest state
+
+    src="$(default_wallpaper_source)"
+    [[ -f $src ]] || return 1
+
+    state="$(wallpaper_state_file)"
+    if [[ -r $state ]] && [[ -n $(<"$state") ]]; then
+        return 0
+    fi
+
+    dest="$REAL_HOME/.local/share/wallpapers/dotfiles/example.jpg"
+    if (( DRY_RUN )); then
+        log "${C_DIM}[dry-run]${C_RESET} install $src -> $dest"
+        return 0
+    fi
+    copy_file "$src" "$dest" 0644
+    mkdir -p -- "$(dirname -- "$state")"
+    printf '%s\n' "$dest" >"$state"
+    ok "default wallpaper: $dest"
+}

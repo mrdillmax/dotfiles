@@ -47,6 +47,34 @@ cursor_theme_exists() {
     [[ -f $dir/index.theme || -f $dir/cursor.theme ]]
 }
 
+# The theme is committed under assets/cursors so a fresh clone needs no archive.
+cursor_repo_theme_dir() {
+    local dir="$DOTFILES_DIR/assets/cursors/${CURSOR_THEME:-win11_concept_cursos}"
+    [[ -d $dir ]] || return 1
+    printf '%s\n' "$dir"
+}
+
+cursor_install_repo_theme() {
+    local theme="$1" src dest
+
+    CURSOR_THEME="$theme"
+    src="$(cursor_repo_theme_dir)" || return 1
+    dest="$REAL_HOME/.local/share/icons/$theme"
+
+    info "cursor theme from repository: $src"
+    if (( DRY_RUN )); then
+        log "${C_DIM}[dry-run]${C_RESET} cp -a $src $dest"
+    else
+        mkdir -p -- "$REAL_HOME/.local/share/icons"
+        rm -rf -- "$dest"
+        cp -a -- "$src" "$dest"
+        chmod -R u+rwX,go+rX -- "$dest"
+        ok "installed $dest"
+    fi
+    CURSOR_INSTALLED_THEME="$theme"
+    return 0
+}
+
 cursor_archive_default() {
     local dir="$DOTFILES_DIR/personal/cursor"
     local candidate
@@ -269,7 +297,10 @@ install_cursor() {
     size="${CURSOR_SIZE_ARG:-$CURSOR_SIZE}"
     cursor_validate_size "$size"
 
-    if [[ -n $CURSOR_ARCHIVE_ARG ]]; then
+    if [[ -z $CURSOR_ARCHIVE_ARG ]] && cursor_repo_theme_dir >/dev/null; then
+        cursor_install_repo_theme "$theme" || true
+        archive=""
+    elif [[ -n $CURSOR_ARCHIVE_ARG ]]; then
         archive="$CURSOR_ARCHIVE_ARG"
     else
         archive="$(cursor_archive_default || true)"
