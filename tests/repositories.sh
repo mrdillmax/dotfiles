@@ -72,5 +72,68 @@ else
     fail "setup order is repositories ($repo_line) then packages ($packages_line)"
 fi
 
+# 4. The root guard must not create state or backup directories on failure.
+guard_line="$(grep -nF 'repositories require root' "$ROOT/install.sh" | cut -d: -f1)"
+# shellcheck disable=SC2016 # literal shell text in install.sh is being checked
+mkdir_line="$(grep -nF 'mkdir -p "$STATE_DIR"' "$ROOT/install.sh" | cut -d: -f1)"
+if [[ -n $guard_line && -n $mkdir_line ]] && ((guard_line < mkdir_line)); then
+    pass "the root guard runs before state directories are created"
+else
+    fail "the root guard runs after state directories (guard $guard_line, mkdir $mkdir_line)"
+fi
+
+# 5. prepare_repositories leaves a clean signal and never upgrades when the
+# merge did not happen.
+run_prepare() {
+    local conf="$1" dry="$2"
+    DOTFILES_DIR="$ROOT" DRY_RUN="$dry" bash -c '
+        source "$DOTFILES_DIR/lib/common.sh"
+        source "$DOTFILES_DIR/lib/tui.sh"
+        source "$DOTFILES_DIR/lib/system.sh"
+        pacman() { printf "PACMAN CALLED\n"; }
+        prepare_repositories "$1"
+    ' _ "$conf" 2>&1
+}
+
+tmp="$(mktemp)"
+printf '[options]\nColor\n' >"$tmp"
+
+out="$(run_prepare "$tmp" 0)"
+if [[ $? -ne 0 && $out != *'PACMAN CALLED'* ]]; then
+    pass "a skipped merge does not upgrade the system"
+else
+    fail "a skipped merge still reached pacman"
+fi
+
+out="$(run_prepare "$tmp" 1)"
+if [[ $? -eq 0 && $out == *'pacman -Syu'* ]]; then
+    pass "--dry-run plans pacman -Syu without running it"
+else
+    fail "--dry-run did not plan pacman -Syu"
+fi
+
+printf '[multilib]\nInclude = /etc/pacman.d/mirrorlist\n' >"$tmp"
+out="$(run_prepare "$tmp" 0)"
+if [[ $? -eq 0 && $out == *'already enabled'* && $out != *'PACMAN CALLED'* ]]; then
+    pass "an enabled multilib skips the upgrade"
+else
+    fail "an enabled multilib still reached pacman"
+fi
+rm -f -- "$tmp"
+
+# 6. A missing pacman.conf is reported, not an awk crash under set -e.
+log="$(mktemp)"
+DOTFILES_DIR="$ROOT" bash -c 'set -e
+    source "$DOTFILES_DIR/lib/common.sh"
+    source "$DOTFILES_DIR/lib/system.sh"
+    merge_pacman_conf /tmp/dotfiles-no-such-pacman.conf' >"$log" 2>&1
+rc=$?
+if [[ $rc -eq 1 ]] && grep -q 'not found, skipping pacman.conf' "$log"; then
+    pass "a missing pacman.conf is reported"
+else
+    fail "a missing pacman.conf crashes (rc $rc)"
+fi
+rm -f -- "$log"
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

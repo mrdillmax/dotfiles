@@ -299,6 +299,12 @@ fi
 REAL_HOME="$(real_home)"
 [[ -n $REAL_HOME ]] || die "cannot determine home directory"
 
+# Fail before mkdir/log setup: a user who forgot sudo must not leave state or
+# backup directories behind.
+if (( DO_REPOSITORIES )) && (( EUID != 0 )) && (( !DRY_RUN )); then
+    die "repositories require root: sudo $DOTFILES_DIR/install.sh --repositories"
+fi
+
 TIMESTAMP="$(date +%Y-%m-%d_%H%M%S)"
 BACKUP_DIR="$REAL_HOME/.dotfiles-backup/$TIMESTAMP"
 STATE_DIR="${XDG_STATE_HOME:-$REAL_HOME/.local/state}/dotfiles"
@@ -349,9 +355,6 @@ QT_UI_FONT6="$UI_FONT,$UI_SIZE,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0"
 QT_MONO_FONT6="$MONO_FONT,$MONO_SIZE,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0"
 
 if (( DO_REPOSITORIES )); then
-    if (( EUID != 0 )) && (( !DRY_RUN )); then
-        die "repositories require root: sudo $DOTFILES_DIR/install.sh --repositories"
-    fi
     prepare_repositories
     exit $?
 fi

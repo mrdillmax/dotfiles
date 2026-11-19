@@ -313,6 +313,10 @@ merge_config() {
 merge_pacman_conf() {
     local target="${1:-/etc/pacman.conf}"
     local tmp
+    if [[ ! -r $target ]]; then
+        warn "not found, skipping pacman.conf: $target"
+        return 1
+    fi
     tmp="$(mktemp)"
     pacman_proposal "$target" "$(nproc)" >"$tmp"
     merge_config "pacman.conf" "$target" "$tmp"
@@ -330,15 +334,25 @@ multilib_enabled() {
 # "target not found". Merge the preset, then refresh with -Syu; -Sy alone is a
 # partial upgrade and is exactly what breaks the system.
 prepare_repositories() {
-    if multilib_enabled; then
+    local conf="${1:-/etc/pacman.conf}"
+
+    if [[ ! -r $conf ]]; then
+        warn "not found: $conf"
+        return 1
+    fi
+
+    if multilib_enabled "$conf"; then
         ok "multilib is already enabled; nothing to do"
         return 0
     fi
 
-    info "enabling [multilib] in /etc/pacman.conf and refreshing the database"
-    merge_pacman_conf
+    info "enabling [multilib] in $conf and refreshing the database"
+    if ! merge_pacman_conf "$conf"; then
+        warn "cannot update $conf; package installs would fail"
+        return 1
+    fi
 
-    if (( !DRY_RUN )) && ! multilib_enabled; then
+    if (( !DRY_RUN )) && ! multilib_enabled "$conf"; then
         warn "[multilib] is still disabled; package installs would fail"
         return 1
     fi
@@ -507,7 +521,7 @@ install_system_configs() {
 
     printf '\n'
     if system_component_wanted pacman; then
-        merge_pacman_conf
+        merge_pacman_conf || warn "pacman.conf merge skipped"
         merge_makepkg_conf
     fi
     if system_component_wanted services; then
