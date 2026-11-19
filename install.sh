@@ -11,7 +11,7 @@ set -euo pipefail
 # Without this, a failing command that is not tested by an if/while quietly
 # ends the installer: the user sees the banner and the prompt, no reason.
 set -E
-trap 'rc=$?; printf "\n%s: line %s failed (exit %s): %s\n" "${0##*/}" "$LINENO" "$rc" "$BASH_COMMAND" >&2' ERR
+trap 'rc=$?; printf "\n%s: line %s failed (exit %s): %s\n" "${BASH_SOURCE[0]:-${0##*/}}" "$LINENO" "$rc" "$BASH_COMMAND" >&2' ERR
 
 SOURCE="${BASH_SOURCE[0]}"
 while [[ -L $SOURCE ]]; do

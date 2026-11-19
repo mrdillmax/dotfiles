@@ -131,8 +131,12 @@ package_installed_map() {
     while IFS= read -r pkg; do
         [[ -n $pkg ]] && PACKAGE_INSTALLED["$pkg"]=1
     done < <(pacman -Qq 2>/dev/null || true)
-    # Spicetify is not a pacman package.
-    command -v spicetify >/dev/null 2>&1 && PACKAGE_INSTALLED[spicetify-cli]=1
+    # Spicetify is not a pacman package. Keep the function's status at 0:
+    # a missing optional command must not abort the installer under set -e.
+    if command -v spicetify >/dev/null 2>&1; then
+        PACKAGE_INSTALLED[spicetify-cli]=1
+    fi
+    return 0
 }
 
 app_installed() {

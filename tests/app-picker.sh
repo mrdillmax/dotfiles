@@ -317,5 +317,21 @@ else
 fi
 rm -f -- "$guard_log"
 
+# 14. A missing optional tool must not make the installed map (and therefore
+# install.sh under set -e) fail. spicetify is not a pacman package.
+map_out="$(PATH=/nonexistent /bin/bash -c '
+    set -euo pipefail
+    source "$1/lib/common.sh"
+    source "$1/lib/packages.sh"
+    pacman() { printf "kitty\n"; }
+    package_installed_map
+    printf "alive\n"
+' _ "$ROOT" 2>&1)" || true
+if [[ $map_out == *alive* ]]; then
+    pass "the installed map survives a missing spicetify"
+else
+    fail "the installed map aborts without spicetify (got: $map_out)"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
