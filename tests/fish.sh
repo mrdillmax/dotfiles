@@ -53,5 +53,18 @@ else
     fail "an existing fish login shell is changed again (rc $rc)"
 fi
 
+# 4. The Tide prompt configuration ships with the module and parses.
+tide="$ROOT/modules/fish/home/.config/fish/conf.d/0-tide.fish"
+if [[ -f $tide ]] && fish -n "$tide"; then
+    pass "the Tide prompt configuration is present and valid"
+else
+    fail "the Tide prompt configuration is missing or invalid"
+fi
+if grep -q '^set -U tide_left_prompt_items ' "$tide"; then
+    pass "the Tide prompt items are configured"
+else
+    fail "the Tide prompt items are not configured"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

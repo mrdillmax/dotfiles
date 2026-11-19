@@ -225,7 +225,8 @@ apply_colors() {
     if ((DRY_RUN)); then
         info "[dry-run] matugen image $WALLPAPER --mode $MODE --type $TYPE --config $MATUGEN_CONFIG"
     else
-        matugen image "$WALLPAPER" --mode "$MODE" --type "$TYPE" --config "$MATUGEN_CONFIG"
+        matugen image "$WALLPAPER" --mode "$MODE" --type "$TYPE" \
+            --prefer closest-to-fallback --config "$MATUGEN_CONFIG"
         ok "colors regenerated from $WALLPAPER ($MODE, $TYPE)"
     fi
 

@@ -220,7 +220,6 @@ hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("lid-handler.sh open"))
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd('uwsm app -- sh -c "cliphist list | rofi -dmenu | cliphist decode | wl-copy"'), { dont_inhibit = true })
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd(powermenu))
 hl.bind(mainMod .. " + H", hl.dsp.exec_cmd(history))
-hl.bind(mainMod .. " + H", hl.dsp.exec_cmd('dunstctl history-pop'))
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd(picker))
 
 hl.bind(mainMod .. " + SHIFT  + S", hl.dsp.exec_cmd('GRIMBLAST_EDITOR="swappy -f" grimblast --freeze edit area'))
@@ -289,6 +288,14 @@ end
 -- Optional per-host workspace targets (see hosts/<host>/monitors.conf.sh)
 local app_ws = monitors.app_workspaces or {}
 
+local function app_workspace(key, fallback)
+    local value = app_ws[key]
+    if type(value) == "number" and value > 0 then
+        return value
+    end
+    return fallback
+end
+
 
 local suppressMaximizeRule = hl.window_rule({
     name  = "suppress-maximize-events",
@@ -323,12 +330,12 @@ hl.window_rule({
 
 hl.window_rule({
     match = { class = ".*[Oo]bsidian.*" },
-    workspace = tostring(app_ws.obsidian or 13) .. " silent",
+    workspace = tostring(app_workspace("obsidian", 5)) .. " silent",
 })
 
 hl.window_rule({
     match = { class = ".*[Vv]esktop.*" },
-    workspace = tostring(app_ws.vesktop or 12) .. " silent",
+    workspace = tostring(app_workspace("vesktop", 6)) .. " silent",
 })
 
 hl.window_rule({

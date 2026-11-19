@@ -499,13 +499,19 @@ Press `SUPER + Space` or launch **Control Center** from rofi. Pages cover:
 
 - **Appearance**: wallpapers with magick thumbnails, dark/light/smart mode,
   matugen colour schemes, fonts/icons/cursor status
-- **Desktop**: monitor status, saved layout, dock preference
-- **Input**: mouse/touchpad tuner, searchable keybind cheatsheet
-- **Session**: autostart, idle, lid, game mode
-- **Music**: Spicetify update, backup/apply and restore
+- **Desktop**: monitor status and saved layout; the dock entry appears only on
+  laptops
+- **Input**: mouse tuner (named for touchpads on laptops), searchable keybind
+  cheatsheet
+- **Session**: autostart (toggle, add or remove a program), idle, lid on
+  laptops, game mode
+- **Network**: Wi-Fi networks through `nmcli`, Bluetooth through `bluetoothctl`
 - **System**: updates, repository mirror refresh (reflector), package
   search/install/remove, doctor, DNS check, package drift, sync and restore
-- **Install and update**: opens `install.sh` in kitty
+- **Install and update**: `spicetify backup apply`, opens `install.sh` in a
+  terminal, updates configuration files
+
+Entries for missing helpers and laptop-only features are hidden, not greyed.
 
 The menu uses the matugen palette (`colors.rasi`), Inter and
 `JetBrainsMono Nerd Font`, with no separate theme to keep in sync. It calls the

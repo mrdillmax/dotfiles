@@ -26,7 +26,8 @@ generate_theme() {
     fi
 
     info "generating colours from $wallpaper"
-    run matugen image "$wallpaper" --config "$REAL_HOME/.config/matugen/config.toml"
+    run matugen image "$wallpaper" --prefer closest-to-fallback \
+        --config "$REAL_HOME/.config/matugen/config.toml"
     if (( !DRY_RUN )) && command -v pkill >/dev/null 2>&1; then
         pkill -SIGUSR2 waybar 2>/dev/null || true
     fi

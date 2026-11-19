@@ -394,7 +394,7 @@ pick_entries() {
             labels+=("$state $name$missing")
         done
 
-        labels+=("+ Add a program")
+        labels+=("+ Add a program" "- Remove a program")
         choice="$(choose_line "Autostart (pick to toggle)" "${labels[@]}")" || return 0
         [[ -n $choice ]] || return 0
         if [[ $choice == '+ Add a program' ]]; then
@@ -405,6 +405,18 @@ pick_entries() {
             [[ -n $new_command ]] || continue
             add_entry "$new_name" "$new_command" || true
             load_entries
+            continue
+        fi
+        if [[ $choice == '- Remove a program' ]]; then
+            local -a names=()
+            for line in "${ENTRIES[@]}"; do
+                IFS=$'\t' read -r enabled name _cmd <<<"$line"
+                names+=("$name")
+            done
+            ((${#names[@]})) || { info "nothing to remove"; continue; }
+            local target
+            target="$(choose_line 'Remove which entry?' "${names[@]}")" || continue
+            [[ -n $target ]] && remove_entry "$target"
             continue
         fi
         chosen="${choice#\[?\] }"

@@ -84,13 +84,13 @@ else
     fail "JSON entries are missing fields"
 fi
 
-# 5. Duplicate detection on the real config (SUPER + H is bound twice).
+# 5. The real config has no duplicate binds (SUPER + H used to be bound twice).
 dup_out="$(run_binds --file "$REPO_CONFIG" --duplicates 2>&1)"
 dup_rc=$?
-if ((dup_rc == 1)) && grep -qx '  SUPER + H' <<<"$dup_out"; then
-    pass "--duplicates finds SUPER + H and exits 1"
+if ((dup_rc == 0)) && grep -q 'No duplicate keybinds' <<<"$dup_out"; then
+    pass "--duplicates reports a clean real config"
 else
-    fail "--duplicates did not find the known duplicate"
+    fail "--duplicates reported a duplicate in the real config"
     printf 'rc=%s\n%s\n' "$dup_rc" "$dup_out"
 fi
 

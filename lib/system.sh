@@ -371,7 +371,7 @@ merge_makepkg_conf() {
 
 enable_system_services() {
     local conf="$DOTFILES_DIR/system/services/services.conf"
-    local service package note label
+    local service service_unit package note label
     local -a labels=() picked=() checked=()
 
     [[ -r $conf ]] || return 0
@@ -408,7 +408,12 @@ enable_system_services() {
     fi
 
     for service in "${picked[@]}"; do
-        if ! systemctl list-unit-files "$service" >/dev/null 2>&1; then
+        if [[ $service != *.* ]]; then
+            service_unit="$service.service"
+        else
+            service_unit="$service"
+        fi
+        if ! systemctl list-unit-files "$service_unit" >/dev/null 2>&1; then
             warn "unit not found, skipping: $service"
             continue
         fi
@@ -450,7 +455,8 @@ install_system_configs() {
     fi
 
     local src dst mode tmp_src iface user
-    local count=0 dns_ok=1 dns_skipped=0 boot_changed=0 dns_changed=0
+    local count=0 dns_ok=1 dns_skipped=0
+    local boot_changed=0 dns_changed=0 zram_changed=0
     local rows=()
 
     mapfile -t rows < <(system_file_map)
@@ -548,6 +554,7 @@ install_system_configs() {
         [[ -n $tmp_src ]] && rm -f -- "$tmp_src"
         case "$dst" in
             /etc/default/grub|/etc/mkinitcpio.conf) boot_changed=1 ;;
+            /etc/systemd/zram-generator.conf) zram_changed=1 ;;
         esac
         dns_is_dns_file "$dst" && dns_changed=1
         count=$((count + 1))
@@ -571,7 +578,7 @@ install_system_configs() {
     info "Applying the changes"
     run systemctl daemon-reload || warn "daemon-reload failed"
 
-    if system_component_wanted zram; then
+    if (( zram_changed )); then
         run systemctl start systemd-zram-setup@zram0.service \
             || warn "could not start zram; check /etc/systemd/zram-generator.conf"
     fi

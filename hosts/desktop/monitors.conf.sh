@@ -9,14 +9,10 @@
 # MON_WS_FIRST first workspace number on this monitor
 # MON_WS_COUNT how many workspace slots this monitor owns
 
-MON_COUNT=2
-MON_NAME=("HDMI-A-2" "DP-1")
-MON_MODE=("1920x1080@60" "1920x1080@60")
-MON_POSITION=("0x0" "1920x0")
-MON_SCALE=("1" "1")
-MON_WS_FIRST=(1 11)
-MON_WS_COUNT=(10 10)
+# No preset: Hyprland uses the connected outputs. Run ./install.sh --monitors
+# to record an explicit layout with per-monitor workspace ranges.
+MON_COUNT=0
 
 # Workspaces for apps that should always open on a fixed workspace.
-APP_WS_VESKTOP=12
-APP_WS_OBSIDIAN=13
+APP_WS_VESKTOP=6
+APP_WS_OBSIDIAN=5

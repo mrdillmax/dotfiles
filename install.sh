@@ -174,12 +174,6 @@ Other:
   --list                list modules, GPU profiles and package categories
   -h, --help            this help
 
-Examples:
-  ./install.sh --dry-run --all
-  ./install.sh --modules hypr,waybar,rofi --gpu nvidia
-  ./install.sh --only-packages --category Terminal,Office --apps foot
-  sudo ./install.sh --system --system-components dns
-  ./install.sh --mouse
 EOF
 }
 
@@ -1031,8 +1025,4 @@ if (( DRY_RUN )); then
 else
     info "backup: $BACKUP_DIR"
     info "log:    $LOG_FILE"
-    printf '\nNext steps:\n'
-    printf '  ./install.sh            # main menu for anything else\n'
-    printf '  ./install.sh --theme    # regenerate matugen colours\n'
-    printf '  ./install.sh --doctor   # read-only health check\n'
 fi

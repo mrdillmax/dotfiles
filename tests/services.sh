@@ -31,6 +31,13 @@ for command in 'systemctl daemon-reload' 'cpupower' 'grub-mkconfig' 'mkinitcpio 
     fi
 done
 
+# shellcheck disable=SC2016 # literal shell text is being checked
+if grep -q 'service_unit="$service.service"' "$ROOT/lib/system.sh"; then
+    pass "service units are looked up with the .service suffix"
+else
+    fail "service units are looked up without a suffix"
+fi
+
 # 3. Bootloader and initramfs rebuilds only follow a changed file.
 if grep -q 'boot_changed' "$ROOT/lib/system.sh"; then
     pass "boot rebuilds are gated on changed files"

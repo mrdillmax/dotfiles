@@ -266,6 +266,12 @@ if grep -q 'Add a program' "$AUTO" && grep -q '^ask_line()' "$AUTO"; then
 else
     fail "the autostart picker cannot add a program"
 fi
+# shellcheck disable=SC2016 # literal shell text is being checked
+if grep -q 'Remove a program' "$AUTO" && grep -q 'remove_entry "$target"' "$AUTO"; then
+    pass "the autostart picker can remove a program"
+else
+    fail "the autostart picker cannot remove a program"
+fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

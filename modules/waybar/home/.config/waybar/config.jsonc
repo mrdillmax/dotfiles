@@ -76,7 +76,8 @@
   "hyprland/language": {
     "format": "  {}",
     "format-en": "EN",
-    "format-uk": "UK"
+    "format-uk": "UK",
+    "on-click": "hyprctl switchxkblayout all next"
   },
 
 

@@ -102,13 +102,15 @@ run_terminal() {
 }
 
 run_and_notify() {
-    local label="$1"
+    local label="$1" log
     shift
-    if "$@" >/dev/null 2>&1; then
+    log="$(mktemp)"
+    if "$@" >"$log" 2>&1; then
         notify "$label"
     else
-        notify "$label failed"
+        notify "$label failed: $(tail -n1 "$log")"
     fi
+    rm -f -- "$log"
 }
 
 require_helper() {
@@ -581,6 +583,88 @@ install_page() {
     done
 }
 
+wifi_connect() {
+    local ssid
+    local -a networks=()
+
+    if ! have nmcli; then
+        notify "NetworkManager (nmcli) is not installed"
+        return 0
+    fi
+    mapfile -t networks < <(nmcli -t -f SSID device wifi list --rescan yes 2>/dev/null |
+        awk 'NF && !seen[$0]++' | head -50)
+    ((${#networks[@]})) || { notify "No Wi-Fi networks found"; return 0; }
+    ssid="$(printf '%s\n' "${networks[@]}" | rofi_pick "Wi-Fi network")" || return 0
+    [[ -n $ssid ]] || return 0
+    run_terminal "nmcli device wifi connect $(printf '%q' "$ssid") --ask"
+}
+
+wifi_page() {
+    local choice connection
+    while :; do
+        choice="$(printf '%s\n' "Wi-Fi — connect" "Wi-Fi — disconnect" "Wi-Fi — status" |
+            rofi_pick "Wi-Fi")" || return 0
+        case "$choice" in
+            "Wi-Fi — connect") wifi_connect ;;
+            "Wi-Fi — disconnect")
+                connection="$(nmcli -t -f NAME connection show --active 2>/dev/null | head -1)"
+                if [[ -n $connection ]]; then
+                    run_terminal "nmcli connection down $(printf '%q' "$connection")"
+                else
+                    notify "No active connection"
+                fi
+                ;;
+            "Wi-Fi — status") run_terminal "nmcli device status" ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
+bluetooth_connect() {
+    local choice mac
+    local -a devices=()
+
+    if ! have bluetoothctl; then
+        notify "bluez (bluetoothctl) is not installed"
+        return 0
+    fi
+    bluetoothctl --timeout 6 scan on >/dev/null 2>&1 || true
+    mapfile -t devices < <(bluetoothctl devices 2>/dev/null | sed 's/^Device //')
+    ((${#devices[@]})) || { notify "No Bluetooth devices found"; return 0; }
+    choice="$(printf '%s\n' "${devices[@]}" | rofi_pick "Bluetooth device")" || return 0
+    [[ -n $choice ]] || return 0
+    mac="${choice%% *}"
+    run_terminal "bluetoothctl connect $(printf '%q' "$mac")"
+}
+
+bluetooth_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' "Bluetooth — on" "Bluetooth — off" "Bluetooth — connect device" \
+            "Bluetooth — status" | rofi_pick "Bluetooth")" || return 0
+        case "$choice" in
+            "Bluetooth — on") run_terminal "bluetoothctl power on" ;;
+            "Bluetooth — off") run_terminal "bluetoothctl power off" ;;
+            "Bluetooth — connect"*) bluetooth_connect ;;
+            "Bluetooth — status") run_terminal "bluetoothctl show" ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
+network_page() {
+    local choice
+    while :; do
+        choice="$(printf '%s\n' "Wi-Fi — networks and status" "Bluetooth — devices and power" |
+            rofi_pick "Network")" || return 0
+        case "$choice" in
+            Wi-Fi*) wifi_page ;;
+            Bluetooth*) bluetooth_page ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
 main_menu() {
     local choice
     while :; do
@@ -589,13 +673,15 @@ main_menu() {
             "Desktop — monitors and dock" \
             "Input — mouse and keybinds" \
             "Session — autostart, idle, game mode" \
+            "Network — Wi-Fi and Bluetooth" \
             "System — doctor, DNS, packages, backups" \
-            "Install and update — run install.sh" | rofi_pick "Control Center")" || return 0
+            "Install and update — installer, Spicetify" | rofi_pick "Control Center")" || return 0
         case "$choice" in
             "Appearance"*) appearance_page ;;
             "Desktop"*) desktop_page ;;
             "Input"*) input_page ;;
             "Session"*) session_page ;;
+            "Network"*) network_page ;;
             "System"*) system_page ;;
             "Install"*) install_page ;;
             "") return 0 ;;
@@ -613,7 +699,7 @@ stay in ./install.sh.
 EOF
         ;;
     --list-actions)
-        printf '%s\n' Appearance Desktop Input Session System "Install and update"
+        printf '%s\n' Appearance Desktop Input Session Network System "Install and update"
         ;;
     "")
         have rofi || die "rofi is not installed"
