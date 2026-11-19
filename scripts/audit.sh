@@ -117,6 +117,7 @@ section "Monitor portability"
 monitor_hits="$(grep -rnE 'HDMI-A-[0-9]|DP-[0-9]|eDP-[0-9]|HEADLESS-[0-9]' \
     "$DOTFILES_DIR" \
     --exclude-dir=.git \
+    --exclude-dir=.superpowers \
     --exclude-dir=personal \
     --exclude-dir=tests \
     --exclude=monitors.conf.sh \
@@ -139,6 +140,7 @@ section "Hardcoded paths"
 home_hits="$(grep -rnP '(?<![A-Za-z0-9._/-])/home/[A-Za-z0-9._-]+/' \
     "$DOTFILES_DIR" \
     --exclude-dir=.git \
+    --exclude-dir=.superpowers \
     --exclude-dir=personal \
     --exclude-dir=tests \
     --exclude='*.md' \
