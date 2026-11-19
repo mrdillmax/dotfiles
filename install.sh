@@ -27,6 +27,7 @@ ASSUME_YES=0
 ALL=0
 DO_PACKAGES=1
 DO_SYSTEM=0
+DO_REPOSITORIES=0
 DO_MOUSE=0
 DO_MONITORS=0
 DO_DOCK=0
@@ -142,6 +143,7 @@ Settings:
                         apply|watch|status
 
 System (/etc, run the write actions with sudo):
+  --repositories        enable [multilib] and refresh the database (sudo)
   --system              install opt-in /etc files one by one
   --system-components a,b
                         dns|zram|cpupower|services|pacman|grub|ram
@@ -222,6 +224,7 @@ while (($#)); do
         --monitor-profiles) MONITOR_PROFILES_ACTION="${2:?missing value for --monitor-profiles}"; HAS_ACTION=1; shift ;;
         --pkg-sync)   PKG_SYNC_ACTION="${2:?missing value for --pkg-sync}"; HAS_ACTION=1; shift ;;
         --system)     DO_SYSTEM=1; HAS_ACTION=1 ;;
+        --repositories) DO_REPOSITORIES=1; HAS_ACTION=1 ;;
         --system-components) SYSTEM_COMPONENTS_ARG="${2:?missing value for --system-components}"; shift ;;
         --iface)      IFACE_ARG="${2:?missing value for --iface}"; shift ;;
         --autologin-user) AUTOLOGIN_USER_ARG="${2:?missing value for --autologin-user}"; shift ;;
@@ -344,6 +347,14 @@ QT_UI_FONT5="$UI_FONT,$UI_SIZE,-1,5,50,0,0,0,0,0"
 QT_MONO_FONT5="$MONO_FONT,$MONO_SIZE,-1,5,50,0,0,0,0,0"
 QT_UI_FONT6="$UI_FONT,$UI_SIZE,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0"
 QT_MONO_FONT6="$MONO_FONT,$MONO_SIZE,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0"
+
+if (( DO_REPOSITORIES )); then
+    if (( EUID != 0 )) && (( !DRY_RUN )); then
+        die "repositories require root: sudo $DOTFILES_DIR/install.sh --repositories"
+    fi
+    prepare_repositories
+    exit $?
+fi
 
 if (( DO_KERNEL )); then
     install_kernel

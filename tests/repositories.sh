@@ -31,5 +31,36 @@ printf '[options]\nColor\n\n[multilib]\nInclude = /etc/pacman.d/mirrorlist\n' >"
 check_enabled "$tmp" 0 "active [multilib] counts as enabled"
 rm -f -- "$tmp"
 
+# 2. The action reports its plan under --dry-run and needs root otherwise.
+log="$(mktemp)"
+if (cd "$ROOT" && ./install.sh --repositories --dry-run) >"$log" 2>&1; then
+    if grep -Eq 'multilib is already enabled|\[dry-run\].*merge pacman.conf' "$log"; then
+        pass "--repositories --dry-run reports its plan"
+    else
+        fail "--repositories --dry-run printed no plan"
+    fi
+else
+    fail "--repositories --dry-run failed"
+fi
+rm -f -- "$log"
+
+if ((EUID != 0)); then
+    log="$(mktemp)"
+    if (cd "$ROOT" && ./install.sh --repositories) >"$log" 2>&1; then
+        fail "--repositories ran without root"
+    elif grep -q 'repositories require root' "$log"; then
+        pass "--repositories needs root"
+    else
+        fail "--repositories failed without a root message"
+    fi
+    rm -f -- "$log"
+fi
+
+if ./install.sh --help 2>&1 | grep -q -- '--repositories'; then
+    pass "--repositories is documented in --help"
+else
+    fail "--repositories is missing from --help"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

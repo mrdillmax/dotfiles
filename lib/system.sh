@@ -326,6 +326,26 @@ multilib_enabled() {
     awk '/^\[multilib\][[:space:]]*$/ { found = 1 } END { exit !found }' "$conf"
 }
 
+# First run: without [multilib] every lib32-* package fails with
+# "target not found". Merge the preset, then refresh with -Syu; -Sy alone is a
+# partial upgrade and is exactly what breaks the system.
+prepare_repositories() {
+    if multilib_enabled; then
+        ok "multilib is already enabled; nothing to do"
+        return 0
+    fi
+
+    info "enabling [multilib] in /etc/pacman.conf and refreshing the database"
+    merge_pacman_conf
+
+    if (( !DRY_RUN )) && ! multilib_enabled; then
+        warn "[multilib] is still disabled; package installs would fail"
+        return 1
+    fi
+
+    run pacman -Syu
+}
+
 merge_makepkg_conf() {
     local target="${1:-/etc/makepkg.conf}"
     local tmp
