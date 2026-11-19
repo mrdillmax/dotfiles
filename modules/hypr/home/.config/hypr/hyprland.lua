@@ -217,7 +217,7 @@ hl.bind(mainMod .. " + SHIFT + A", hl.dsp.exec_cmd("autostart.sh pick"))
 hl.bind("switch:on:Lid Switch", hl.dsp.exec_cmd("lid-handler.sh closed"))
 hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("lid-handler.sh open"))
 
-hl.bind(mainMod .. " + V", hl.dsp.exec_cmd('uwsm app -- sh -c "cliphist list | rofi -dmenu | cliphist decode | wl-copy"'), { dont_inhibit = true })
+hl.bind(mainMod .. " + V", hl.dsp.exec_cmd('uwsm app -- sh -c "cliphist list | rofi -theme \\"$HOME/.config/rofi/launcher.rasi\\" -dmenu | cliphist decode | wl-copy"'), { dont_inhibit = true })
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd(powermenu))
 hl.bind(mainMod .. " + H", hl.dsp.exec_cmd(history))
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd(picker))

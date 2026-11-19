@@ -102,6 +102,33 @@ else
     fail "rofi rows still rely on transparent"
 fi
 
+# 3c. Rofi 2.x paints element-text white unless the theme overrides it, so every
+# themed menu needs an explicit transparent background.
+for theme in \
+    "$ROOT/modules/rofi/home/.config/rofi/launcher.rasi" \
+    "$ROOT/modules/rofi/home/.config/rofi/powermenu.rasi" \
+    "$RASI"; do
+    if awk '/^element-text *\{/,/^\}/' "$theme" | grep -q 'background-color: *transparent'; then
+        pass "$(basename "$theme") keeps element-text transparent"
+    else
+        fail "$(basename "$theme") leaves element-text white"
+    fi
+done
+
+# 3d. Message and history popups reuse the same palette.
+# shellcheck disable=SC2016 # literal shell text is being checked
+if grep -q 'args=(-theme "$THEME"' "$CC"; then
+    pass "info messages use the control center theme"
+else
+    fail "info messages fall back to the default white theme"
+fi
+if grep -q 'launcher.rasi' "$ROOT/modules/rofi/home/.config/rofi/scripts/rofi-dunst-history.sh" \
+    && grep -q 'launcher.rasi' "$ROOT/modules/hypr/home/.config/hypr/hyprland.lua"; then
+    pass "history and clipboard menus use the launcher theme"
+else
+    fail "history or clipboard menus fall back to the default theme"
+fi
+
 # 4. The bind is configurable per host and rendered through a separate Lua file.
 for host in desktop laptop; do
     if grep -q 'CONTROL_CENTER_BIND="SUPER + Space"' "$ROOT/hosts/$host/control-center.conf"; then

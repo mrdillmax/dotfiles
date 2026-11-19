@@ -81,7 +81,9 @@ AUR_GPG_FLAGS=(--gpgflags "--keyserver hkps://keyserver.ubuntu.com --keyserver h
 message() {
     local text="$1"
     if have rofi; then
-        rofi -e "$text"
+        local -a args=(-e "$text")
+        [[ -r $THEME ]] && args=(-theme "$THEME" "${args[@]}")
+        rofi "${args[@]}"
     else
         printf '%s\n' "$text"
     fi
