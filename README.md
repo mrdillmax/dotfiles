@@ -270,7 +270,12 @@ it, a plain numbered prompt is used.
 | `workspaces-split` | per-monitor workspace slots; offered only with 2+ monitors |
 | `mouse-sensitivity` | interactive pointer tuner and the input overlay |
 
-Spicetify CLI is a selected Music entry and is installed by the upstream script, not pacman. `./install.sh --spicetify` runs the same installer.
+Spicetify CLI is a selected Music entry, not a pacman package. The installer
+downloads the official release archive into `~/.spicetify` instead of running
+the upstream shell installer, which needs an initialised Spotify. Launch
+Spotify once (spotify-launcher downloads it on first start) before running
+`spicetify update`, `apply`, or the Marketplace. `./install.sh --spicetify`
+runs the same installer.
 
 ### Host profiles
 

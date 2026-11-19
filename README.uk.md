@@ -271,7 +271,12 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 | `workspaces-split` | слоти воркспейсів на монітор; лише коли є 2+ монітори |
 | `mouse-sensitivity` | інтерактивний тюнер вказівника й overlay вводу |
 
-Spicetify CLI — вибраний Music-пункт, який ставить upstream-скрипт, а не pacman. `./install.sh --spicetify` запускає той самий інсталятор.
+Spicetify CLI — вибраний Music-пункт, а не pacman-пакет. Інсталятор качає
+офіційний release-архів у `~/.spicetify`, а не запускає upstream shell-скрипт,
+якому потрібен уже ініціалізований Spotify. Запусти Spotify один раз
+(spotify-launcher качає його при першому старті), перш ніж робити
+`spicetify update`, `apply` чи Marketplace. `./install.sh --spicetify`
+запускає той самий інсталятор.
 
 ### Профілі хоста
 
