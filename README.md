@@ -617,6 +617,26 @@ sudo ./install.sh --system --system-components ram
 
 No fstab entry, no sudoers rule and no NOPASSWD rule is created.
 
+### Kernel and CPU level
+
+```bash
+./install.sh --kernel
+```
+
+The installer detects the CPU x86-64 level (`v1`..`v4`) and offers kernels at
+or below it: `linux-lts` (fallback), `linux`, `linux-zen`, and a matching
+xanmod level on desktops. Laptops are treated conservatively. An above-CPU
+level requires a red warning and typing `I UNDERSTAND`; non-interactive mode
+refuses it. The running kernel and the fallback kernel are never removed.
+
+NVIDIA DKMS always gets matching headers. The installer prints
+`mkinitcpio`/`grub-mkconfig` commands and never runs them.
+`./install.sh --doctor` compares the CPU level with the installed kernel level.
+
+yay runs with `--pgpfetch=false` for AUR kernels. Build keys are expected in the
+user keyring; import a missing key once with `gpg --recv-keys`, then the install
+does not stop on a keyserver timeout or ask again.
+
 ## Theming
 
 Colours are generated with matugen from a wallpaper:
