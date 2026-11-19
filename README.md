@@ -550,7 +550,9 @@ so a missing file is safe.
 `packages/catalog.tsv` is the source of truth. Each row carries the package,
 category, role, default flag, host, GPU list and a short description. The
 installer shows category tabs and a checklist inside each category, so you can
-drop one package without editing a list.
+drop one package without editing a list. Categories that contain default
+packages start checked, so pressing Enter keeps the curated set instead of
+silently selecting nothing.
 
 - ★ main: config in this repo, selected by default
 - ○ alternative: package only, not selected by default

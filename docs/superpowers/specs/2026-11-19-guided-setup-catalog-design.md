@@ -93,6 +93,8 @@ only. The guided wizard lives only in the interactive menu.
 - If `--only-packages` is used without `--packages`, `--apps` or
   `--category` and there is no TTY (or `--yes` is set), exit with a clear
   error naming the missing selector.
+- Preselect every category that has default packages, so accepting the
+  category picker does not silently select nothing.
 - Log the exact package list before installing.
 - Check `sudo` (when not root) and the package manager before mutating.
 - After install, re-read `pacman -Qq` and report any requested package that

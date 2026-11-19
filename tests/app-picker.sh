@@ -127,6 +127,14 @@ fi
 check_contains "Terminal" "$category_list" "catalog has the Terminal category"
 check_contains "Games" "$category_list" "catalog has the Games category"
 check_contains "System" "$category_list" "catalog has the System category"
+default_category_list="$(catalog_default_categories)"
+check_contains "Terminal" "$default_category_list" "Terminal has default packages"
+check_contains "Desktop" "$default_category_list" "Desktop has default packages"
+if grep -qx 'Virtualization' <<<"$default_category_list"; then
+    fail "Virtualization has no default packages but is preselected"
+else
+    pass "categories without defaults stay unchecked"
+fi
 duplicates="$(catalog_lines | cut -f1 | sort | uniq -d)"
 if [[ -z $duplicates ]]; then
     pass "catalog has no duplicate packages"

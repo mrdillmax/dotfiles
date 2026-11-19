@@ -48,6 +48,12 @@ catalog_category_defaults() {
     catalog_lines | awk -F'\t' -v c="$1" '$2 == c && $4 == "yes" { n++ } END { print n + 0 }'
 }
 
+# Categories with at least one default package. Used to preselect the category
+# picker so pressing Enter does not silently select nothing.
+catalog_default_categories() {
+    catalog_lines | awk -F'\t' '$4 == "yes" { seen[$2] = 1 } END { for (c in seen) print c }' | sort
+}
+
 # Prints package<TAB>role<TAB>default<TAB>host<TAB>gpu<TAB>description.
 catalog_rows_for_category() {
     catalog_lines | awk -F'\t' -v c="$1" '$2 == c'
@@ -179,7 +185,7 @@ app_label() {
 }
 
 select_categories() {
-    local -a categories=() labels=()
+    local -a categories=() labels=() default_categories=()
     local category
 
     SELECTED_CATEGORIES=()
@@ -212,11 +218,18 @@ select_categories() {
         return 0
     fi
 
+    mapfile -t default_categories < <(catalog_default_categories)
+
+    local label
+    TUI_CHECKED_ITEMS=()
     for category in "${categories[@]}"; do
-        labels+=("$category — $(catalog_category_count "$category") packages, $(catalog_category_defaults "$category") by default")
+        label="$category — $(catalog_category_count "$category") packages, $(catalog_category_defaults "$category") by default"
+        labels+=("$label")
+        if printf '%s\n' "${default_categories[@]:-}" | grep -Fxq -- "$category"; then
+            TUI_CHECKED_ITEMS+=("$label")
+        fi
     done
 
-    TUI_CHECKED_ITEMS=()
     tui_checklist "Package categories" "${labels[@]}"
     local line
     for line in "${TUI_SELECTION[@]}"; do
