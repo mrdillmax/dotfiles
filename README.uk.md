@@ -112,7 +112,7 @@ cd ~/Projects/dotfiles
 На машині, де ще немає передумов:
 
 ```bash
-./bootstrap.sh            # base-devel/git/curl, далі ./install.sh
+./bootstrap.sh            # base-devel/git/curl/jq/gum + yay-bin, далі ./install.sh
 ./bootstrap.sh --dry-run  # спершу показати всі команди
 ```
 
@@ -134,11 +134,11 @@ fish -c 'fisher update'   # встановити плагіни tide
 ./bootstrap.sh --yes -- --host laptop --gpu intel
 ```
 
-Bootstrap ставить лише інструменти, потрібні інсталятору (`base-devel`, `git`,
-`curl`), перевіряє доступність мережі й повідомляє про відсутній AUR-помічник.
-Він ніколи не збирає AUR-помічник. Далі запускає `install.sh` (з `--all --yes`,
-якщо передано `--yes`) і завершує read-only проходом `--doctor`. Усе після `--`
-передається в `install.sh`.
+Bootstrap ставить інструменти, потрібні інсталятору (`base-devel`, `git`,
+`curl`, `jq`, `gum`), перевіряє доступність мережі й збирає `yay-bin`, якщо
+AUR-помічника немає. `--no-aur` лишає старий режим лише з попередженням. Далі
+запускає `install.sh` (з `--all --yes`, якщо передано `--yes`) і завершує
+read-only проходом `--doctor`. Усе після `--` передається в `install.sh`.
 
 ## Структура репозиторію
 

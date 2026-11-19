@@ -112,7 +112,7 @@ Flags stay for automation:
 On a machine that does not have the prerequisites yet:
 
 ```bash
-./bootstrap.sh            # base-devel/git/curl, then ./install.sh
+./bootstrap.sh            # base-devel/git/curl/jq/gum + yay-bin, then ./install.sh
 ./bootstrap.sh --dry-run  # show every command first
 ```
 
@@ -134,11 +134,11 @@ fish -c 'fisher update'   # install the tide prompt plugins
 ./bootstrap.sh --yes -- --host laptop --gpu intel
 ```
 
-Bootstrap installs only the tools the installer needs (`base-devel`, `git`,
-`curl`), checks network reachability and reports a missing AUR helper. It never
-builds an AUR helper. It then runs `install.sh` (with `--all --yes` when `--yes`
-is given) and finishes with a read-only `--doctor` pass. Everything after `--`
-is forwarded to `install.sh`.
+Bootstrap installs the tools the installer needs (`base-devel`, `git`, `curl`,
+`jq`, `gum`), checks network reachability and builds `yay-bin` when no AUR
+helper exists. Use `--no-aur` to keep the old report-only behaviour. It then
+runs `install.sh` (with `--all --yes` when `--yes` is given) and finishes with a
+read-only `--doctor` pass. Everything after `--` is forwarded to `install.sh`.
 
 ## Repository layout
 

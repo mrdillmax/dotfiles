@@ -45,7 +45,7 @@ make doctor           # read-only health check
 
 `./install.sh --dry-run --all` selects the required modules and default packages but never touches `/etc`.
 
-If the machine lacks the prerequisites (`base-devel`, `git`, `curl`), bootstrap
+If the machine lacks the prerequisites (`base-devel`, `git`, `curl`, `jq`, `gum`), bootstrap
 can install them and then start the installer:
 
 ```bash
@@ -53,7 +53,7 @@ can install them and then start the installer:
 ./bootstrap.sh --yes -- --host laptop --gpu intel
 ```
 
-Bootstrap never builds an AUR helper; it only reports a missing `yay`/`paru`.
+Bootstrap builds `yay-bin` when no AUR helper exists; `--no-aur` only reports a missing `yay`/`paru`.
 Everything after `--` is passed to `install.sh`.
 
 ## 3. Interactive install
