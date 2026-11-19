@@ -152,6 +152,33 @@ if grep -qx 'Virtualization' <<<"$default_category_list"; then
 else
     pass "categories without defaults stay unchecked"
 fi
+
+# 4c. Category labels have no comma: gum splits --selected on commas, so a
+# comma used to drop the whole preselection and Enter selected nothing.
+terminal_label="$(category_label Terminal)"
+if [[ $terminal_label == *,* ]]; then
+    fail "category labels contain a comma (got: $terminal_label)"
+else
+    pass "category labels contain no comma"
+fi
+check_contains "Terminal —" "$terminal_label" "category label names the category"
+
+# 4d. Preselection survives a label that still contains a comma.
+gum() {
+    local prev="" arg
+    for arg in "$@"; do
+        [[ $prev == --selected ]] && printf '%s\n' "$arg"
+        prev="$arg"
+    done
+}
+TUI_CHECKED_ITEMS=("A — 2 packages, 1 by default")
+tui_checklist_indexes "test" "A — 2 packages, 1 by default" "B — 0 packages, 0 by default"
+if [[ ${TUI_SELECTION_INDEXES[0]:-} == 0 ]]; then
+    pass "comma in a label keeps its preselection"
+else
+    fail "comma in a label drops the preselection"
+fi
+unset -f gum
 duplicates="$(catalog_lines | cut -f1 | sort | uniq -d)"
 if [[ -z $duplicates ]]; then
     pass "catalog has no duplicate packages"

@@ -68,13 +68,15 @@ else
     fail "select_modules is defined after the menu opens"
 fi
 
-# 0b. Gum gets every default module as an explicit checked item.
+# 0b. Gum gets every default module as an explicit checked item, and commas are
+# removed from the displayed label because gum splits --selected on commas.
 # shellcheck disable=SC2016 # literal shell text is being checked
-if grep -q 'args+=(--selected "${items\[$i\]}")' "$ROOT/lib/tui.sh" \
+if grep -q 'args+=(--selected "${display\[$i\]}")' "$ROOT/lib/tui.sh" \
+    && grep -q 'display+=("${items\[$i\]//,/;}")' "$ROOT/lib/tui.sh" \
     && grep -q 'label="${label//,/;}"' "$ROOT/install.sh"; then
     pass "module labels are comma-safe and preselected individually"
 else
-    fail "gum preselection still builds a comma-separated list"
+    fail "gum preselection builds a comma-separated list or keeps commas"
 fi
 
 # 1. Every actionable menu entry has a flag.

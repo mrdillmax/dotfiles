@@ -251,6 +251,14 @@ tui_checklist_indexes() {
 
     ((${#items[@]} == 0)) && return 0
 
+    # gum reads --selected as a comma-separated list, so a comma inside a label
+    # splits it and the preselection silently matches nothing. Show semicolons
+    # instead; the caller still receives its original item text.
+    local -a display=()
+    for i in "${!items[@]}"; do
+        display+=("${items[$i]//,/;}")
+    done
+
     if tui_has_gum; then
         local line
         local -a selected=()
@@ -266,19 +274,19 @@ tui_checklist_indexes() {
 
         local -a args=(--no-limit --header "$title")
         for i in "${selected[@]}"; do
-            args+=(--selected "${items[$i]}")
+            args+=(--selected "${display[$i]}")
         done
 
         while IFS= read -r line; do
             line="$(tui_normalize_choice "$line")"
             [[ -n $line ]] || continue
-            for i in "${!items[@]}"; do
-                if [[ ${items[$i]} == "$line" ]]; then
+            for i in "${!display[@]}"; do
+                if [[ ${display[$i]} == "$line" ]]; then
                     TUI_SELECTION_INDEXES+=("$i")
                     break
                 fi
             done
-        done < <(printf '%s\n' "${items[@]}" | gum choose "${args[@]}")
+        done < <(printf '%s\n' "${display[@]}" | gum choose "${args[@]}")
         return 0
     fi
 

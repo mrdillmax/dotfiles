@@ -48,6 +48,13 @@ catalog_category_defaults() {
     catalog_lines | awk -F'\t' -v c="$1" '$2 == c && $4 == "yes" { n++ } END { print n + 0 }'
 }
 
+# No comma: gum reads --selected as a comma-separated list, and a comma here
+# used to drop the whole preselection.
+category_label() {
+    printf '%s — %s packages (%s default)' \
+        "$1" "$(catalog_category_count "$1")" "$(catalog_category_defaults "$1")"
+}
+
 # Categories with at least one default package. Used to preselect the category
 # picker so pressing Enter does not silently select nothing.
 catalog_default_categories() {
@@ -210,7 +217,7 @@ select_categories() {
     local label
     TUI_CHECKED_ITEMS=()
     for category in "${categories[@]}"; do
-        label="$category — $(catalog_category_count "$category") packages, $(catalog_category_defaults "$category") by default"
+        label="$(category_label "$category")"
         labels+=("$label")
         if printf '%s\n' "${default_categories[@]:-}" | grep -Fxq -- "$category"; then
             TUI_CHECKED_ITEMS+=("$label")
