@@ -382,7 +382,11 @@ package_search_install() {
         repo/*) run_terminal "sudo pacman -S --needed $(printf '%q' "$pkg")" ;;
         aur/*)
             if [[ -n $helper ]]; then
-                run_terminal "$helper -S --needed $(printf '%q' "$pkg")"
+                if [[ $helper == yay ]]; then
+                    run_terminal "$helper --pgpfetch=false -S --needed $(printf '%q' "$pkg")"
+                else
+                    run_terminal "$helper -S --needed $(printf '%q' "$pkg")"
+                fi
             else
                 notify "No AUR helper; install $pkg manually"
             fi
@@ -453,7 +457,11 @@ system_page() {
                 ;;
             "Update — repository and AUR")
                 if [[ -n $(aur_helper) ]]; then
-                    run_terminal "$(aur_helper) -Syu"
+                    if [[ $(aur_helper) == yay ]]; then
+                        run_terminal "yay --pgpfetch=false -Syu"
+                    else
+                        run_terminal "$(aur_helper) -Syu"
+                    fi
                 else
                     notify "No AUR helper; updating repository packages only"
                     run_terminal "sudo pacman -Syu"

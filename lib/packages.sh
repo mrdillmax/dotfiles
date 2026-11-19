@@ -359,7 +359,11 @@ install_packages() {
                     helper="paru"
                 fi
                 if [[ -n $helper ]]; then
-                    run "$helper" -S --needed --noconfirm "${aur[@]}"
+                    if [[ $helper == yay ]]; then
+                        run "$helper" --pgpfetch=false -S --needed --noconfirm "${aur[@]}"
+                    else
+                        run "$helper" -S --needed --noconfirm "${aur[@]}"
+                    fi
                 else
                     warn "no AUR helper found (yay/paru); install manually:"
                     printf '  %s\n' "${aur[@]}"

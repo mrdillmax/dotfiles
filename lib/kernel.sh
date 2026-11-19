@@ -213,7 +213,14 @@ kernel_install_package() {
         helper="paru"
     fi
     [[ -n $helper ]] || die "no AUR helper found for $package"
-    run "$helper" -S --needed --noconfirm "$package"
+    if [[ $helper == yay ]]; then
+        # The keyring already has the build keys on a normal install. Letting
+        # yay fetch again makes it fail on unavailable keyservers, so disable
+        # that prompt and let makepkg verify against the existing keyring.
+        run "$helper" --pgpfetch=false -S --needed --noconfirm "$package"
+    else
+        run "$helper" -S --needed --noconfirm "$package"
+    fi
 }
 
 kernel_offer_menu() {
