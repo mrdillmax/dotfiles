@@ -266,11 +266,12 @@ if grep -q 'Add a program' "$AUTO" && grep -q '^ask_line()' "$AUTO"; then
 else
     fail "the autostart picker cannot add a program"
 fi
-# shellcheck disable=SC2016 # literal shell text is being checked
-if grep -q 'Remove a program' "$AUTO" && grep -q 'remove_entry "$target"' "$AUTO"; then
-    pass "the autostart picker can remove a program"
+if grep -q 'Remove a program' "$AUTO" \
+    && grep -q '^remove_fzf()' "$AUTO" \
+    && grep -q 'fzf --multi --height=100%' "$AUTO"; then
+    pass "the autostart picker removes programs through fzf"
 else
-    fail "the autostart picker cannot remove a program"
+    fail "the autostart picker cannot remove programs through fzf"
 fi
 
 if grep -q 'labels=("+ Add a program" "- Remove a program")' "$AUTO" \
@@ -279,6 +280,21 @@ if grep -q 'labels=("+ Add a program" "- Remove a program")' "$AUTO" \
     pass "add and remove are at the top, programs are chosen with fzf"
 else
     fail "the autostart add flow does not use fzf"
+fi
+
+if grep -q 'Command...' "$AUTO" \
+    && grep -q 'read -r answer_command' "$AUTO" \
+    && grep -q '^add_fzf()' "$AUTO"; then
+    pass "the autostart picker accepts a custom command"
+else
+    fail "the autostart picker only accepts desktop apps"
+fi
+
+if grep -q 'run_in_terminal_wait' "$AUTO" \
+    && grep -q 'kitty --class dotfiles-control-center' "$AUTO"; then
+    pass "add and remove open a floating terminal only when needed"
+else
+    fail "the autostart picker still opens a console before the rofi list"
 fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"

@@ -203,6 +203,13 @@ else
     pass "an unknown option is rejected"
 fi
 
+# 12b. The editor picker uses a real Nerd Font glyph, not a literal escape.
+if ! grep -q '\\uf11c' "$SCRIPT" && grep -qF "$(printf '%b' '\uf11c')" "$SCRIPT"; then
+    pass "the editor picker shows its icon"
+else
+    fail "the editor picker shows a literal escape"
+fi
+
 # 13. The desktop entry launches rofi mode.
 desktop="$ROOT/modules/binds-cheatsheet/home/.local/share/applications/binds-cheatsheet.desktop"
 if grep -qx 'Exec=binds-cheatsheet.sh --rofi' "$desktop" \

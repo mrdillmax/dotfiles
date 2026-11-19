@@ -337,7 +337,7 @@ print_rofi_edit() {
     local -a rows=()
 
     for i in "${!KEYS[@]}"; do
-        rows+=("<span font='JetBrainsMono Nerd Font 13'>\uf11c</span>  $(printf '%-28s %s' "${KEYS[$i]}" "${ACTIONS[$i]}")")
+        rows+=("<span font='JetBrainsMono Nerd Font 13'></span>  $(printf '%-28s %s' "${KEYS[$i]}" "${ACTIONS[$i]}")")
     done
 
     if ! command -v rofi >/dev/null 2>&1 || [[ -z ${WAYLAND_DISPLAY:-}${DISPLAY:-} ]]; then
@@ -346,7 +346,7 @@ print_rofi_edit() {
     index="$(printf '%s\n' "${rows[@]}" | rofi \
         -theme "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/launcher.rasi" \
         -dmenu -p "" -no-custom -no-fixed-num-lines -markup-rows -format i \
-        -theme-str 'entry { placeholder: "Edit keybind"; }')" || return 1
+        -theme-str 'window { width: 820px; } entry { placeholder: "Keybinds — pick one to edit"; }')" || return 1
     [[ $index =~ ^[0-9]+$ ]] || return 1
     printf '%s:%s\n' "$CONFIG" "${LINES[$index]}"
 }

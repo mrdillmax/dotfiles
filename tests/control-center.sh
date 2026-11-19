@@ -81,11 +81,15 @@ else
     fail "Spicetify update is not a single action inside updates"
 fi
 
-# 1e. A terminal opened by the control center waits for a key press.
-if ! grep -q -- '--hold' "$CC" && grep -q 'read -rsn1' "$CC"; then
-    pass "the action terminal waits for a key press and closes"
+# 1e. Only commands whose output matters wait for a key press; fzf pickers
+# close immediately on Esc.
+# shellcheck disable=SC2016 # literal source text is being checked
+if grep -q -- '--hold' "$CC" \
+    && grep -q 'read -rsn1' "$CC" \
+    && grep -q '\[ -n "$sel" \] || exit 0' "$CC"; then
+    pass "only output-heavy terminals wait for a key press"
 else
-    fail "the action terminal closes immediately or stays forever"
+    fail "fzf pickers still wait for a key or output terminals close too fast"
 fi
 
 # 1f. Host-specific entries are gated: no dock layout on a desktop, no lid
@@ -227,8 +231,8 @@ menu_block="$(awk '/^menu_page\(\)/,/^}/' "$CC")"
 if grep -q 'Toggle notifications' <<<"$menu_block" \
     && ! grep -q 'Apply idle' <<<"$menu_block" \
     && ! grep -q 'Game mode status' <<<"$menu_block" \
-    && grep -q 'Autostart") run_terminal' <<<"$menu_block"; then
-    pass "menu entries are toggles and autostart uses a terminal"
+    && grep -q 'Autostart") autostart.sh pick' <<<"$menu_block"; then
+    pass "menu entries are toggles and autostart stays in rofi"
 else
     fail "menu wording is stale"
 fi
@@ -267,6 +271,69 @@ if grep -q 'lines: *20;' "$RASI"; then
     pass "the menu can show twenty rows"
 else
     fail "the menu still scrolls for a normal page"
+fi
+
+# 5f. Submenus return one page back on Esc; only applied actions close rofi.
+style_block="$(awk '/^style_page\(\)/,/^}/' "$CC")"
+config_block="$(awk '/^configuration_page\(\)/,/^}/' "$CC")"
+if ! grep -q 'wallpaper_page; exit 0' <<<"$style_block" \
+    && ! grep -q 'appearance_page; exit 0' <<<"$style_block" \
+    && ! grep -q '"Wi-Fi") wifi_page; exit 0' <<<"$config_block" \
+    && ! grep -q '"Config files") config_files_page; exit 0' <<<"$config_block"; then
+    pass "submenus return to their parent on Esc"
+else
+    fail "a submenu still exits the whole control center"
+fi
+
+# 5g. Fonts and icons are editable, not a read-only summary.
+if grep -q '^appearance_page()' "$CC" \
+    && grep -q '^apply_ui_font()' "$CC" \
+    && grep -q '^apply_icon_theme()' "$CC" \
+    && grep -q '^apply_cursor_theme()' "$CC"; then
+    pass "fonts, icons and cursors can be changed from the panel"
+else
+    fail "fonts and icons are still read-only"
+fi
+
+# 5h. README opens as formatted markdown in Obsidian.
+# shellcheck disable=SC2016 # literal source text is being checked
+if grep -q '^open_markdown()' "$CC" \
+    && grep -q 'obsidian://open?path=' "$CC" \
+    && grep -q 'open_markdown "$ROOT/README.md"' "$CC"; then
+    pass "README opens in Obsidian"
+else
+    fail "README still opens as raw markdown in Firefox"
+fi
+
+# 5i. Toggling notifications refreshes the waybar module.
+if grep -q 'pkill -RTMIN+8 -x waybar' "$CC"; then
+    pass "notification toggles refresh waybar"
+else
+    fail "the waybar notification module is not refreshed"
+fi
+
+# 5j. fzf uses a bottom preview so package details are readable.
+if grep -q "preview-window='down,60%,wrap'" "$CC"; then
+    pass "package details use a wide bottom preview"
+else
+    fail "package details still wrap in a narrow side preview"
+fi
+
+# 5k. Docker checks the daemon and offers to start it.
+if grep -q '^docker_page()' "$CC" \
+    && grep -q 'systemctl is-active --quiet docker' "$CC" \
+    && grep -q 'Docker service is not running' "$CC"; then
+    pass "LazyDocker starts or explains the Docker service"
+else
+    fail "LazyDocker opens without checking the Docker service"
+fi
+
+# 5l. Only one Keybinds entry remains in configuration.
+if [[ $(grep -c 'specs+=.*|Keybinds' <<<"$config_block") -eq 1 ]] \
+    && ! grep -q 'Edit keybinds' <<<"$config_block"; then
+    pass "configuration has a single Keybinds entry"
+else
+    fail "configuration still lists Keybinds twice"
 fi
 
 # 6. Install and uninstall use fzf when it is available.

@@ -111,6 +111,20 @@ open_browser() {
     fi
 }
 
+# Obsidian is the markdown viewer on this desktop; Firefox renders the raw
+# file without formatting. Fall back to the browser when Obsidian is absent.
+open_markdown() {
+    local file="$1" uri=""
+    if have obsidian && have python3 && have xdg-open; then
+        uri="obsidian://open?path=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$file" 2>/dev/null || true)"
+    fi
+    if [[ -n $uri ]]; then
+        (xdg-open "$uri" >/dev/null 2>&1 &)
+    else
+        open_browser "$file"
+    fi
+}
+
 # Show read-only information as a normal menu list. It uses the same row
 # colours as the rest of the control center, so values stay readable.
 show_info() {
@@ -200,10 +214,18 @@ message() {
 }
 
 run_terminal() {
+    local hold=0
+    if [[ ${1:-} == --hold ]]; then
+        hold=1
+        shift
+    fi
     local command="$1"
     local workdir="${ROOT:-$REAL_HOME}"
     local script
-    script="cd $(printf '%q' "$workdir") && $command; rc=\$?; printf '\n[exit %s] Press any key to close.' \"\$rc\"; read -rsn1"
+    script="cd $(printf '%q' "$workdir") && $command"
+    if ((hold)); then
+        script+="; rc=\$?; printf '\n[exit %s] Press any key to close.' \"\$rc\"; read -rsn1"
+    fi
     if have kitty; then
         kitty --class dotfiles-control-center -e bash -lc "$script"
     elif have x-terminal-emulator; then
@@ -290,6 +312,7 @@ edit_bind_page() {
     target="$(binds-cheatsheet.sh --rofi-edit)" || return 0
     [[ -n $target ]] || return 0
     open_config_at "$target"
+    exit 0
 }
 
 # ---------------------------------------------------------------- apps -------
@@ -306,21 +329,21 @@ docs_versions() {
     kernel="$(uname -r)"
     shell="$(fish --version 2>/dev/null | awk '{print $3}')"
     compositor="$(hyprctl version 2>/dev/null | sed -n 's/^Hyprland \([^ ]*\).*/\1/p' | head -n1)"
-    bar="$(waybar --version 2>/dev/null | awk '{print $2}')"
+    bar="$(waybar --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
     launcher="$(rofi -v 2>/dev/null | sed -n 's/^Version: //p' | head -n1)"
     term="$(kitty --version 2>/dev/null | awk '{print $2}')"
     total="$(pacman -Qq 2>/dev/null | wc -l)"
     explicit="$(pacman -Qqe 2>/dev/null | wc -l)"
 
     show_info "Versions" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>OS</b>            ${os:--}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Kernel</b>        ${kernel:--}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Shell</b>         fish ${shell:--}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Compositor</b>    Hyprland ${compositor:--}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Status bar</b>    Waybar ${bar:--}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Launcher</b>      rofi ${launcher:--}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Terminal</b>      kitty ${term:--}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Packages</b>      ${total} installed, ${explicit} explicit"
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>OS</b> · ${os:--}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Kernel</b> · ${kernel:--}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Shell</b> · fish ${shell:--}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Compositor</b> · Hyprland ${compositor:--}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Status bar</b> · Waybar ${bar:--}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Launcher</b> · rofi ${launcher:--}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Terminal</b> · kitty ${term:--}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Packages</b> · ${total} installed, ${explicit} explicit"
 }
 
 docs_links() {
@@ -358,12 +381,11 @@ docs_page() {
                 else
                     message "binds-cheatsheet.sh is not installed."
                 fi
-                exit 0
                 ;;
-            "Versions") docs_versions; exit 0 ;;
+            "Versions") docs_versions ;;
             "README")
                 if [[ -n $ROOT && -r $ROOT/README.md ]]; then
-                    open_browser "$ROOT/README.md"
+                    open_markdown "$ROOT/README.md"
                 else
                     notify "Repository README not found"
                 fi
@@ -428,6 +450,7 @@ notifications_toggle() {
         dunstctl set-paused true
         printf 'Notifications paused\n'
     fi
+    pkill -RTMIN+8 -x waybar >/dev/null 2>&1 || true
 }
 
 screen_lock() {
@@ -482,11 +505,11 @@ menu_page() {
                 exit 0
                 ;;
             "Toggle notifications") notifications_toggle; exit 0 ;;
-            "Autostart") run_terminal "autostart.sh pick"; exit 0 ;;
-            "Idle status") run_terminal "idle-tune.sh status"; exit 0 ;;
+            "Autostart") autostart.sh pick </dev/null ;;
+            "Idle status") run_terminal --hold "idle-tune.sh status"; exit 0 ;;
             "Configure idle") run_terminal "idle-tune.sh configure"; exit 0 ;;
             "Toggle idle") run_terminal "idle-tune.sh toggle"; exit 0 ;;
-            "Lid status") run_terminal "lid-handler.sh status"; exit 0 ;;
+            "Lid status") run_terminal --hold "lid-handler.sh status"; exit 0 ;;
             "Toggle game mode") run_and_notify "Game mode toggled" gamemode.sh toggle; exit 0 ;;
             "") return 0 ;;
         esac
@@ -600,6 +623,7 @@ wallpaper_page() {
     selected="$(rofi_pick "Wallpaper" "${args[@]}" <"$CACHE_DIR/rows")" || return 0
     [[ -n ${paths[$selected]:-} ]] || return 0
     wallpaper_apply "${paths[$selected]}"
+    exit 0
 }
 
 theme_mode_page() {
@@ -612,8 +636,9 @@ theme_mode_page() {
         Dark) run_and_notify "Dark theme applied" theme-menu.sh --mode dark --apply ;;
         Light) run_and_notify "Light theme applied" theme-menu.sh --mode light --apply ;;
         Smart) run_and_notify "Smart theme applied" theme-menu.sh --mode smart --apply ;;
-        "") return 0 ;;
+        *) return 0 ;;
     esac
+    exit 0
 }
 
 theme_scheme_page() {
@@ -633,6 +658,112 @@ theme_scheme_page() {
         *) return 0 ;;
     esac
     run_and_notify "Color scheme applied" theme-menu.sh --type "$type" --apply
+    exit 0
+}
+
+list_fonts() {
+    fc-list --format '%{family}\n' 2>/dev/null |
+        tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' |
+        awk 'NF' | sort -u
+}
+
+list_mono_fonts() {
+    fc-list :spacing=mono --format '%{family}\n' 2>/dev/null |
+        tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' |
+        awk 'NF' | sort -u
+}
+
+list_icon_themes() {
+    local dir path
+    for dir in /usr/share/icons "$REAL_HOME/.local/share/icons" "$REAL_HOME/.icons"; do
+        [[ -d $dir ]] || continue
+        for path in "$dir"/*; do
+            [[ -d $path ]] || continue
+            [[ -r $path/index.theme || -d $path/cursors ]] || continue
+            printf '%s\n' "${path##*/}"
+        done
+    done | awk '!seen[$0]++' | sort
+}
+
+list_cursor_themes() {
+    local dir path
+    for dir in /usr/share/icons "$REAL_HOME/.local/share/icons" "$REAL_HOME/.icons"; do
+        [[ -d $dir ]] || continue
+        for path in "$dir"/*; do
+            [[ -d $path/cursors ]] || continue
+            printf '%s\n' "${path##*/}"
+        done
+    done | awk '!seen[$0]++' | sort
+}
+
+list_gtk_themes() {
+    local dir path
+    for dir in /usr/share/themes "$REAL_HOME/.local/share/themes" "$REAL_HOME/.themes"; do
+        [[ -d $dir ]] || continue
+        for path in "$dir"/*; do
+            [[ -d $path ]] || continue
+            [[ -d $path/gtk-2.0 || -d $path/gtk-3.0 || -d $path/gtk-4.0 ]] || continue
+            printf '%s\n' "${path##*/}"
+        done
+    done | awk '!seen[$0]++' | sort
+}
+
+set_gtk_ini() {
+    local key="$1" value="$2" file
+    for file in "$CONFIG_HOME/gtk-3.0/settings.ini" "$CONFIG_HOME/gtk-4.0/settings.ini"; do
+        [[ -r $file ]] || continue
+        if grep -q "^${key}=" "$file"; then
+            sed -i "s|^${key}=.*|${key}=${value}|" "$file" 2>/dev/null || true
+        else
+            printf '%s=%s\n' "$key" "$value" >>"$file" 2>/dev/null || true
+        fi
+    done
+}
+
+apply_ui_font() {
+    local family
+    family="$(list_fonts | rofi_pick "UI font")" || return 1
+    [[ -n $family ]] || return 1
+    have gsettings && gsettings set org.gnome.desktop.interface font-name "$family 10" 2>/dev/null || true
+    have gsettings && gsettings set org.gnome.desktop.interface document-font-name "$family 10" 2>/dev/null || true
+    set_gtk_ini gtk-font-name "$family 10"
+    notify "UI font: $family"
+}
+
+apply_mono_font() {
+    local family
+    family="$(list_mono_fonts | rofi_pick "Monospace font")" || return 1
+    [[ -n $family ]] || return 1
+    have gsettings && gsettings set org.gnome.desktop.interface monospace-font-name "$family 10" 2>/dev/null || true
+    set_gtk_ini monospace-font-name "$family 10"
+    notify "Monospace font: $family"
+}
+
+apply_icon_theme() {
+    local theme
+    theme="$(list_icon_themes | rofi_pick "Icon theme")" || return 1
+    [[ -n $theme ]] || return 1
+    have gsettings && gsettings set org.gnome.desktop.interface icon-theme "$theme" 2>/dev/null || true
+    set_gtk_ini gtk-icon-theme-name "$theme"
+    notify "Icon theme: $theme"
+}
+
+apply_cursor_theme() {
+    local theme
+    theme="$(list_cursor_themes | rofi_pick "Cursor theme")" || return 1
+    [[ -n $theme ]] || return 1
+    have gsettings && gsettings set org.gnome.desktop.interface cursor-theme "$theme" 2>/dev/null || true
+    set_gtk_ini gtk-cursor-theme-name "$theme"
+    notify "Cursor theme: $theme"
+}
+
+apply_gtk_theme() {
+    local theme
+    theme="$(list_gtk_themes | rofi_pick "GTK theme")" || return 1
+    [[ -n $theme ]] || return 1
+    have gsettings && gsettings set org.gnome.desktop.interface gtk-theme "$theme" 2>/dev/null || true
+    set_gtk_ini gtk-theme-name "$theme"
+    notify "GTK theme: $theme"
 }
 
 appearance_status() {
@@ -644,11 +775,43 @@ appearance_status() {
     scheme="$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | tr -d "'" || printf 'unknown')"
 
     show_info "Fonts and icons" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>GTK theme</b>      ${gtk}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Icons</b>          ${icon}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Font</b>           ${font}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Cursor</b>         ${cursor}" \
-        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Color scheme</b>   ${scheme}"
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>GTK theme</b> · ${gtk}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Icons</b> · ${icon}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Font</b> · ${font}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Cursor</b> · ${cursor}" \
+        "<span font='JetBrainsMono Nerd Font 13'></span>  <b>Color scheme</b> · ${scheme}"
+}
+
+appearance_editor() {
+    if ! have nwg-look; then
+        message "Install nwg-look to edit every GTK appearance setting."
+        return 1
+    fi
+    (nwg-look >/dev/null 2>&1 &)
+}
+
+appearance_page() {
+    local choice
+    while :; do
+        choice="$(pick_icon "Fonts and icons" \
+            $'|UI font' \
+            $'|Monospace font' \
+            $'|Icon theme' \
+            $'|Cursor theme' \
+            $'|GTK theme' \
+            $'|Current values' \
+            $'|Appearance editor')" || return 0
+        case "$choice" in
+            "UI font") apply_ui_font || continue; exit 0 ;;
+            "Monospace font") apply_mono_font || continue; exit 0 ;;
+            "Icon theme") apply_icon_theme || continue; exit 0 ;;
+            "Cursor theme") apply_cursor_theme || continue; exit 0 ;;
+            "GTK theme") apply_gtk_theme || continue; exit 0 ;;
+            "Current values") appearance_status ;;
+            "Appearance editor") appearance_editor || continue; exit 0 ;;
+            *) return 0 ;;
+        esac
+    done
 }
 
 style_page() {
@@ -660,10 +823,10 @@ style_page() {
             $'|Color scheme' \
             $'|Fonts and icons')" || return 0
         case "$choice" in
-            "Wallpaper") wallpaper_page; exit 0 ;;
-            "Theme mode") theme_mode_page; exit 0 ;;
-            "Color scheme") theme_scheme_page; exit 0 ;;
-            "Fonts and icons") appearance_status; exit 0 ;;
+            "Wallpaper") wallpaper_page ;;
+            "Theme mode") theme_mode_page ;;
+            "Color scheme") theme_scheme_page ;;
+            "Fonts and icons") appearance_page ;;
             "") return 0 ;;
         esac
     done
@@ -682,9 +845,9 @@ wifi_connect() {
     mapfile -t networks < <(nmcli -t -f SSID device wifi list --rescan yes 2>/dev/null |
         awk 'NF && !seen[$0]++' | head -50)
     ((${#networks[@]})) || { notify "No Wi-Fi networks found"; return 0; }
-    ssid="$(printf '%s\n' "${networks[@]}" | rofi_pick "Wi-Fi network")" || return 0
-    [[ -n $ssid ]] || return 0
-    run_terminal "nmcli device wifi connect $(printf '%q' "$ssid") --ask"
+    ssid="$(printf '%s\n' "${networks[@]}" | rofi_pick "Wi-Fi network")" || return 1
+    [[ -n $ssid ]] || return 1
+    run_terminal --hold "nmcli device wifi connect $(printf '%q' "$ssid") --ask"
 }
 
 wifi_page() {
@@ -695,17 +858,17 @@ wifi_page() {
             $'|Disconnect' \
             $'|Status')" || return 0
         case "$choice" in
-            "Connect") wifi_connect; exit 0 ;;
+            "Connect") wifi_connect || continue; exit 0 ;;
             "Disconnect")
                 connection="$(nmcli -t -f NAME connection show --active 2>/dev/null | head -1)"
                 if [[ -n $connection ]]; then
-                    run_terminal "nmcli connection down $(printf '%q' "$connection")"
+                    run_terminal --hold "nmcli connection down $(printf '%q' "$connection")"
                 else
                     notify "No active connection"
                 fi
                 exit 0
                 ;;
-            "Status") run_terminal "nmcli device status"; exit 0 ;;
+            "Status") run_terminal --hold "nmcli device status"; exit 0 ;;
             "") return 0 ;;
         esac
     done
@@ -722,10 +885,10 @@ bluetooth_connect() {
     bluetoothctl --timeout 6 scan on >/dev/null 2>&1 || true
     mapfile -t devices < <(bluetoothctl devices 2>/dev/null | sed 's/^Device //')
     ((${#devices[@]})) || { notify "No Bluetooth devices found"; return 0; }
-    choice="$(printf '%s\n' "${devices[@]}" | rofi_pick "Bluetooth device")" || return 0
-    [[ -n $choice ]] || return 0
+    choice="$(printf '%s\n' "${devices[@]}" | rofi_pick "Bluetooth device")" || return 1
+    [[ -n $choice ]] || return 1
     mac="${choice%% *}"
-    run_terminal "bluetoothctl connect $(printf '%q' "$mac")"
+    run_terminal --hold "bluetoothctl connect $(printf '%q' "$mac")"
 }
 
 bluetooth_page() {
@@ -737,10 +900,10 @@ bluetooth_page() {
             $'|Connect device' \
             $'|Status')" || return 0
         case "$choice" in
-            "Power on") run_terminal "bluetoothctl power on"; exit 0 ;;
-            "Power off") run_terminal "bluetoothctl power off"; exit 0 ;;
-            "Connect device") bluetooth_connect; exit 0 ;;
-            "Status") run_terminal "bluetoothctl show"; exit 0 ;;
+            "Power on") run_terminal --hold "bluetoothctl power on"; exit 0 ;;
+            "Power off") run_terminal --hold "bluetoothctl power off"; exit 0 ;;
+            "Connect device") bluetooth_connect || continue; exit 0 ;;
+            "Status") run_terminal --hold "bluetoothctl show"; exit 0 ;;
             "") return 0 ;;
         esac
     done
@@ -756,7 +919,7 @@ monitors_page() {
     while :; do
         choice="$(pick_icon "Monitors" "${specs[@]}")" || return 0
         case "$choice" in
-            "Status") run_terminal "monitor-profiles.sh status"; exit 0 ;;
+            "Status") run_terminal --hold "monitor-profiles.sh status"; exit 0 ;;
             "Apply layout") run_and_notify "Monitor layout applied" monitor-profiles.sh apply; exit 0 ;;
             "Dock layout")
                 layout="$(printf '%s\n' right left mirror ask | rofi_pick "Dock layout")" || return 0
@@ -773,9 +936,9 @@ sound_page() {
     if have pavucontrol; then
         (pavucontrol >/dev/null 2>&1 &)
     elif have wpctl; then
-        run_terminal "wpctl status"
+        run_terminal --hold "wpctl status"
     elif have pactl; then
-        run_terminal "pactl info"
+        run_terminal --hold "pactl info"
     else
         notify "No audio control tool found"
     fi
@@ -844,7 +1007,7 @@ configuration_page() {
         have nmcli && specs+=($'|Wi-Fi')
         have bluetoothctl && specs+=($'|Bluetooth')
         have monitor-profiles.sh && specs+=($'|Monitors')
-        have binds-cheatsheet.sh && specs+=($'|Keybinds' $'|Edit keybinds')
+        have binds-cheatsheet.sh && specs+=($'|Keybinds')
         have mouse-tune.sh && specs+=($'|'"$mouse_label")
         have fish && specs+=($'|Tide')
         specs+=($'|Config files')
@@ -854,12 +1017,11 @@ configuration_page() {
             "Wi-Fi") wifi_page ;;
             "Bluetooth") bluetooth_page ;;
             "Monitors") monitors_page ;;
-            "Edit keybinds") edit_bind_page; exit 0 ;;
-            "Keybinds") binds-cheatsheet.sh --rofi; exit 0 ;;
+            "Keybinds") edit_bind_page ;;
             Mouse*) run_terminal "mouse-tune.sh"; exit 0 ;;
             "Tide") tide_configure; exit 0 ;;
             "Config files") config_files_page ;;
-            "") return 0 ;;
+            *) return 0 ;;
         esac
     done
 }
@@ -895,13 +1057,13 @@ package_search_install() {
     choice="$(printf '%s\n' "${labels[@]}" | rofi_pick "Install package")" || return 0
     pkg="${choice#*/}"
     case "$choice" in
-        repo/*) run_terminal "sudo pacman -S --needed $(printf '%q' "$pkg")" ;;
+        repo/*) run_terminal --hold "sudo pacman -S --needed $(printf '%q' "$pkg")" ;;
         aur/*)
             if [[ -n $helper ]]; then
                 if [[ $helper == yay ]]; then
-                    run_terminal "$helper $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-S --needed $(printf '%q' "$pkg")"
+                    run_terminal --hold "$helper $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-S --needed $(printf '%q' "$pkg")"
                 else
-                    run_terminal "$helper -S --needed $(printf '%q' "$pkg")"
+                    run_terminal --hold "$helper -S --needed $(printf '%q' "$pkg")"
                 fi
             else
                 notify "No AUR helper; install $pkg manually"
@@ -910,15 +1072,23 @@ package_search_install() {
     esac
 }
 
+# fzf layout: package info sits below the list, so long descriptions use the
+# full terminal width instead of wrapping inside a narrow side pane.
 fzf_install() {
-    local kind="$1" helper flags=""
+    local kind="$1" helper flags script
     if ! have fzf; then
         package_search_install
         return 0
     fi
 
     if [[ $kind == repo ]]; then
-        run_terminal "pacman -Slq | fzf --multi --height=100% --reverse --prompt='repo> ' --preview='pacman -Si {1}' | xargs -r sudo pacman -S --needed"
+        script="$(cat <<'EOF'
+sel="$(pacman -Slq | fzf --multi --height=100% --reverse --border=rounded --info=inline --prompt='repo> ' --preview='pacman -Si {1}' --preview-window='down,60%,wrap')" || exit 0
+[ -n "$sel" ] || exit 0
+printf '%s\n' "$sel" | xargs -r sudo pacman -S --needed
+EOF
+)"
+        run_terminal --hold "$script"
         return 0
     fi
 
@@ -928,7 +1098,36 @@ fzf_install() {
         return 0
     fi
     [[ $helper == yay ]] && flags="$(printf '%q ' "${AUR_GPG_FLAGS[@]}")"
-    run_terminal "$helper -Slq | fzf --multi --height=100% --reverse --prompt='AUR> ' --preview='$helper -Si {1}' | xargs -r $helper $flags -S --needed"
+    script="$(cat <<EOF
+sel="\$($helper -Slq | fzf --multi --height=100% --reverse --border=rounded --info=inline --prompt='AUR> ' --preview='$helper -Si {1}' --preview-window='down,60%,wrap')" || exit 0
+[ -n "\$sel" ] || exit 0
+printf '%s\\n' "\$sel" | xargs -r $helper $flags -S --needed
+EOF
+)"
+    run_terminal --hold "$script"
+}
+
+docker_page() {
+    if ! have lazydocker; then
+        notify "LazyDocker is not installed"
+        return 0
+    fi
+    if ! have docker; then
+        notify "Docker is not installed"
+        return 0
+    fi
+    if ! systemctl is-active --quiet docker 2>/dev/null; then
+        if ask_confirm "Docker service is not running. Start it now?"; then
+            run_terminal --hold "sudo systemctl start docker"
+        else
+            return 0
+        fi
+    fi
+    if ! docker info >/dev/null 2>&1; then
+        notify "Docker is not reachable (service or permissions)"
+        return 0
+    fi
+    run_terminal "lazydocker"
 }
 
 install_page() {
@@ -943,8 +1142,8 @@ install_page() {
         case "$choice" in
             "Repositories") fzf_install repo; exit 0 ;;
             AUR) fzf_install aur; exit 0 ;;
-            Docker) run_terminal "lazydocker"; exit 0 ;;
-            "") return 0 ;;
+            Docker) docker_page; exit 0 ;;
+            *) return 0 ;;
         esac
     done
 }
@@ -965,18 +1164,40 @@ package_remove() {
     ask_confirm "Remove $pkg and its unused dependencies?" || return 0
     helper="$(aur_helper)"
     if [[ -n $helper ]]; then
-        run_terminal "$helper -Rns $(printf '%q' "$pkg")"
+        run_terminal --hold "$helper -Rns $(printf '%q' "$pkg")"
     else
-        run_terminal "sudo pacman -Rns $(printf '%q' "$pkg")"
+        run_terminal --hold "sudo pacman -Rns $(printf '%q' "$pkg")"
     fi
 }
 
 fzf_remove() {
+    local script
     if ! have fzf; then
         package_remove
         return 0
     fi
-    run_terminal "pacman -Qqe | fzf --multi --height=100% --reverse --prompt='remove> ' --preview='pacman -Qi {1}' | xargs -r sudo pacman -Rns"
+    script="$(cat <<'EOF'
+sel="$(pacman -Qqe | fzf --multi --height=100% --reverse --border=rounded --info=inline --prompt='remove> ' --preview='pacman -Qi {1}' --preview-window='down,60%,wrap')" || exit 0
+[ -n "$sel" ] || exit 0
+printf '%s\n' "$sel" | xargs -r sudo pacman -Rns
+EOF
+)"
+    run_terminal --hold "$script"
+}
+
+fzf_inspect() {
+    local script
+    if ! have fzf; then
+        notify "fzf is not installed"
+        return 0
+    fi
+    script="$(cat <<'EOF'
+sel="$(pacman -Qq | fzf --height=100% --reverse --border=rounded --info=inline --prompt='inspect> ' --preview='pacman -Qi {1}' --preview-window='down,60%,wrap')" || exit 0
+[ -n "$sel" ] || exit 0
+pacman -Qi "$sel"
+EOF
+)"
+    run_terminal --hold "$script"
 }
 
 uninstall_page() {
@@ -987,15 +1208,8 @@ uninstall_page() {
             $'|Inspect package')" || return 0
         case "$choice" in
             "Remove packages") fzf_remove; exit 0 ;;
-            "Inspect package")
-                if ! have fzf; then
-                    notify "fzf is not installed"
-                    return 0
-                fi
-                run_terminal "pacman -Qq | fzf --height=100% --reverse --prompt='inspect> ' --preview='pacman -Qi {1}' | xargs -r pacman -Qi"
-                exit 0
-                ;;
-            "") return 0 ;;
+            "Inspect package") fzf_inspect; exit 0 ;;
+            *) return 0 ;;
         esac
     done
 }
@@ -1019,35 +1233,35 @@ update_page() {
         [[ -n $(spicetify_bin) ]] && specs+=($'|Spicetify')
         choice="$(pick_icon "Update" "${specs[@]}")" || return 0
         case "$choice" in
-            "Repositories") run_terminal "sudo pacman -Syu"; exit 0 ;;
+            "Repositories") run_terminal --hold "sudo pacman -Syu"; exit 0 ;;
             "Repositories and AUR")
                 helper="$(aur_helper)"
                 if [[ -n $helper ]]; then
                     if [[ $helper == yay ]]; then
-                        run_terminal "yay $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-Syu"
+                        run_terminal --hold "yay $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-Syu"
                     else
-                        run_terminal "$helper -Syu"
+                        run_terminal --hold "$helper -Syu"
                     fi
                 else
                     notify "No AUR helper; updating repository packages only"
-                    run_terminal "sudo pacman -Syu"
+                    run_terminal --hold "sudo pacman -Syu"
                 fi
                 exit 0
                 ;;
             Mirrors)
                 local backup
                 backup="/etc/pacman.d/mirrorlist.bak.$(date +%Y%m%d-%H%M%S)"
-                run_terminal "sudo cp -a /etc/pacman.d/mirrorlist $(printf '%q' "$backup") && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist"
+                run_terminal --hold "sudo cp -a /etc/pacman.d/mirrorlist $(printf '%q' "$backup") && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist"
                 exit 0
                 ;;
             "Update dotfiles")
-                run_terminal "git -C $(printf '%q' "$ROOT") pull --ff-only && ./install.sh --all --no-packages"
+                run_terminal --hold "git -C $(printf '%q' "$ROOT") pull --ff-only && ./install.sh --all --no-packages"
                 exit 0
                 ;;
-            "Apply configs") run_terminal "./install.sh --all --no-packages"; exit 0 ;;
-            "Pull live changes") run_terminal "./scripts/sync.sh pull"; exit 0 ;;
-            Installer) run_terminal "./install.sh"; exit 0 ;;
-            Spicetify) run_terminal "$(spicetify_bin) backup apply"; exit 0 ;;
+            "Apply configs") run_terminal --hold "./install.sh --all --no-packages"; exit 0 ;;
+            "Pull live changes") run_terminal --hold "./scripts/sync.sh pull"; exit 0 ;;
+            Installer) run_terminal --hold "./install.sh"; exit 0 ;;
+            Spicetify) run_terminal --hold "$(spicetify_bin) backup apply"; exit 0 ;;
             "") return 0 ;;
         esac
     done

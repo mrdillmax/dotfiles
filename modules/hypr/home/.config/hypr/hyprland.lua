@@ -432,3 +432,11 @@ hl.window_rule({
     center = true,
     size = { 900, 600 },
 })
+
+hl.window_rule({
+    name = "nwg-look-float",
+    match = { class = "^nwg-look$" },
+    float = true,
+    center = true,
+    size = { 760, 700 },
+})

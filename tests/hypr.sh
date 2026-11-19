@@ -48,6 +48,20 @@ else
     fail "the microphone tooltip is hardcoded"
 fi
 
+bar_config="$ROOT/modules/waybar/home/.config/waybar/config.jsonc"
+if grep -q '"{icon}   {volume}%"' "$bar_config" \
+    && grep -q '{usage}%' "$bar_config"; then
+    pass "waybar leaves space between icons and values"
+else
+    fail "waybar values collide with their icons"
+fi
+
+if grep -q 'nwg-look-float' "$lua"; then
+    pass "the appearance editor floats in the centre"
+else
+    fail "the appearance editor tiles"
+fi
+
 if grep -q 'dotfiles-control-center-float' "$lua" \
     && grep -q 'pavucontrol-float' "$lua" \
     && grep -q 'center = true' "$lua"; then

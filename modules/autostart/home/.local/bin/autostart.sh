@@ -15,6 +15,7 @@ REAL_HOME="${HOME:?HOME is not set}"
 STATE_DIR="${XDG_STATE_HOME:-$REAL_HOME/.local/state}/dotfiles"
 STATE_FILE="$STATE_DIR/autostart.tsv"
 LOG_FILE="$STATE_DIR/autostart.log"
+SELF="$(readlink -f -- "${BASH_SOURCE[0]}")"
 
 DRY_RUN=0
 COMMAND=""
@@ -53,6 +54,8 @@ Usage: autostart.sh <list|status|enable NAME|disable NAME|toggle NAME|
   run             start the enabled entries (used by Hyprland at login)
   reset           restore the built-in list, all enabled
   pick            interactive toggle menu (rofi/gum/whiptail/dialog/plain)
+  add-fzf         add a desktop app or custom command through fzf (terminal)
+  remove-fzf      remove entries through fzf (terminal)
 
 Options:
   --dry-run       print what would change; do not write or start anything
@@ -66,6 +69,33 @@ die() { printf 'autostart: %s\n' "$*" >&2; exit 1; }
 info() { printf ':: %s\n' "$*"; }
 ok() { printf 'ok %s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }
+
+notify_msg() {
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -a "Autostart" "$1" >/dev/null 2>&1 || true
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send "Autostart" "$1" >/dev/null 2>&1 || true
+    else
+        printf '%s\n' "$1" >&2
+    fi
+}
+
+have_tty() { [[ -t 0 ]]; }
+
+# fzf needs a terminal. The picker itself stays in rofi; only add/remove
+# spawn this floating terminal, and it blocks until the user closes it.
+run_in_terminal_wait() {
+    local command="$1" workdir
+    workdir="$(printf '%q' "$REAL_HOME")"
+    if command -v kitty >/dev/null 2>&1; then
+        kitty --class dotfiles-control-center -e bash -lc "cd $workdir && $command"
+    elif command -v x-terminal-emulator >/dev/null 2>&1; then
+        x-terminal-emulator -e bash -lc "cd $workdir && $command"
+    else
+        notify_msg "No terminal found for the fzf picker"
+        return 1
+    fi
+}
 
 valid_name() {
     [[ $1 =~ ^[A-Za-z0-9_.-]+$ ]]
@@ -421,7 +451,7 @@ desktop_apps() {
 # name<TAB>command.
 choose_program() {
     local -a rows=() names=() commands=()
-    local id name exec selection i answer_name answer_command
+    local id name exec selection i answer_name answer_command answer_name_input
 
     while IFS=$'\t' read -r id name exec; do
         [[ -n $id && -n $name && -n $exec ]] || continue
@@ -445,11 +475,23 @@ choose_program() {
     for i in "${!rows[@]}"; do
         [[ ${rows[$i]} == "$selection" ]] || continue
         if [[ ${names[$i]} == "__command__" ]]; then
-            answer_name="$(ask_line 'Program name')" || return 1
-            [[ -n $answer_name ]] || return 1
-            answer_name="$(sanitize_name "$answer_name")"
-            answer_command="$(ask_line 'Command')" || return 1
-            [[ -n $answer_command ]] || return 1
+            if have_tty; then
+                printf 'Command: ' >&2
+                read -r answer_command || return 1
+                [[ -n $answer_command ]] || return 1
+                answer_name="$(sanitize_name "$(basename -- "${answer_command%% *}")")"
+                [[ -n $answer_name ]] || answer_name="custom"
+                printf 'Name [%s]: ' "$answer_name" >&2
+                read -r answer_name_input || return 1
+                answer_name="${answer_name_input:-$answer_name}"
+                answer_name="$(sanitize_name "$answer_name")"
+            else
+                answer_name="$(ask_line 'Program name')" || return 1
+                [[ -n $answer_name ]] || return 1
+                answer_name="$(sanitize_name "$answer_name")"
+                answer_command="$(ask_line 'Command')" || return 1
+                [[ -n $answer_command ]] || return 1
+            fi
             printf '%s\t%s\n' "$answer_name" "$answer_command"
         else
             printf '%s\t%s\n' "${names[$i]}" "${commands[$i]}"
@@ -457,6 +499,59 @@ choose_program() {
         return 0
     done
     return 1
+}
+
+# Add flow for a terminal: fzf picks an installed app, or Command... asks for
+# an arbitrary command line. Esc leaves without changing anything.
+add_fzf() {
+    local picked new_name new_command
+    if ! command -v fzf >/dev/null 2>&1; then
+        notify_msg "fzf is not installed"
+        return 0
+    fi
+    picked="$(choose_program)" || return 0
+    IFS=$'\t' read -r new_name new_command <<<"$picked"
+    [[ -n $new_name && -n $new_command ]] || return 0
+
+    load_entries
+    if entry_index "$new_name" >/dev/null 2>&1; then
+        notify_msg "An entry named $new_name already exists"
+        return 0
+    fi
+    add_entry "$new_name" "$new_command" || return 0
+    notify_msg "Added $new_name"
+}
+
+# Remove flow for a terminal: fzf shows every entry, Tab selects several.
+remove_fzf() {
+    local line enabled name cmd state selected removed=0
+    local -a rows=()
+
+    if ! command -v fzf >/dev/null 2>&1; then
+        notify_msg "fzf is not installed"
+        return 0
+    fi
+    load_entries
+    ((${#ENTRIES[@]})) || { notify_msg "Nothing to remove"; return 0; }
+
+    for line in "${ENTRIES[@]}"; do
+        IFS=$'\t' read -r enabled name cmd <<<"$line"
+        if [[ $enabled == 1 ]]; then state='[x]'; else state='[ ]'; fi
+        rows+=("$name"$'\t'"$state $name  —  $cmd")
+    done
+
+    selected="$(printf '%s\n' "${rows[@]}" | fzf --multi --height=100% \
+        --reverse --border=rounded --info=inline --delimiter=$'\t' \
+        --with-nth=2 --prompt='remove> ' \
+        --header='Tab selects several, Enter removes')" || return 0
+    [[ -n $selected ]] || return 0
+
+    while IFS=$'\t' read -r name _; do
+        [[ -n $name ]] || continue
+        remove_entry "$name" || continue
+        removed=$((removed + 1))
+    done <<<"$selected"
+    ((removed == 0)) || notify_msg "Removed $removed entr$([[ $removed == 1 ]] && echo y || echo ies)"
 }
 
 pick_entries() {
@@ -476,28 +571,21 @@ pick_entries() {
         choice="$(choose_line "Autostart (pick to toggle)" "${labels[@]}")" || return 0
         [[ -n $choice ]] || return 0
         if [[ $choice == '+ Add a program' ]]; then
-            local picked new_name new_command
-            picked="$(choose_program)" || continue
-            IFS=$'\t' read -r new_name new_command <<<"$picked"
-            [[ -n $new_name && -n $new_command ]] || continue
-            if entry_index "$new_name" >/dev/null 2>&1; then
-                warn "an entry named $new_name already exists"
+            if have_tty; then
+                add_fzf
             else
-                add_entry "$new_name" "$new_command" || true
+                run_in_terminal_wait "$(printf '%q' "$SELF") add-fzf"
             fi
             load_entries
             continue
         fi
         if [[ $choice == '- Remove a program' ]]; then
-            local -a names=()
-            for line in "${ENTRIES[@]}"; do
-                IFS=$'\t' read -r enabled name _cmd <<<"$line"
-                names+=("$name")
-            done
-            ((${#names[@]})) || { info "nothing to remove"; continue; }
-            local target
-            target="$(choose_line 'Remove which entry?' "${names[@]}")" || continue
-            [[ -n $target ]] && remove_entry "$target"
+            if have_tty; then
+                remove_fzf
+            else
+                run_in_terminal_wait "$(printf '%q' "$SELF") remove-fzf"
+            fi
+            load_entries
             continue
         fi
         chosen="${choice#\[?\] }"
@@ -525,7 +613,7 @@ pick_entries() {
 
 while (($#)); do
     case "$1" in
-        list|status|run|reset|pick)
+        list|status|run|reset|pick|add-fzf|remove-fzf)
             [[ -z $COMMAND ]] || die "only one command is allowed"
             COMMAND="$1"
             ;;
@@ -567,5 +655,7 @@ case "$COMMAND" in
     reset)       reset_entries ;;
     run)         run_entries ;;
     pick)        pick_entries ;;
+    add-fzf)     add_fzf ;;
+    remove-fzf)  remove_fzf ;;
     "")          usage >&2; exit 2 ;;
 esac
