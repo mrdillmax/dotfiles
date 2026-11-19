@@ -62,5 +62,15 @@ else
     fail "--repositories is missing from --help"
 fi
 
+# 3. Guided setup prepares repositories before it installs packages.
+repo_line="$(grep -n -- '--repositories' "$ROOT/install.sh" | grep -v 'die ' | tail -1 | cut -d: -f1)"
+packages_line="$(grep -n -- '--only-packages' "$ROOT/install.sh" | grep 'run_setup\|setup_stage\|install.sh"' | tail -1 | cut -d: -f1)"
+setup_start="$(grep -n '^run_setup()' "$ROOT/install.sh" | cut -d: -f1)"
+if [[ -n $repo_line && -n $packages_line ]] && ((repo_line > setup_start && repo_line < packages_line)); then
+    pass "setup prepares repositories before packages"
+else
+    fail "setup order is repositories ($repo_line) then packages ($packages_line)"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

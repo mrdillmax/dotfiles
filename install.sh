@@ -854,7 +854,24 @@ run_setup() {
     local -a common=(--host "$HOST_NAME" --gpu "$GPU_PROFILE")
     (( DRY_RUN )) && common+=(--dry-run)
 
-    info "First-time setup: packages -> configuration -> system -> kernel"
+    info "First-time setup: repositories -> packages -> configuration -> system -> kernel"
+
+    # A fresh machine has [multilib] commented out; every lib32-* package would
+    # fail with "target not found". Do this before the package picker.
+    if ! multilib_enabled; then
+        local -a repo_cmd=(--repositories)
+        (( DRY_RUN )) && repo_cmd+=(--dry-run)
+        if (( DRY_RUN || EUID == 0 )); then
+            setup_stage "Repositories — enable [multilib] and refresh the package database?" \
+                bash "$DOTFILES_DIR/install.sh" "${repo_cmd[@]}" || return $?
+        else
+            setup_stage "Repositories — enable [multilib] and refresh the package database (sudo)?" \
+                sudo bash "$DOTFILES_DIR/install.sh" "${repo_cmd[@]}" || return $?
+        fi
+    else
+        info "multilib is already enabled; repositories step skipped"
+    fi
+
     setup_stage "Step 1/4: packages — choose categories and applications?" \
         bash "$DOTFILES_DIR/install.sh" --only-packages "${common[@]}" || return $?
     setup_stage "Step 2/4: configuration files — packages, dotfiles and user services?" \

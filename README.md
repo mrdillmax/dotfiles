@@ -190,9 +190,9 @@ the rest of the installer dependencies exist, so it uses only bash and no
 
 The main menu follows the order of a first install:
 
-1. **First-time setup** — walks through packages, configuration files, `/etc`
-   files (with `sudo`) and the kernel, with an explanation and a confirmation
-   between steps.
+1. **First-time setup** — enables `[multilib]` when it is missing, then walks
+   through packages, configuration files, `/etc` files (with `sudo`) and the
+   kernel, with an explanation and a confirmation between steps.
 2. **Profile** — host and GPU profile.
 3. **1. Packages**, **2. Configuration files**, **3. System configuration**,
    **4. Kernel** — the same stages for repeat runs.
@@ -214,7 +214,7 @@ installer keeps the previous non-interactive behaviour.
 |------|-------|
 | Installation | `--setup`, `--all`, `--modules a,b`, `--category a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu`, `--spicetify` |
 | Settings | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
-| System | `--system`, `--system-components a,b` (includes `ram`), `--iface`, `--autologin-user` |
+| System | `--repositories`, `--system`, `--system-components a,b` (includes `ram`), `--iface`, `--autologin-user` |
 | Kernel | `--kernel`, `--kernel-level v1..v4` |
 | Maintenance | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
 | General | `--dry-run`, `--yes`, `--list`, `--help` |
@@ -226,6 +226,12 @@ Every menu entry maps to one of these flags. `tests/menu.sh` and
 selected by default except `ram-cache` and `workspaces-split`; `lid` is skipped
 on desktops and `idle` is enabled when installed. System files are always opt-in
 through `--system`.
+
+When `/etc/pacman.conf` has no active `[multilib]`, `--setup` first runs
+`--repositories`: it merges the preset (diff, backup, confirmation) and
+refreshes the database with `pacman -Syu`. Without it every `lib32-*` package
+fails with `target not found`. The step is skipped when `[multilib]` is already
+enabled, and `--setup` never runs it through `1. Packages`.
 
 `--only-packages` without `--packages`, `--category` or `--apps` exits with an
 error when there is no terminal to show the picker. After installation the

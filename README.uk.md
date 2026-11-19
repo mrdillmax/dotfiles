@@ -190,8 +190,9 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 
 Головне меню йде в порядку першого встановлення:
 
-1. **First-time setup** — проводить через пакети, конфіги, файли `/etc`
-   (через `sudo`) і ядро, з поясненням і підтвердженням між кроками.
+1. **First-time setup** — вмикає `[multilib]`, якщо його немає, далі проводить
+   через пакети, конфіги, файли `/etc` (через `sudo`) і ядро, з поясненням і
+   підтвердженням між кроками.
 2. **Profile** — профіль host і GPU.
 3. **1. Packages**, **2. Configuration files**, **3. System configuration**,
    **4. Kernel** — ті самі кроки для повторних запусків.
@@ -214,7 +215,7 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 |---------|----------|
 | Встановлення | `--setup`, `--all`, `--modules a,b`, `--category a,b`, `--apps a,b`, `--packages a,b`, `--no-packages`, `--only-packages`, `--host`, `--gpu`, `--spicetify` |
 | Налаштування | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
-| Система | `--system`, `--system-components a,b` (включно з `ram`), `--iface`, `--autologin-user` |
+| Система | `--repositories`, `--system`, `--system-components a,b` (включно з `ram`), `--iface`, `--autologin-user` |
 | Ядро | `--kernel`, `--kernel-level v1..v4` |
 | Обслуговування | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
 | Загальні | `--dry-run`, `--yes`, `--list`, `--help` |
@@ -226,6 +227,12 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 типово, крім `ram-cache` і `workspaces-split`; `lid` пропускається на десктопі,
 а `idle` вмикається після встановлення. Системні файли завжди опційні й
 ставляться лише через `--system`.
+
+Якщо в `/etc/pacman.conf` немає активної секції `[multilib]`, `--setup` спершу
+запускає `--repositories`: зливає пресет (diff, backup, підтвердження) і
+оновлює базу через `pacman -Syu`. Без цього кожен пакет `lib32-*` падає з
+`target not found`. Крок пропускається, коли `[multilib]` уже ввімкнено, і
+`--setup` ніколи не робить його через `1. Packages`.
 
 `--only-packages` без `--packages`, `--category` чи `--apps` завершується
 помилкою, коли немає термінала для пікера. Після встановлення інсталятор
