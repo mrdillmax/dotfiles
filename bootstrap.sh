@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # First-run bootstrap for a fresh Arch install.
 #
-# It installs only the tools the installer itself needs, checks for an AUR
-# helper (it never builds one), then runs install.sh and a read-only doctor
-# pass. Everything after `--` is forwarded to install.sh.
+# It installs the tools the installer needs, builds yay-bin when no AUR helper
+# exists, then runs install.sh and a read-only doctor pass. Everything after
+# `--` is forwarded to install.sh.
 #
 # Safety model:
 #   * --dry-run prints every command and changes nothing
 #   * packages are installed only after a confirmation (or --yes)
-#   * no AUR helper is installed automatically
+#   * yay-bin is built as the invoking user, never as root
+#   * --no-aur keeps the old behaviour and only warns about a missing helper
 #   * the installer keeps its own backup/confirmation rules
 set -euo pipefail
 
@@ -27,9 +28,11 @@ DRY_RUN=0
 ASSUME_YES=0
 SKIP_PACKAGES=0
 SKIP_NETWORK=0
+SKIP_AUR=0
 INSTALLER_ARGS=()
+AUR_TMP=""
 
-BASE_PACKAGES=(base-devel git curl)
+BASE_PACKAGES=(base-devel git curl jq gum)
 
 usage() {
     cat <<'EOF'
@@ -38,14 +41,16 @@ Usage: ./bootstrap.sh [options] [-- installer options]
   --yes, -y        install packages and run install.sh --all --yes
   --dry-run        print every command, change nothing
   --no-packages    skip the package step
+  --no-aur         do not build yay-bin when no AUR helper exists
   --skip-network   skip the network reachability check
   -h, --help       this help
 
 Everything after `--` is passed to install.sh, for example:
   ./bootstrap.sh --yes -- --host laptop --gpu intel
 
-Bootstrap installs only base-devel, git and curl. AUR packages need an AUR
-helper (paru or yay); bootstrap reports a missing helper but never installs it.
+Bootstrap installs base-devel, git, curl, jq and gum. When neither paru nor
+yay exists, it builds yay-bin from the AUR as your user. Use --no-aur to skip
+that step.
 EOF
 }
 
@@ -98,6 +103,14 @@ check_network() {
     ok "network reachable"
 }
 
+cleanup() {
+    if [[ -n $AUR_TMP && -d $AUR_TMP ]]; then
+        rm -rf -- "$AUR_TMP"
+    fi
+    return 0
+}
+trap cleanup EXIT
+
 missing_packages() {
     local pkg
     MISSING=()
@@ -108,7 +121,7 @@ missing_packages() {
         || ! command -v fakeroot >/dev/null 2>&1; then
         MISSING+=("base-devel")
     fi
-    for pkg in git curl; do
+    for pkg in git curl jq gum; do
         command -v "$pkg" >/dev/null 2>&1 || MISSING+=("$pkg")
     done
 }
@@ -142,13 +155,47 @@ install_packages() {
     ok "bootstrap packages installed"
 }
 
-check_aur_helper() {
+install_aur_helper() {
+    ((SKIP_PACKAGES)) && return 0
+    if ((SKIP_AUR)); then
+        warn "AUR helper installation disabled (--no-aur)"
+        return 0
+    fi
     if command -v paru >/dev/null 2>&1 || command -v yay >/dev/null 2>&1; then
         ok "AUR helper found"
         return 0
     fi
-    warn "no AUR helper (paru/yay) found; AUR packages from the catalog will be skipped"
-    warn "install one manually, then rerun the installer"
+
+    if ((DRY_RUN)); then
+        printf '[dry-run] git clone https://aur.archlinux.org/yay-bin.git <tmp>/yay-bin\n'
+        printf '[dry-run] (cd <tmp>/yay-bin && makepkg -si --noconfirm)\n'
+        return 0
+    fi
+
+    command -v git >/dev/null 2>&1 || {
+        warn "git is missing; cannot build yay-bin"
+        return 0
+    }
+    command -v makepkg >/dev/null 2>&1 || {
+        warn "makepkg is missing; cannot build yay-bin"
+        return 0
+    }
+
+    if ! confirm "No AUR helper found. Build yay-bin from the AUR?"; then
+        warn "AUR helper installation declined; AUR packages will be skipped"
+        return 0
+    fi
+
+    AUR_TMP="$(mktemp -d)"
+    if ! git clone --depth=1 https://aur.archlinux.org/yay-bin.git "$AUR_TMP/yay-bin"; then
+        warn "could not clone yay-bin; AUR packages will be skipped"
+        return 0
+    fi
+    if (cd "$AUR_TMP/yay-bin" && makepkg -si --noconfirm); then
+        ok "yay installed"
+    else
+        warn "yay-bin build failed; AUR packages will be skipped"
+    fi
 }
 
 installer_command() {
@@ -195,6 +242,7 @@ while (($#)); do
         --yes|-y)      ASSUME_YES=1 ;;
         --dry-run)     DRY_RUN=1 ;;
         --no-packages) SKIP_PACKAGES=1 ;;
+        --no-aur)      SKIP_AUR=1 ;;
         --skip-network) SKIP_NETWORK=1 ;;
         --)
             shift
@@ -210,7 +258,7 @@ done
 check_host
 check_network
 install_packages
-check_aur_helper
+install_aur_helper
 run_installer
 run_doctor
 

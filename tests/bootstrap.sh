@@ -29,6 +29,8 @@ new_case() {
     : >"$base/arch-release"
     : >"$base/pacman.log"
     : >"$base/installer.log"
+    : >"$base/git.log"
+    : >"$base/makepkg.log"
 
     cat >"$base/bin/id" <<'EOF'
 #!/bin/bash
@@ -43,6 +45,18 @@ EOF
     cat >"$base/bin/cat" <<'EOF'
 #!/bin/bash
 exec /bin/cat "$@"
+EOF
+
+    cat >"$base/bin/mktemp" <<'EOF'
+#!/bin/bash
+dir="${BOOTSTRAP_TMP_ROOT:-/tmp}/tmp.$$.$RANDOM"
+/bin/mkdir -p "$dir"
+printf '%s\n' "$dir"
+EOF
+
+    cat >"$base/bin/rm" <<'EOF'
+#!/bin/bash
+exec /bin/rm "$@"
 EOF
 
     cat >"$base/bin/pacman" <<'EOF'
@@ -67,6 +81,7 @@ done
 exit "${INSTALLER_RC:-0}"
 EOF
     chmod 0755 "$base/bin/id" "$base/bin/dirname" "$base/bin/cat" \
+        "$base/bin/mktemp" "$base/bin/rm" \
         "$base/bin/pacman" "$base/bin/sudo" \
         "$base/installer"
 
@@ -91,7 +106,9 @@ run_bs() {
         BOOTSTRAP_ARCH_RELEASE="$base/arch-release" \
         BOOTSTRAP_INSTALLER="$base/installer" \
         PACMAN_LOG="$base/pacman.log" INSTALLER_LOG="$base/installer.log" \
-        BOOTSTRAP_UID="${BOOTSTRAP_UID:-1000}" \
+        GIT_LOG="$base/git.log" MAKEPKG_LOG="$base/makepkg.log" \
+        YAY_BIN="$base/bin/yay" \
+        BOOTSTRAP_UID="${BOOTSTRAP_UID:-1000}" BOOTSTRAP_TMP_ROOT="$base" \
         PACMAN_RC="${PACMAN_RC:-0}" INSTALLER_RC="${INSTALLER_RC:-0}" \
         DOCTOR_RC="${DOCTOR_RC:-0}" CURL_RC="${CURL_RC:-0}" \
         "$BASH" "$SCRIPT" "$@"
@@ -158,7 +175,7 @@ fi
 base="$(new_case)"
 add_tool "$base" curl
 yes_out="$(run_bs "$base" --yes -- --host laptop)"
-if grep -q '^-S --needed --noconfirm base-devel git$' "$base/pacman.log"; then
+if grep -q '^-S --needed --noconfirm base-devel git jq gum$' "$base/pacman.log"; then
     pass "--yes installs the missing bootstrap packages"
 else
     fail "pacman was not called with the expected packages"
@@ -208,7 +225,7 @@ fi
 
 # 9. An already provisioned machine needs no pacman call.
 base="$(new_case)"
-for tool in curl git makepkg gcc fakeroot paru; do
+for tool in curl git makepkg gcc fakeroot paru jq gum; do
     add_tool "$base" "$tool"
 done
 present_out="$(run_bs "$base" --yes)"
@@ -228,13 +245,38 @@ fi
 # 10. A missing AUR helper is a warning, not a failure.
 base="$(new_case)"
 add_tool "$base" curl
-warn_out="$(run_bs "$base" --yes 2>&1)"
-if grep -q 'no AUR helper' <<<"$warn_out" \
+warn_out="$(run_bs "$base" --yes --no-aur 2>&1)"
+if grep -q 'AUR helper installation disabled' <<<"$warn_out" \
     && grep -q -- '--all --yes' "$base/installer.log"; then
-    pass "a missing AUR helper warns and continues"
+    pass "--no-aur warns and continues"
 else
-    fail "a missing AUR helper stopped the bootstrap"
+    fail "--no-aur stopped the bootstrap"
     printf '%s\n' "$warn_out"
+fi
+
+# 10b. A missing helper is built from yay-bin.
+base="$(new_case)"
+for tool in curl jq gum; do add_tool "$base" "$tool"; done
+cat >"$base/bin/git" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >>"$GIT_LOG"
+/bin/mkdir -p "$4"
+EOF
+cat >"$base/bin/makepkg" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >>"$MAKEPKG_LOG"
+printf '#!/usr/bin/env bash\nexit 0\n' >"$YAY_BIN"
+/bin/chmod 0755 "$YAY_BIN"
+EOF
+chmod 0755 "$base/bin/git" "$base/bin/makepkg"
+build_out="$(run_bs "$base" --yes 2>&1)"
+if grep -q 'yay-bin.git' "$base/git.log" \
+    && grep -q -- '-si --noconfirm' "$base/makepkg.log" \
+    && grep -q 'yay installed' <<<"$build_out"; then
+    pass "a missing AUR helper is built from yay-bin"
+else
+    fail "yay-bin was not built"
+    printf '%s\n' "$build_out"
 fi
 
 # 11. An installer failure propagates and skips the doctor.
