@@ -109,7 +109,7 @@ fi
 
 # 4. Apply uses the stored values.
 run_theme --apply >/dev/null
-if grep -q "image $wall --mode light --type scheme-vibrant --prefer closest-to-fallback --config $home/.config/matugen/config.toml" "$matugen_log"; then
+if grep -q "image $wall --mode light --type scheme-vibrant --prefer saturation --config $home/.config/matugen/config.toml" "$matugen_log"; then
     pass "--apply runs matugen with the stored settings"
 else
     fail "matugen was not called correctly"
