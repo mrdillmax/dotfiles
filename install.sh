@@ -77,6 +77,8 @@ HAS_ACTION=0
 # Load helpers before parsing so die() is available for bad options.
 # shellcheck source=lib/common.sh
 source "$DOTFILES_DIR/lib/common.sh"
+# shellcheck source=lib/firefox.sh
+source "$DOTFILES_DIR/lib/firefox.sh"
 # shellcheck source=lib/tui.sh
 source "$DOTFILES_DIR/lib/tui.sh"
 # shellcheck source=lib/monitors.sh
@@ -631,17 +633,6 @@ if (( !ASSUME_YES )) && [[ -t 0 ]]; then
     info "selected host: $HOST_NAME   gpu: $GPU_PROFILE"
 fi
 
-firefox_profile_dir() {
-    local candidate
-    for candidate in "$REAL_HOME"/.config/mozilla/firefox/*.default-release; do
-        if [[ -d $candidate ]]; then
-            basename "$candidate"
-            return 0
-        fi
-    done
-    printf 'default-release\n'
-}
-
 obsidian_vault() {
     local candidate
     for candidate in "$REAL_HOME"/Obsidian/*/; do
@@ -656,17 +647,26 @@ obsidian_vault() {
 install_module_files() {
     local name="$1"
     local root="$DOTFILES_DIR/modules/$name/home"
-    local src rel dst
+    local src rel dst firefox_profile
 
     [[ -d $root ]] || return 0
 
     while IFS= read -r src; do
         rel="${src#"$root"/}"
         local templated=0
-        if [[ $rel == *@FIREFOX_PROFILE_DIR@* || $rel == *@OBSIDIAN_VAULT@* ]]; then
+        if [[ $rel == *@FIREFOX_PROFILE_DIR@* ]]; then
+            if ! firefox_profile="$(firefox_profile_dir)"; then
+                if [[ -z ${_FIREFOX_WARNED:-} ]]; then
+                    warn "Firefox profile not found; skipping its chrome files (start Firefox once, then re-run)"
+                    _FIREFOX_WARNED=1
+                fi
+                continue
+            fi
+            rel="${rel//@FIREFOX_PROFILE_DIR@/$firefox_profile}"
+        fi
+        if [[ $rel == *@OBSIDIAN_VAULT@* ]]; then
             templated=1
         fi
-        rel="${rel//@FIREFOX_PROFILE_DIR@/$(firefox_profile_dir)}"
         rel="${rel//@OBSIDIAN_VAULT@/$(obsidian_vault)}"
         if [[ $rel == *.in ]]; then
             dst="$REAL_HOME/${rel%.in}"
@@ -722,11 +722,23 @@ selected_terminal() {
 
 render_template() {
     local src="$1" dst="$2"
-    local content tmp
+    local content tmp profile
     content="$(<"$src")"
 
+    if [[ $content == *@FIREFOX_PROFILE_DIR@* ]]; then
+        if profile="$(firefox_profile_dir)"; then
+            content="${content//@FIREFOX_PROFILE_DIR@/$profile}"
+        else
+            warn "Firefox profile not found; writing $dst without the Firefox theme entry"
+            content="$(printf '%s\n' "$content" | awk '
+                /^\[templates\.firefox\]/ { skip = 1; next }
+                skip && /^\[/              { skip = 0 }
+                !skip                      { print }
+            ')"
+        fi
+    fi
+
     content="${content//@HOME@/$REAL_HOME}"
-    content="${content//@FIREFOX_PROFILE_DIR@/$(firefox_profile_dir)}"
     content="${content//@OBSIDIAN_VAULT@/$(obsidian_vault)}"
     content="${content//@CURSOR_THEME@/$CURSOR_THEME}"
     content="${content//@CURSOR_SIZE@/$CURSOR_SIZE}"
