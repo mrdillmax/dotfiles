@@ -49,3 +49,6 @@ hosts/*/generated/
 *.log
 __pycache__/
 *.pyc
+
+# ── Disabled grep-only tests (kept locally, not part of the suite) ─────────
+tests/legacy/

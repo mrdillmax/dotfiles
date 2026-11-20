@@ -1431,6 +1431,7 @@ main_menu() {
     done
 }
 
+control_center_main() {
 case "${1:-}" in
     --help|-h)
         cat <<'EOF'
@@ -1454,3 +1455,9 @@ EOF
         die "unknown option: $1 (see --help)"
         ;;
 esac
+}
+
+# Keep the script sourceable for behavior tests; only execute as a program.
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+    control_center_main "$@"
+fi
