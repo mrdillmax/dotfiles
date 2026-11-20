@@ -572,6 +572,26 @@ wallpaper_apply() {
     fi
 }
 
+# The theme menu writes theme.conf last, so it wins over the older
+# wallpaper.path mirror. Both are read here to keep the marker accurate.
+wallpaper_current_image() {
+    local state="$STATE_DIR/theme.conf" image=""
+
+    if [[ -r $state ]]; then
+        image="$(sed -n 's/^wallpaper=//p' "$state" | head -n1)"
+    fi
+    if [[ -z $image && -r $REAL_HOME/.config/hypr/wallpaper.path ]]; then
+        image="$(<"$REAL_HOME/.config/hypr/wallpaper.path")"
+    fi
+    [[ -n $image ]] && printf '%s\n' "$image"
+}
+
+# The label carries the "(current)" marker, so the cache key changes when the
+# selection does.
+wallpaper_card_key() {
+    printf '%s\n%s\n' "$1" "$2"
+}
+
 rofi_color() {
     local key="$1" file="$CONFIG_HOME/rofi/colors.rasi" value
     [[ -r $file ]] || return 1
@@ -619,9 +639,7 @@ wallpaper_page() {
         return 0
     fi
 
-    current=""
-    [[ -r $REAL_HOME/.config/hypr/wallpaper.path ]] \
-        && current="$(<"$REAL_HOME/.config/hypr/wallpaper.path")"
+    current="$(wallpaper_current_image)"
 
     if have magick; then
         CARD_BG="$(rofi_color surface || true)"
@@ -646,7 +664,7 @@ wallpaper_page() {
     local row
     for row in "${labels[@]}"; do
         image="${paths[$row]}"
-        thumb="$CACHE_DIR/$(printf '%s' "$image" | sha1sum | cut -c1-12).png"
+        thumb="$CACHE_DIR/$(wallpaper_card_key "$row" "$image" | sha1sum | cut -c1-12).png"
         if ((card_mode)); then
             thumb="${thumb%.png}-card.png"
             if [[ ! -r $thumb || $image -nt $thumb ]]; then
@@ -661,7 +679,8 @@ wallpaper_page() {
 
     local -a args=(-show-icons)
     if ((card_mode)); then
-        args+=(-theme-str 'window { width: 700px; } listview { columns: 2; lines: 3; } element-icon { size: 300px; } element-text { enabled: false; }')
+        # One card per row: two 320px cards do not fit the panel width.
+        args+=(-theme-str 'window { width: 400px; } listview { lines: 3; } element-icon { size: 330px; } element-text { enabled: false; }')
     fi
     selected="$(rofi_pick "Wallpaper" "${args[@]}" <"$CACHE_DIR/rows")" || return 0
     [[ -n ${paths[$selected]:-} ]] || return 0

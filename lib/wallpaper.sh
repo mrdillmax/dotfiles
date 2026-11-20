@@ -41,6 +41,31 @@ wallpaper_from_state() {
     printf '%s\n' "$image"
 }
 
+# The theme menu records its choice in $XDG_STATE_HOME. That file is written
+# last, so it is the truth; wallpaper.path is kept in sync for older readers.
+wallpaper_theme_state_file() {
+    printf '%s\n' "${XDG_STATE_HOME:-$REAL_HOME/.local/state}/dotfiles/theme.conf"
+}
+
+wallpaper_current_image() {
+    local state image
+    state="$(wallpaper_theme_state_file)"
+    if [[ -r $state ]]; then
+        image="$(sed -n 's/^wallpaper=//p' "$state" | head -n1)"
+        if [[ -n $image ]]; then
+            printf '%s\n' "$image"
+            return 0
+        fi
+    fi
+    wallpaper_from_state
+}
+
+# Cache key for a wallpaper card. The label carries the "(current)" marker, so
+# including it regenerates the caption when the selection changes.
+wallpaper_card_key() {
+    printf '%s\n%s\n' "$1" "$2"
+}
+
 default_wallpaper_source() {
     printf '%s\n' "$DOTFILES_DIR/assets/wallpapers/example.jpg"
 }

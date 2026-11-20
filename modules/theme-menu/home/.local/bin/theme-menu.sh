@@ -182,7 +182,21 @@ write_state() {
         printf 'source_index=%s\n' "$SOURCE_INDEX"
     } >"$tmp"
     mv -f -- "$tmp" "$STATE_FILE"
+    sync_wallpaper_path
     ok "settings saved to $STATE_FILE"
+}
+
+# Hyprland, the wallpaper picker and the theme scripts all read this file.
+sync_wallpaper_path() {
+    local path="$REAL_HOME/.config/hypr/wallpaper.path"
+
+    [[ -n $WALLPAPER ]] || return 0
+    if ((DRY_RUN)); then
+        info "[dry-run] would write $path"
+        return 0
+    fi
+    mkdir -p -- "$(dirname -- "$path")"
+    printf '%s\n' "$WALLPAPER" >"$path"
 }
 
 print_state() {
