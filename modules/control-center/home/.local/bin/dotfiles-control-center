@@ -1110,6 +1110,86 @@ configuration_page() {
 
 # ------------------------------------------------------------- install ------
 
+# Quote every argument for a shell string. AUR_GPG_FLAGS holds values with
+# spaces, so the flags and the package list need the same treatment.
+pkg_quote() {
+    local out='' arg
+    for arg in "$@"; do
+        out+="$(printf '%q' "$arg") "
+    done
+    printf '%s' "${out% }"
+}
+
+# Build the install command without running it. The terminal stays attached to
+# pacman/yay, so their own [Y/n] prompts keep working.
+package_install_command() {   # kind helper pkg...
+    local kind="$1" helper="$2"
+    shift 2
+    local -a cmd=()
+    case "$kind" in
+        repo) cmd=(sudo pacman -S --needed) ;;
+        aur)
+            [[ -n $helper ]] || return 1
+            cmd=("$helper")
+            [[ $helper == yay ]] && cmd+=("${AUR_GPG_FLAGS[@]}")
+            cmd+=(-S --needed)
+            ;;
+        *) return 1 ;;
+    esac
+    printf '%s %s' "$(pkg_quote "${cmd[@]}")" "$(pkg_quote "$@")"
+}
+
+package_remove_command() {    # helper pkg
+    local helper="$1" pkg="$2"
+    if [[ -n $helper ]]; then
+        printf '%s -Rns %s' "$helper" "$(pkg_quote "$pkg")"
+    else
+        printf 'sudo pacman -Rns %s' "$(pkg_quote "$pkg")"
+    fi
+}
+
+# The fzf screens run in a terminal, so they return a script instead of running
+# commands here. Selection is read with mapfile: piping it through xargs would
+# redirect stdin from /dev/null and make pacman read EOF at its prompt.
+fzf_install_script() {        # kind helper
+    local kind="$1" helper="$2" source_cmd prompt preview install_cmd
+    case "$kind" in
+        repo)
+            source_cmd='pacman -Slq'
+            prompt='repo> '
+            preview='pacman -Si {1}'
+            install_cmd='sudo pacman -S --needed'
+            ;;
+        aur)
+            [[ -n $helper ]] || return 1
+            source_cmd="$helper -Slq"
+            prompt='AUR> '
+            preview="$helper -Si {1}"
+            install_cmd="$helper"
+            [[ $helper == yay ]] && install_cmd+=" $(pkg_quote "${AUR_GPG_FLAGS[@]}")"
+            install_cmd+=" -S --needed"
+            ;;
+        *) return 1 ;;
+    esac
+
+    cat <<EOF
+mapfile -t sel < <($source_cmd | fzf --multi --height=100% --reverse --border=rounded --info=inline --prompt='$prompt' --preview='$preview' --preview-window='down,60%,wrap')
+((\${#sel[@]})) || exit 0
+$install_cmd "\${sel[@]}"
+EOF
+}
+
+fzf_remove_script() {         # helper
+    local helper="$1" remove_cmd='sudo pacman -Rns'
+    [[ -n $helper ]] && remove_cmd="$helper -Rns"
+
+    cat <<EOF
+mapfile -t sel < <(pacman -Qqe | fzf --multi --height=100% --reverse --border=rounded --info=inline --prompt='remove> ' --preview='pacman -Qi {1}' --preview-window='down,60%,wrap')
+((\${#sel[@]})) || exit 0
+$remove_cmd "\${sel[@]}"
+EOF
+}
+
 package_search_install() {
     local query choice helper pkg
     local -a repo=() aur=() labels=()
@@ -1139,14 +1219,12 @@ package_search_install() {
     choice="$(printf '%s\n' "${labels[@]}" | rofi_pick "Install package")" || return 0
     pkg="${choice#*/}"
     case "$choice" in
-        repo/*) run_terminal --hold "sudo pacman -S --needed $(printf '%q' "$pkg")" ;;
+        repo/*)
+            run_terminal --hold "$(package_install_command repo "" "$pkg")"
+            ;;
         aur/*)
             if [[ -n $helper ]]; then
-                if [[ $helper == yay ]]; then
-                    run_terminal --hold "$helper $(printf '%q ' "${AUR_GPG_FLAGS[@]}")-S --needed $(printf '%q' "$pkg")"
-                else
-                    run_terminal --hold "$helper -S --needed $(printf '%q' "$pkg")"
-                fi
+                run_terminal --hold "$(package_install_command aur "$helper" "$pkg")"
             else
                 notify "No AUR helper; install $pkg manually"
             fi
@@ -1157,36 +1235,20 @@ package_search_install() {
 # fzf layout: package info sits below the list, so long descriptions use the
 # full terminal width instead of wrapping inside a narrow side pane.
 fzf_install() {
-    local kind="$1" helper flags script
+    local kind="$1" helper=""
     if ! have fzf; then
         package_search_install
         return 0
     fi
 
-    if [[ $kind == repo ]]; then
-        script="$(cat <<'EOF'
-sel="$(pacman -Slq | fzf --multi --height=100% --reverse --border=rounded --info=inline --prompt='repo> ' --preview='pacman -Si {1}' --preview-window='down,60%,wrap')" || exit 0
-[ -n "$sel" ] || exit 0
-printf '%s\n' "$sel" | xargs -r sudo pacman -S --needed
-EOF
-)"
-        run_terminal --hold "$script"
-        return 0
+    if [[ $kind == aur ]]; then
+        helper="$(aur_helper)"
+        if [[ -z $helper ]]; then
+            notify "No AUR helper; install paru or yay first"
+            return 0
+        fi
     fi
-
-    helper="$(aur_helper)"
-    if [[ -z $helper ]]; then
-        notify "No AUR helper; install paru or yay first"
-        return 0
-    fi
-    [[ $helper == yay ]] && flags="$(printf '%q ' "${AUR_GPG_FLAGS[@]}")"
-    script="$(cat <<EOF
-sel="\$($helper -Slq | fzf --multi --height=100% --reverse --border=rounded --info=inline --prompt='AUR> ' --preview='$helper -Si {1}' --preview-window='down,60%,wrap')" || exit 0
-[ -n "\$sel" ] || exit 0
-printf '%s\\n' "\$sel" | xargs -r $helper $flags -S --needed
-EOF
-)"
-    run_terminal --hold "$script"
+    run_terminal --hold "$(fzf_install_script "$kind" "$helper")"
 }
 
 docker_ready() {
@@ -1281,26 +1343,17 @@ package_remove() {
     pkg="$choice"
     ask_confirm "Remove $pkg and its unused dependencies?" || return 0
     helper="$(aur_helper)"
-    if [[ -n $helper ]]; then
-        run_terminal --hold "$helper -Rns $(printf '%q' "$pkg")"
-    else
-        run_terminal --hold "sudo pacman -Rns $(printf '%q' "$pkg")"
-    fi
+    run_terminal --hold "$(package_remove_command "$helper" "$pkg")"
 }
 
 fzf_remove() {
-    local script
+    local helper
     if ! have fzf; then
         package_remove
         return 0
     fi
-    script="$(cat <<'EOF'
-sel="$(pacman -Qqe | fzf --multi --height=100% --reverse --border=rounded --info=inline --prompt='remove> ' --preview='pacman -Qi {1}' --preview-window='down,60%,wrap')" || exit 0
-[ -n "$sel" ] || exit 0
-printf '%s\n' "$sel" | xargs -r sudo pacman -Rns
-EOF
-)"
-    run_terminal --hold "$script"
+    helper="$(aur_helper)"
+    run_terminal --hold "$(fzf_remove_script "$helper")"
 }
 
 fzf_inspect() {
