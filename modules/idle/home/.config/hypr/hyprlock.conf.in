@@ -1,0 +1,53 @@
+# Lock screen.
+#
+# Fallback used before the first matugen run; after that matugen regenerates
+# this file from the palette. Template: ~/.config/matugen/templates/hyprlock.conf.
+
+general {
+    hide_cursor = true
+    ignore_empty_input = true
+}
+
+background {
+    monitor =
+    path = screenshot
+    blur_passes = 3
+    dim_inactive = false
+}
+
+input-field {
+    monitor =
+    size = 260, 44
+    rounding = 12
+    outline_thickness = 2
+    dots_size = 0.18
+    dots_spacing = 0.15
+    outer_color = rgb(8ed5cc)
+    inner_color = rgb(1f2b28)
+    font_color = rgb(dde4e1)
+    fail_color = rgb(ffb4ab)
+    placeholder_text = <span foreground="#9aa5a1">Password</span>
+    fail_text = <span foreground="#ffb4ab">Wrong password</span>
+}
+
+label {
+    monitor =
+    text = $TIME
+    color = rgb(dde4e1)
+    font_size = 64
+    font_family = @UI_FONT@
+    position = 0, 120
+    halign = center
+    valign = center
+}
+
+label {
+    monitor =
+    text = $USER
+    color = rgb(9aa5a1)
+    font_size = 14
+    font_family = @UI_FONT@
+    position = 0, -40
+    halign = center
+    valign = center
+}
