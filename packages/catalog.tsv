@@ -173,9 +173,6 @@ sunshine-bin	Games	pkg	yes	any	any	A self-hosted game stream host for Moonlight.
 wine-gecko	Games	pkg	yes	any	any	Wine's built-in replacement for Microsoft's Internet Explorer
 wine-mono	Games	pkg	yes	any	any	Wine's built-in replacement for Microsoft's .NET Framework
 xmclauncher-bin	Games	pkg	yes	any	any	X Minecraft Launcher - A modern, open-source Minecraft Launcher (repackaged from the official .pacman artifact)
-docker	Virtualization	pkg	no	any	any	Pack, ship and run any application as a lightweight container
-docker-compose	Virtualization	pkg	no	any	any	Fast, isolated development environments using Docker
-lazydocker	Virtualization	pkg	no	any	any	Terminal UI for Docker and Docker Compose
 libvirt	Virtualization	pkg	no	any	any	API for controlling virtualization engines (openvz,kvm,qemu,virtualbox,xen,etc)
 qemu-base	Virtualization	pkg	no	any	any	A basic QEMU setup for headless environments
 qemu-desktop	Virtualization	pkg	no	any	any	A QEMU setup for desktop environments

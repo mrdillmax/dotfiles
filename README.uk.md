@@ -503,16 +503,14 @@ dotfiles-control-center
 
 Натисни `SUPER + Space` або відкрий **Control Center** з rofi. Сторінки:
 
-- **Apps**: відкриває запуск програм (drun)
 - **Docs**: бінди, версії ядра/оболонки/десктопу, README і посилання
 - **Menu**: показати, сховати або перезапустити Waybar; блокування;
   перезавантаження Hyprland; нотифікації; автозапуск; idle, кришка, game mode
 - **Style**: шпалери з мініатюрами, dark/light/smart, схеми matugen, статус
   шрифтів та іконок
-- **Configuration**: звук, Wi-Fi, Bluetooth, монітори, бінди, мишка/тачпад,
-  Tide і основні текстові конфіги у редакторі
-- **Install**: пакети з репозиторіїв і AUR через `fzf`; lazydocker, коли є
-  Docker
+- **Configuration**: звук, Wi-Fi, Bluetooth, монітори, екран блокування,
+  бінди, мишка/тачпад, Tide і основні текстові конфіги у редакторі
+- **Install**: пакети з репозиторіїв і AUR через `fzf`
 - **Uninstall**: видалення кількох пакетів через `fzf` і перегляд інформації
 - **Update**: pacman/AUR, дзеркала reflector, дотфайли і
   `spicetify backup apply`
@@ -590,8 +588,8 @@ pcall(dofile, HOME .. "/.config/hypr/input.lua")
 опційні. `cuda`, `virtio-win`, `hypridle`, `hyprlock`, `profile-sync-daemon`,
 `vmtouch` і `preload` також видимі, але опційні. Базові системні пакети
 (`base`, `base-devel`, `git`, `networkmanager`, компілятори тощо) не входять до
-каталогу; ними керує bootstrap. Віртуалізація, Docker і засоби діагностики
-заліза опційні.
+каталогу; ними керує bootstrap. Віртуалізація і засоби діагностики заліза
+опційні.
 
 Категорії: System, Desktop, Hyprland, Audio, Network, Development, Games,
 Virtualization, Fonts, Drivers, Terminal, Launcher, Bar, Notifications,

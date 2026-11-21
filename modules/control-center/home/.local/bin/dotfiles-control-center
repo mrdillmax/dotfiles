@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Rofi control center for daily settings.
 #
-# Nine top-level pages: apps, docs, menu toggles, style, configuration,
-# install, uninstall, updates and power. Installation and updates run through
+# Eight top-level pages: docs, menu toggles, style, configuration, install,
+# uninstall, updates and power. Installation and updates run through
 # small helpers or a terminal, so this menu never edits the system silently.
 set -uo pipefail
 
@@ -339,12 +339,6 @@ edit_bind_page() {
         notify "Hyprland reloaded"
     fi
     exit 0
-}
-
-# ---------------------------------------------------------------- apps -------
-
-apps_page() {
-    exec rofi -show drun
 }
 
 # ---------------------------------------------------------------- docs -------
@@ -935,6 +929,28 @@ style_page() {
 
 # --------------------------------------------------------- configuration ----
 
+# nmcli and bluetoothctl exist whenever NetworkManager/bluez are installed, even
+# on a machine without the radio. Ask the hardware, not the package.
+wifi_hardware_present() {
+    have nmcli || return 1
+    nmcli -t -f TYPE device 2>/dev/null | grep -qx 'wifi'
+}
+
+bluetooth_hardware_present() {
+    have bluetoothctl || return 1
+    [[ -n $(bluetoothctl list 2>/dev/null) ]]
+}
+
+# The lock screen is opt-in: the idle module installs hyprlock. This entry is
+# the explicit route; the power page keeps working without it.
+lock_screen_page() {
+    if have hyprlock; then
+        exec hyprlock
+    fi
+    notify "Install hyprlock (idle module) to use the lock screen"
+    return 1
+}
+
 wifi_connect() {
     local ssid
     local -a networks=()
@@ -1105,9 +1121,10 @@ configuration_page() {
     while :; do
         specs=()
         { have pavucontrol || have wpctl || have pactl; } && specs+=($'|Sound')
-        have nmcli && specs+=($'|Wi-Fi')
-        have bluetoothctl && specs+=($'|Bluetooth')
+        wifi_hardware_present && specs+=($'|Wi-Fi')
+        bluetooth_hardware_present && specs+=($'|Bluetooth')
         have monitor-profiles.sh && specs+=($'|Monitors')
+        have hyprlock && specs+=($'|Lock screen')
         have binds-cheatsheet.sh && specs+=($'|Keybinds')
         have mouse-tune.sh && specs+=($'|'"$mouse_label")
         have fish && specs+=($'|Tide')
@@ -1118,6 +1135,7 @@ configuration_page() {
             "Wi-Fi") wifi_page ;;
             "Bluetooth") bluetooth_page ;;
             "Monitors") monitors_page ;;
+            "Lock screen") lock_screen_page ;;
             "Keybinds") edit_bind_page ;;
             Mouse*) run_terminal "mouse-tune.sh"; exit 0 ;;
             "Tide") tide_configure; exit 0 ;;
@@ -1270,65 +1288,6 @@ fzf_install() {
     run_terminal --hold "$(fzf_install_script "$kind" "$helper")"
 }
 
-docker_ready() {
-    local user
-    user="${USER:-$(id -un)}"
-
-    if ! have docker; then
-        notify "Docker is not installed"
-        return 1
-    fi
-    if have systemctl && ! systemctl is-active --quiet docker 2>/dev/null; then
-        if ask_confirm "Docker service is not running. Start it now?"; then
-            run_terminal --hold "sudo systemctl start docker"
-        else
-            return 1
-        fi
-    fi
-
-    if docker info >/dev/null 2>&1; then
-        return 0
-    fi
-
-    if ! id -nG "$user" 2>/dev/null | tr ' ' '\n' | grep -qx docker; then
-        if ask_confirm "Add $user to the docker group? A re-login is required."; then
-            run_terminal --hold "sudo usermod -aG docker $(printf '%q' "$user")"
-            notify "Docker group added. Log out and back in, then retry."
-        fi
-    else
-        notify "Docker is not reachable (service or permissions)"
-    fi
-    return 1
-}
-
-docker_pull() {
-    local image
-    image="$(ask_text "Docker image (for example archlinux:latest)")" || return 0
-    [[ -n $image ]] || return 0
-    run_terminal --hold "docker pull $(printf '%q' "$image")"
-}
-
-docker_page() {
-    local choice
-
-    if ! have lazydocker; then
-        notify "LazyDocker is not installed"
-        return 0
-    fi
-    docker_ready || return 0
-
-    while :; do
-        choice="$(pick_icon "Docker" \
-            $'|LazyDocker' \
-            $'|Pull image')" || return 0
-        case "$choice" in
-            LazyDocker) run_terminal "lazydocker"; exit 0 ;;
-            "Pull image") docker_pull; exit 0 ;;
-            *) return 0 ;;
-        esac
-    done
-}
-
 install_page() {
     local choice
     while :; do
@@ -1336,12 +1295,10 @@ install_page() {
             $'|Repositories'
             $'|AUR'
         )
-        have lazydocker && specs+=($'|Docker')
         choice="$(pick_icon "Install" "${specs[@]}")" || return 0
         case "$choice" in
             "Repositories") fzf_install repo; exit 0 ;;
             AUR) fzf_install aur; exit 0 ;;
-            Docker) docker_page ;;
             *) return 0 ;;
         esac
     done
@@ -1419,7 +1376,6 @@ update_page() {
                 $'|Installer'
             )
         fi
-        specs+=($'|Maintenance help')
         [[ -n $(spicetify_bin) ]] && specs+=($'|Spicetify')
         choice="$(pick_icon "Update" "${specs[@]}")" || return 0
         case "$choice" in
@@ -1450,12 +1406,6 @@ update_page() {
             "Apply configs") run_terminal --hold "./install.sh --all --no-packages --yes"; exit 0 ;;
             "Import live edits") run_terminal --hold "./scripts/sync.sh pull"; exit 0 ;;
             Installer) run_terminal --hold "./install.sh"; exit 0 ;;
-            "Maintenance help")
-                show_info "Dotfiles maintenance" \
-                    "<b>Pull repo and apply</b> · git pull, then install the repository configs" \
-                    "<b>Apply configs</b> · install the configs already in this clone" \
-                    "<b>Import live edits</b> · copy changes made on this machine back into the clone"
-                ;;
             Spicetify) run_terminal --hold "$(spicetify_bin) backup apply"; exit 0 ;;
             "") return 0 ;;
         esac
@@ -1474,11 +1424,17 @@ power_page() {
 
 # ------------------------------------------------------------- main menu ----
 
+# Main menu order. Icons line up with this list by index.
+control_center_pages() {
+    printf '%s\n' Docs Menu Style Configuration Install Uninstall Update Power
+}
+
 main_menu() {
     local index i
-    local -a icons=($'' $'' $'' $'' $'' $'' $'' $'' $'')
-    local -a names=(Apps Docs Menu Style Configuration Install Uninstall Update Power)
-    local -a rows=()
+    local -a icons=($'' $'' $'' $'' $'' $'' $'' $'')
+    local -a names=() rows=()
+
+    mapfile -t names < <(control_center_pages)
 
     for i in "${!names[@]}"; do
         rows+=("<span font='JetBrainsMono Nerd Font 13'>${icons[$i]}</span>  ${names[$i]}")
@@ -1487,15 +1443,14 @@ main_menu() {
     while :; do
         index="$(printf '%s\n' "${rows[@]}" | rofi_index "Control Center")" || return 0
         case "$index" in
-            0) apps_page ;;
-            1) docs_page ;;
-            2) menu_page ;;
-            3) style_page ;;
-            4) configuration_page ;;
-            5) install_page ;;
-            6) uninstall_page ;;
-            7) update_page ;;
-            8) power_page ;;
+            0) docs_page ;;
+            1) menu_page ;;
+            2) style_page ;;
+            3) configuration_page ;;
+            4) install_page ;;
+            5) uninstall_page ;;
+            6) update_page ;;
+            7) power_page ;;
             *) return 0 ;;
         esac
     done
@@ -1507,15 +1462,15 @@ case "${1:-}" in
         cat <<'EOF'
 Usage: dotfiles-control-center
 
-Opens the rofi control center: apps, docs, menu toggles, style,
-configuration, install, uninstall, updates and power.
+Opens the rofi control center: docs, menu toggles, style, configuration,
+install, uninstall, updates and power.
 
 Esc closes the current page. Run a single action from the installer flags
 instead when scripting.
 EOF
         ;;
     --list-actions)
-        printf '%s\n' Apps Docs Menu Style Configuration Install Uninstall Update Power
+        control_center_pages
         ;;
     "")
         have rofi || die "rofi is not installed"
