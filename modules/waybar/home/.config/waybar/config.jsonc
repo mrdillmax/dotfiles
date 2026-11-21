@@ -55,7 +55,7 @@
   // Notification state. Clicking pauses or resumes dunst and refreshes the
   // module through its realtime signal.
   "custom/dunst": {
-    "exec": "~/.config/waybar/scripts/dunst.sh",
+    "exec": "~/.local/bin/waybar-dunst.sh",
     "return-type": "json",
     "interval": "once",
     "signal": 8,

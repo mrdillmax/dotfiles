@@ -42,8 +42,8 @@ local terminal    = "kitty"
 local fileManager = "dolphin"
 local dmenu       = "rofi -show drun"
 local menu        = "rofi -show run"
-local powermenu   = os.getenv("HOME") .. "/.config/rofi/scripts/powermenu.sh"
-local history     = os.getenv("HOME") .. "/.config/rofi/scripts/rofi-dunst-history.sh"
+local powermenu   = os.getenv("HOME") .. "/.local/bin/powermenu.sh"
+local history     = os.getenv("HOME") .. "/.local/bin/dunst-history.sh"
 local picker      = "hyprpicker -a"
 local calc        = "qalculate-gtk"
 local procsmng    = "kitty btop"
@@ -217,7 +217,7 @@ hl.bind(mainMod .. " + SHIFT + A", hl.dsp.exec_cmd("autostart.sh pick"))
 hl.bind("switch:on:Lid Switch", hl.dsp.exec_cmd("lid-handler.sh closed"))
 hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("lid-handler.sh open"))
 
-hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("uwsm app -- clipboard-menu.sh"), { dont_inhibit = true })
+hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("clipboard-menu.sh"))
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd(powermenu))
 hl.bind(mainMod .. " + H", hl.dsp.exec_cmd(history))
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd(picker))
@@ -255,10 +255,10 @@ for _, m in ipairs(monitors) do
     max_ws = math.max(max_ws, tonumber(m.ws_count) or 10)
 end
 
--- switch_ws.sh is installed by the optional workspaces-split module. Without
+-- switch-workspace.sh is installed by the optional workspaces-split module. Without
 -- it, fall back to the native workspace dispatchers so a single-monitor setup
 -- still gets working SUPER+1..0 bindings.
-local switch_ws = HOME .. "/.config/hypr/switch_ws.sh"
+local switch_ws = HOME .. "/.local/bin/switch-workspace.sh"
 local ws_handle = io.open(switch_ws, "r")
 local has_switch_ws = ws_handle ~= nil
 if ws_handle then ws_handle:close() end

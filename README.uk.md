@@ -330,7 +330,7 @@ Spicetify CLI — вибраний Music-пункт, а не pacman-пакет. 
 
 - `~/.config/hypr/monitors.lua` — викликає `hl.monitor()` і
   `hl.workspace_rule()` та повертає список моніторів;
-- `~/.config/hypr/monitors.conf.sh` — копію, яку читає `switch_ws.sh`.
+- `~/.config/hypr/monitors.conf.sh` — копію, яку читає `switch-workspace.sh`.
 
 `hyprland.lua` завантажує `monitors.lua` через `pcall(dofile, ...)`. Якщо файл
 відсутній або невалідний, використовується `preferred,auto,1`, тож свіже
@@ -351,7 +351,7 @@ Spicetify CLI — вибраний Music-пункт, а не pacman-пакет. 
 laptop.
 
 Модуль `workspaces-split` пропонується лише коли знайдено 2+ монітори. Він
-встановлює `~/.config/hypr/switch_ws.sh`, який читає імена моніторів і
+встановлює `~/.local/bin/switch-workspace.sh`, який читає імена моніторів і
 діапазони воркспейсів зі згенерованого `monitors.conf.sh` — нічого не
 захардкожено. Без модуля `SUPER+1..0` використовує рідні диспетчери Hyprland.
 

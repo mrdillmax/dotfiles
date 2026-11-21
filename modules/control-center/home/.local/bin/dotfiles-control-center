@@ -1467,10 +1467,8 @@ update_page() {
 power_page() {
     if have powermenu.sh; then
         exec powermenu.sh
-    elif [[ -x $CONFIG_HOME/rofi/scripts/powermenu.sh ]]; then
-        exec "$CONFIG_HOME/rofi/scripts/powermenu.sh"
     else
-        notify "powermenu.sh is not installed"
+        notify "powermenu.sh is not installed (rofi module)"
     fi
 }
 

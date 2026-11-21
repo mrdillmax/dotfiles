@@ -332,7 +332,7 @@ renders two files from it:
 
 - `~/.config/hypr/monitors.lua` — calls `hl.monitor()` and
   `hl.workspace_rule()`, and returns the monitor list;
-- `~/.config/hypr/monitors.conf.sh` — the copy read by `switch_ws.sh`.
+- `~/.config/hypr/monitors.conf.sh` — the copy read by `switch-workspace.sh`.
 
 `hyprland.lua` loads `monitors.lua` with `pcall(dofile, ...)`. If the file is
 missing or invalid, it falls back to `preferred,auto,1`, so a fresh install
@@ -352,7 +352,7 @@ For a laptop, the generated layout supports fractional scale and any `eDP-*`
 panel; lid and external-monitor behaviour belongs to the laptop host profile.
 
 The `workspaces-split` module is offered only when two or more monitors are
-detected. It installs `~/.config/hypr/switch_ws.sh`, which reads monitor names
+detected. It installs `~/.local/bin/switch-workspace.sh`, which reads monitor names
 and workspace ranges from the generated `monitors.conf.sh` — nothing is
 hardcoded. Without the module, `SUPER+1..0` uses Hyprland's native workspace
 dispatchers.

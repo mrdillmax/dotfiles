@@ -90,8 +90,12 @@ if status is-interactive; and test -n "$WAYLAND_DISPLAY"
     # === In terminal autostart ===
     fastfetch
 end
-    # === Autologin ===
-if status is-login; and string match -q '/dev/tty1' (tty); and test -z "$WAYLAND_DISPLAY"
+
+# === Autologin ===
+# Start the desktop from tty1 only when no session is running yet. uwsm
+# knows whether this is a safe moment; checking WAYLAND_DISPLAY alone missed
+# the case where the user already logged in on another VT.
+if uwsm check may-start; and string match -q '/dev/tty1' (tty)
     clear
     exec uwsm start hyprland-uwsm.desktop > /dev/null 2>&1
 end
