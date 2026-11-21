@@ -271,15 +271,33 @@ add_bind() {
 
     escaped="${command//\\/\\\\}"
     escaped="${escaped//\"/\\\"}"
-    if [[ -s $CONFIG && -n "$(tail -c1 "$CONFIG")" ]]; then
-        printf '\n' >>"$CONFIG"
-    fi
-    {
-        printf '\n# Added by binds-cheatsheet on %s\n' "$(date +%F)"
-        printf 'hl.bind(mainMod .. " + %s", hl.dsp.exec_cmd("%s"))\n' "$suffix" "$escaped"
-    } >>"$CONFIG"
 
-    line_no="$(wc -l <"$CONFIG")"
+    # Insert after the last existing bind so the new line stays in the binds
+    # section instead of landing below the window rules at the end of the file.
+    local last_bind tmp
+    last_bind="$(grep -n 'hl\.bind(' "$CONFIG" | tail -n1 | cut -d: -f1)"
+    tmp="$(mktemp)"
+
+    if [[ -n $last_bind ]]; then
+        {
+            head -n "$last_bind" "$CONFIG"
+            printf -- '-- Added by binds-cheatsheet on %s\n' "$(date +%F)"
+            printf 'hl.bind(mainMod .. " + %s", hl.dsp.exec_cmd("%s"))\n\n' "$suffix" "$escaped"
+            tail -n "+$((last_bind + 1))" "$CONFIG"
+        } >"$tmp"
+        line_no=$((last_bind + 2))
+    else
+        {
+            cat "$CONFIG"
+            [[ -s $CONFIG && -n "$(tail -c1 "$CONFIG")" ]] && printf '\n'
+            printf -- '-- Added by binds-cheatsheet on %s\n' "$(date +%F)"
+            printf 'hl.bind(mainMod .. " + %s", hl.dsp.exec_cmd("%s"))\n' "$suffix" "$escaped"
+        } >"$tmp"
+        line_no="$(wc -l <"$tmp")"
+    fi
+
+    mv -- "$tmp" "$CONFIG"
+
     ok "added $candidate"
     printf '%s:%s\n' "$CONFIG" "$line_no"
 }
