@@ -748,7 +748,7 @@ Manifest:
 
 | Source | Destination |
 |--------|-------------|
-| `system/zram/zram-generator.conf` | `/etc/systemd/zram-generator.conf` |
+| `system/zram/99-dotfiles.conf` | `/etc/systemd/zram-generator.conf.d/99-dotfiles.conf` |
 | `system/cpupower/cpupower` | `/etc/default/cpupower` |
 | `system/networkmanager/dns.conf` | `/etc/NetworkManager/conf.d/dns.conf` (Pi-hole + Unbound only) |
 | `system/networkmanager/rc-manager.conf` | `/etc/NetworkManager/conf.d/rc-manager.conf` (Pi-hole + Unbound only) |
@@ -757,8 +757,8 @@ Manifest:
 | `system/wait-iface/wait-iface.sh` | `/usr/local/bin/wait-iface.sh` |
 | `system/systemd/...` | `/etc/systemd/system/...` |
 | `system/ram-cache/99-ram-cache.conf` | `/etc/sysctl.d/99-ram-cache.conf` (ram component only) |
-| `system/grub/default-grub` | `/etc/default/grub` (nvidia/hybrid only; extra confirmation) |
-| `system/mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` (nvidia/hybrid only; extra confirmation) |
+| `system/grub/99-dotfiles.cfg` | `/etc/default/grub.d/99-dotfiles.cfg` (nvidia/hybrid only; extra confirmation) |
+| `system/mkinitcpio/99-dotfiles.conf` | `/etc/mkinitcpio.conf.d/99-dotfiles.conf` (nvidia/hybrid only; extra confirmation) |
 | `system/modprobe/nvidia.conf` | `/etc/modprobe.d/nvidia.conf` (nvidia/hybrid only) |
 | `system/modprobe/*` | `/etc/modprobe.d/*` (other modprobe files) |
 
@@ -778,8 +778,9 @@ diff, asks for confirmation and creates a backup. The merge is skipped with
 
 The GRUB, mkinitcpio and `modprobe/nvidia.conf` files are specific to the
 proprietary NVIDIA driver. The installer maps them only when the selected GPU
-profile is `nvidia` or `hybrid`. Other profiles do not touch `/etc/default/grub`,
-`/etc/mkinitcpio.conf` or `/etc/modprobe.d/nvidia.conf`.
+profile is `nvidia` or `hybrid`. Other profiles do not touch
+`/etc/default/grub.d/`, `/etc/mkinitcpio.conf.d/` or `/etc/modprobe.d/nvidia.conf`.
+The stock `/etc/default/grub` and `/etc/mkinitcpio.conf` are never replaced.
 
 The default GRUB template does **not** include `mitigations=off` or
 `module_blacklist=tpm,tpm_tis,tpm_tis_core`. Both options are in a commented

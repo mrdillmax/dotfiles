@@ -750,7 +750,7 @@ Drop-in завжди потребує окремого підтвердженн�
 
 | Джерело | Призначення |
 |---------|-------------|
-| `system/zram/zram-generator.conf` | `/etc/systemd/zram-generator.conf` |
+| `system/zram/99-dotfiles.conf` | `/etc/systemd/zram-generator.conf.d/99-dotfiles.conf` |
 | `system/cpupower/cpupower` | `/etc/default/cpupower` |
 | `system/networkmanager/dns.conf` | `/etc/NetworkManager/conf.d/dns.conf` (лише з Pi-hole + Unbound) |
 | `system/networkmanager/rc-manager.conf` | `/etc/NetworkManager/conf.d/rc-manager.conf` (лише з Pi-hole + Unbound) |
@@ -759,8 +759,8 @@ Drop-in завжди потребує окремого підтвердженн�
 | `system/wait-iface/wait-iface.sh` | `/usr/local/bin/wait-iface.sh` |
 | `system/systemd/...` | `/etc/systemd/system/...` |
 | `system/ram-cache/99-ram-cache.conf` | `/etc/sysctl.d/99-ram-cache.conf` (лише компонент ram) |
-| `system/grub/default-grub` | `/etc/default/grub` (лише nvidia/hybrid; додаткове підтвердження) |
-| `system/mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` (лише nvidia/hybrid; додаткове підтвердження) |
+| `system/grub/99-dotfiles.cfg` | `/etc/default/grub.d/99-dotfiles.cfg` (лише nvidia/hybrid; додаткове підтвердження) |
+| `system/mkinitcpio/99-dotfiles.conf` | `/etc/mkinitcpio.conf.d/99-dotfiles.conf` (лише nvidia/hybrid; додаткове підтвердження) |
 | `system/modprobe/nvidia.conf` | `/etc/modprobe.d/nvidia.conf` (лише nvidia/hybrid) |
 | `system/modprobe/*` | `/etc/modprobe.d/*` (інші modprobe-файли) |
 
@@ -780,8 +780,9 @@ diff, питає підтвердження й робить бекап. Злит
 
 Файли GRUB, mkinitcpio і `modprobe/nvidia.conf` специфічні для пропрієтарного
 драйвера NVIDIA. Інсталятор мапить їх лише коли вибраний GPU-профіль — `nvidia`
-або `hybrid`. Інші профілі не чіпають `/etc/default/grub`,
-`/etc/mkinitcpio.conf` і `/etc/modprobe.d/nvidia.conf`.
+або `hybrid`. Інші профілі не чіпають `/etc/default/grub.d/`,
+`/etc/mkinitcpio.conf.d/` і `/etc/modprobe.d/nvidia.conf`. Штатні
+`/etc/default/grub` та `/etc/mkinitcpio.conf` ніколи не замінюються.
 
 Стандартний шаблон GRUB **не** містить `mitigations=off` чи
 `module_blacklist=tpm,tpm_tis,tpm_tis_core`. Обидві опції є в закоментованому

@@ -58,7 +58,7 @@ system_file_map() {
             unbound/pi-hole.conf)            printf '%s\t%s\t%s\n' "$src" "$(dns_unbound_conf_path)" "0644" ;;
             pihole/dotfiles-dnsmasq.conf)    printf '%s\t%s\t%s\n' "$src" "/etc/dnsmasq.d/dotfiles.conf" "0644" ;;
             wait-iface/wait-iface.sh)        printf '%s\t%s\t%s\n' "$src" "/usr/local/bin/wait-iface.sh" "0755" ;;
-            zram/zram-generator.conf)        printf '%s\t%s\t%s\n' "$src" "/etc/systemd/zram-generator.conf" "0644" ;;
+            zram/99-dotfiles.conf)           printf '%s\t%s\t%s\n' "$src" "/etc/systemd/zram-generator.conf.d/99-dotfiles.conf" "0644" ;;
             cpupower/cpupower)               printf '%s\t%s\t%s\n' "$src" "/etc/default/cpupower" "0644" ;;
             ram-cache/*)                     printf '%s\t%s\t%s\n' "$src" "/etc/sysctl.d/${rel#ram-cache/}" "0644" ;;
             pkg-sync/dotfiles-pkg-sync-mark.sh) printf '%s\t%s\t%s\n' "$src" "/usr/local/bin/dotfiles-pkg-sync-mark.sh" "0755" ;;
@@ -66,14 +66,14 @@ system_file_map() {
             networkmanager/dns.conf)         printf '%s\t%s\t%s\n' "$src" "/etc/NetworkManager/conf.d/dns.conf" "0644" ;;
             networkmanager/rc-manager.conf)  printf '%s\t%s\t%s\n' "$src" "/etc/NetworkManager/conf.d/rc-manager.conf" "0644" ;;
             systemd/*)                       printf '%s\t%s\t%s\n' "$src" "/etc/systemd/system/${rel#systemd/}" "0644" ;;
-            grub/default-grub)
+            grub/99-dotfiles.cfg)
                 if [[ ${GPU_PROFILE:-} == nvidia || ${GPU_PROFILE:-} == hybrid ]]; then
-                    printf '%s\t%s\t%s\n' "$src" "/etc/default/grub" "0644"
+                    printf '%s\t%s\t%s\n' "$src" "/etc/default/grub.d/99-dotfiles.cfg" "0644"
                 fi
                 ;;
-            mkinitcpio/mkinitcpio.conf)
+            mkinitcpio/99-dotfiles.conf)
                 if [[ ${GPU_PROFILE:-} == nvidia || ${GPU_PROFILE:-} == hybrid ]]; then
-                    printf '%s\t%s\t%s\n' "$src" "/etc/mkinitcpio.conf" "0644"
+                    printf '%s\t%s\t%s\n' "$src" "/etc/mkinitcpio.conf.d/99-dotfiles.conf" "0644"
                 fi
                 ;;
             modprobe/nvidia.conf)
@@ -89,7 +89,7 @@ system_file_map() {
 
 is_critical_system_path() {
     case "$1" in
-        /etc/default/grub|/etc/mkinitcpio.conf|*/getty@tty1.service.d/autologin.conf) return 0 ;;
+        /etc/default/grub.d/*|/etc/mkinitcpio.conf.d/*|*/getty@tty1.service.d/autologin.conf) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -101,6 +101,30 @@ confirm_critical() {
     tui_confirm "CRITICAL: replace $1. Continue?" no || rc=$?
     ASSUME_YES="$saved"
     return "$rc"
+}
+
+# Check a freshly installed file with the tool that will read it. A failure
+# makes the caller restore the previous file instead of leaving a broken one.
+system_conf_validate() {
+    local dst="$1"
+
+    case "$dst" in
+        */unbound/*)
+            if command -v unbound-checkconf >/dev/null 2>&1; then
+                unbound-checkconf "$dst" >/dev/null 2>&1
+            fi
+            ;;
+        *.sh|/usr/local/bin/*|/etc/default/grub.d/*.cfg|/etc/mkinitcpio.conf.d/*.conf)
+            bash -n "$dst"
+            ;;
+        /etc/systemd/system/*.service|/etc/systemd/system/*.socket|\
+        /etc/systemd/system/*.timer|/etc/systemd/system/*.path|\
+        /etc/systemd/system/*.mount|/etc/systemd/system/*.target)
+            if command -v systemd-analyze >/dev/null 2>&1; then
+                systemd-analyze verify "$dst" >/dev/null 2>&1
+            fi
+            ;;
+    esac
 }
 
 detect_default_iface() {
@@ -457,7 +481,7 @@ install_system_configs() {
         die "system configs require root: sudo ./install.sh --system"
     fi
 
-    local src dst mode tmp_src iface user
+    local src dst mode tmp_src iface user prev_tmp
     local count=0
     local boot_changed=0 dns_changed=0 zram_changed=0
     local rows=()
@@ -536,14 +560,31 @@ install_system_configs() {
             # unbound refuses to start on a bad drop-in; validate and roll back.
             dns_write_unbound "$src" "$dst" || continue
         else
+            prev_tmp=""
+            if [[ -e $dst ]]; then
+                prev_tmp="$(mktemp)"
+                cp -a -- "$dst" "$prev_tmp"
+            fi
             mkdir -p "$(dirname "$dst")"
             install -m "$mode" -- "$src" "$dst"
+            if ! system_conf_validate "$dst"; then
+                warn "validation failed for $dst; restoring the previous file"
+                if [[ -n $prev_tmp ]]; then
+                    cp -a -- "$prev_tmp" "$dst"
+                else
+                    rm -f -- "$dst"
+                fi
+                rm -f -- "$prev_tmp"
+                [[ -n $tmp_src ]] && rm -f -- "$tmp_src"
+                continue
+            fi
+            [[ -n $prev_tmp ]] && rm -f -- "$prev_tmp"
             ok "installed $dst"
         fi
         [[ -n $tmp_src ]] && rm -f -- "$tmp_src"
         case "$dst" in
-            /etc/default/grub|/etc/mkinitcpio.conf) boot_changed=1 ;;
-            /etc/systemd/zram-generator.conf) zram_changed=1 ;;
+            /etc/default/grub.d/*|/etc/mkinitcpio.conf.d/*) boot_changed=1 ;;
+            /etc/systemd/zram-generator.conf.d/*) zram_changed=1 ;;
         esac
         dns_is_dns_file "$dst" && dns_changed=1
         count=$((count + 1))
@@ -581,7 +622,7 @@ install_system_configs() {
 
     if (( zram_changed )); then
         run systemctl start systemd-zram-setup@zram0.service \
-            || warn "could not start zram; check /etc/systemd/zram-generator.conf"
+            || warn "could not start zram; check /etc/systemd/zram-generator.conf.d/99-dotfiles.conf"
     fi
     if system_component_wanted cpupower; then
         run systemctl enable --now cpupower || warn "could not enable cpupower"

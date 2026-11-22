@@ -27,7 +27,7 @@ or the invoking login. It always requires a separate confirmation.
 
 | Source | Destination | Notes |
 |--------|-------------|-------|
-| `zram/zram-generator.conf` | `/etc/systemd/zram-generator.conf` | zram swap, `ram / 2`, zstd |
+| `zram/99-dotfiles.conf` | `/etc/systemd/zram-generator.conf.d/99-dotfiles.conf` | zram swap, `ram / 2`, zstd |
 | `cpupower/cpupower` | `/etc/default/cpupower` | `governor='performance'`; `cpupower.service` is enabled |
 | `networkmanager/dns.conf` | `/etc/NetworkManager/conf.d/dns.conf` | only with Pi-hole + Unbound |
 | `networkmanager/rc-manager.conf` | `/etc/NetworkManager/conf.d/rc-manager.conf` | only with Pi-hole + Unbound |
@@ -38,8 +38,8 @@ or the invoking login. It always requires a separate confirmation.
 | `systemd/...` | `/etc/systemd/system/...` | |
 | `pacman/hooks/dotfiles-pkg-sync.hook` | `/etc/pacman.d/hooks/dotfiles-pkg-sync.hook` | marks package changes for a later review |
 | `pkg-sync/dotfiles-pkg-sync-mark.sh` | `/usr/local/bin/dotfiles-pkg-sync-mark.sh` | writes `/var/lib/dotfiles/pkg-sync.stamp` |
-| `grub/default-grub` | `/etc/default/grub` | nvidia/hybrid only; extra critical confirmation |
-| `mkinitcpio/mkinitcpio.conf` | `/etc/mkinitcpio.conf` | nvidia/hybrid only; extra critical confirmation |
+| `grub/99-dotfiles.cfg` | `/etc/default/grub.d/99-dotfiles.cfg` | kernel cmdline; nvidia/hybrid only; extra critical confirmation |
+| `mkinitcpio/99-dotfiles.conf` | `/etc/mkinitcpio.conf.d/99-dotfiles.conf` | MODULES/HOOKS; nvidia/hybrid only; extra critical confirmation |
 | `modprobe/nvidia.conf` | `/etc/modprobe.d/nvidia.conf` | nvidia/hybrid only |
 | `modprobe/*` | `/etc/modprobe.d/*` | other modprobe files |
 
