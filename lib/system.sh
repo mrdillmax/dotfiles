@@ -8,6 +8,8 @@ _DOTFILES_SYSTEM=1
 source "$DOTFILES_DIR/lib/dns.sh"
 # shellcheck source=lib/dns_config.sh
 source "$DOTFILES_DIR/lib/dns_config.sh"
+# shellcheck source=lib/firewall.sh
+source "$DOTFILES_DIR/lib/firewall.sh"
 
 # Optional filter: --system-components dns,zram,... Empty means "everything".
 if [[ -z ${SYSTEM_COMPONENTS+x} ]]; then
@@ -568,6 +570,8 @@ install_system_configs() {
     fi
     if system_component_wanted services; then
         enable_system_services
+        enable_syncthing_user_service || true
+        firewall_apply || warn "firewall policy was not applied"
         set_login_shell_fish || true
     fi
 

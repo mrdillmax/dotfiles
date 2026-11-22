@@ -17,6 +17,13 @@ else
     pass "Docker packages are gone"
 fi
 
+row="$(awk -F'\t' '$1 == "openssh" {print $1"|"$4}' "$CATALOG")"
+if [[ $row == 'openssh|no' ]]; then
+    pass "openssh is optional"
+else
+    fail "openssh row is missing or defaulted on: ${row:-none}"
+fi
+
 if awk -F'\t' 'BEGIN{ok=1} /^#/ || NF==0 {next} $1=="" || $2=="" || $3=="" || $4=="" {ok=0} END{exit !ok}' "$CATALOG"; then
     pass "every catalog row has all required columns"
 else

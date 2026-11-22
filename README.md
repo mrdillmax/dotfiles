@@ -791,8 +791,11 @@ When the GRUB or mkinitcpio file was installed, `--system` also runs
 `grub-mkconfig -o /boot/grub/grub.cfg` and `mkinitcpio -P`, printing a warning
 on failure. Kernel work belongs to `./install.sh --kernel`.
 
-UFW is documentation only. The repository does not change firewall state or
-rules; see `system/ufw/README.md` for general guidance.
+UFW is enabled with a minimal policy: deny incoming, allow outgoing, and open
+only `22/tcp` when `sshd` is installed and `22000/tcp`+`22000/udp` when
+Syncthing is installed. Local-only services stay closed. The policy is in
+`lib/firewall.sh`; `ufw show added` prevents duplicate rules on a re-run. The
+Syncthing user service is enabled and started for the desktop user.
 
 Not managed by this repository: `/etc/fstab`, NetworkManager connection
 profiles, snapper configuration.

@@ -142,6 +142,7 @@ qpwgraph	Audio	pkg	yes	any	any	PipeWire Graph Qt GUI Interface
 realtime-privileges	Audio	pkg	yes	any	any	Realtime privileges for users
 reaper	Audio	pkg	no	any	any	A complete digital audio production application for computers
 rtkit	Audio	pkg	yes	any	any	Realtime Policy and Watchdog Daemon
+openssh	Network	pkg	no	any	any	Remote login server; ufw opens 22/tcp only when sshd is present
 pi-hole-core	Network	main	yes	any	any	The Pi-hole is an advertising-aware DNS/Web server. Arch adaptation for lan wide DNS server.
 pi-hole-ftl-bin	Network	main	yes	any	any	The Pi-hole FTL engine
 rclone	Network	pkg	no	any	any	rsync for cloud storage

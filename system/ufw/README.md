@@ -1,7 +1,18 @@
-# UFW notes
+# UFW policy
 
-This repository does not manage UFW. It never enables, disables, resets or
-changes rules. Review the current state and add rules manually.
+`./install.sh --system` (component `services`) applies one small policy and
+then enables UFW:
+
+- default **deny incoming**
+- default **allow outgoing**
+- `22/tcp` only when `sshd` exists
+- `22000/tcp` and `22000/udp` only when `syncthing` exists
+
+Nothing else is opened. Pi-hole (53), unbound (5335), the Syncthing web UI
+(8384) and CUPS (631) are local-only services and get no rule.
+
+The policy lives in `lib/firewall.sh`. `ufw show added` is read before adding,
+so a second run adds no duplicate rules.
 
 ## Review the current state
 
@@ -10,33 +21,14 @@ sudo ufw status verbose
 sudo ufw show added
 ```
 
-Check that the default policies match your setup before adding rules:
+## Local-only services
 
-```bash
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-```
-
-## Add only the rules you need
-
-Examples for common local services:
-
-```bash
-sudo ufw allow 22/tcp          # SSH
-sudo ufw allow 53              # DNS on tcp and udp
-sudo ufw allow 80/tcp          # local web service
-```
-
-Pi-hole and Unbound usually need port 53 on the LAN. Unbound on port 5335
-listens on `127.0.0.1` and normally needs no rule. Keep the Pi-hole admin page
-on the LAN or on localhost. Do not expose it to the internet.
+Pi-hole and unbound listen on loopback; other devices reach DNS through
+Pi-hole on the machine's LAN address only if you add a rule yourself. Keep the
+Pi-hole admin page local. Do not expose it to the internet.
 
 ## Safety
 
-Allow your SSH port before enabling UFW on a remote machine. Do not run
-`ufw reset` unless you have a local console or another way back in.
-
-## Why there is no preset
-
-Firewall rules depend on the services that actually run on the machine. The
-repository documents the interaction only and leaves the rules to the operator.
+Allow your SSH port before enabling UFW on a remote machine. The installer does
+this automatically when `sshd` is installed. Do not run `ufw reset` unless you
+have a local console or another way back in.
