@@ -1,0 +1,9 @@
+# Blocklists added to the Pi-hole gravity database by install.sh.
+#
+# One URL per line. Lines starting with # are ignored. install.sh inserts only
+# the addresses that are missing and rebuilds gravity once, so this file is
+# safe to keep under version control.
+https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+https://big.oisd.nl/domainswild
+https://adaway.org/hosts.txt
+https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt

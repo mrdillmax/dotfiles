@@ -176,8 +176,11 @@ fi
 
 section "System configuration"
 
-if has unbound-checkconf && [[ -r /etc/unbound/unbound.conf ]]; then
-    if output="$(unbound-checkconf /etc/unbound/unbound.conf 2>&1)"; then
+unbound_conf=/etc/unbound/unbound.conf
+[[ -r /etc/unbound/unbound.conf.d/pi-hole.conf ]] && \
+    unbound_conf=/etc/unbound/unbound.conf.d/pi-hole.conf
+if has unbound-checkconf && [[ -r $unbound_conf ]]; then
+    if output="$(unbound-checkconf "$unbound_conf" 2>&1)"; then
         pass "unbound-checkconf: $output"
     else
         fail "unbound-checkconf failed:"

@@ -25,17 +25,21 @@ dns_query() {
     local server="$1" port="$2" name="$3" tool
     tool="$(dns_tool)" || return 1
 
+    # dig exits 9 when the server answers REFUSED/NXDOMAIN or is unreachable.
+    # That is a normal probe result here, not an installer error, so every
+    # branch ends with `|| true` and the function always reports success.
     case "${tool##*/}" in
         dig)
             dig +short +time=2 +tries=1 -p "$port" "$name" "@$server" 2>/dev/null \
-                | awk 'NF {print; exit}'
+                | awk 'NF {print; exit}' || true
             ;;
         drill)
             drill -p "$port" "$name" "@$server" 2>/dev/null \
-                | awk '/IN[[:space:]]+A[[:space:]]/ {print $NF; exit}'
+                | awk '/IN[[:space:]]+A[[:space:]]/ {print $NF; exit}' || true
             ;;
         *) return 1 ;;
     esac
+    return 0
 }
 
 dns_resolv_nameservers() {
@@ -79,7 +83,7 @@ dns_collect() {
         "$DNS_PIHOLE_SERVER:$DNS_PIHOLE_PORT:Pi-hole" \
         "$DNS_UNBOUND_SERVER:$DNS_UNBOUND_PORT:unbound"; do
         IFS=: read -r server port label <<<"$entry"
-        answer="$(dns_query "$server" "$port" "$DNS_PROBE_NAME")"
+        answer="$(dns_query "$server" "$port" "$DNS_PROBE_NAME" || true)"
         if [[ -n $answer ]]; then
             printf 'OK\tprobe\t%s resolves %s via %s:%s\n' \
                 "$label" "$DNS_PROBE_NAME" "$server" "$port"
@@ -113,6 +117,7 @@ dns_warnings() {
 dns_is_dns_file() {
     case "$1" in
         /etc/unbound/*|\
+        /etc/dnsmasq.d/*|\
         /etc/pihole/*|\
         /etc/NetworkManager/conf.d/dns.conf|\
         /etc/NetworkManager/conf.d/rc-manager.conf|\

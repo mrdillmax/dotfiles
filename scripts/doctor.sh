@@ -344,15 +344,18 @@ else
     done
 fi
 
-if has unbound-checkconf && [[ -r /etc/unbound/unbound.conf ]]; then
-    if unbound_out="$(unbound-checkconf /etc/unbound/unbound.conf 2>&1)"; then
+unbound_conf=/etc/unbound/unbound.conf
+[[ -r /etc/unbound/unbound.conf.d/pi-hole.conf ]] && \
+    unbound_conf=/etc/unbound/unbound.conf.d/pi-hole.conf
+if has unbound-checkconf && [[ -r $unbound_conf ]]; then
+    if unbound_out="$(unbound-checkconf "$unbound_conf" 2>&1)"; then
         ok "unbound-checkconf: $unbound_out"
     else
         fail "unbound-checkconf failed"
         printf '%s\n' "$unbound_out"
     fi
 else
-    skip "unbound-checkconf or /etc/unbound/unbound.conf is not available"
+    skip "unbound-checkconf or an unbound config is not available"
 fi
 
 section "System files"

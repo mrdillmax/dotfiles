@@ -752,9 +752,8 @@ Manifest:
 | `system/cpupower/cpupower` | `/etc/default/cpupower` |
 | `system/networkmanager/dns.conf` | `/etc/NetworkManager/conf.d/dns.conf` (Pi-hole + Unbound only) |
 | `system/networkmanager/rc-manager.conf` | `/etc/NetworkManager/conf.d/rc-manager.conf` (Pi-hole + Unbound only) |
-| `system/unbound/unbound.conf` | `/etc/unbound/unbound.conf` |
-| `system/pihole/dnsmasq.conf` | `/etc/pihole/dnsmasq.conf` |
-| `system/pihole/pihole.toml.example` | `/etc/pihole/pihole.toml` (only after review) |
+| `system/unbound/pi-hole.conf` | `/etc/unbound/unbound.conf.d/pi-hole.conf` |
+| `system/pihole/dotfiles-dnsmasq.conf` | `/etc/dnsmasq.d/dotfiles.conf` |
 | `system/wait-iface/wait-iface.sh` | `/usr/local/bin/wait-iface.sh` |
 | `system/systemd/...` | `/etc/systemd/system/...` |
 | `system/ram-cache/99-ram-cache.conf` | `/etc/sysctl.d/99-ram-cache.conf` (ram component only) |
@@ -763,12 +762,12 @@ Manifest:
 | `system/modprobe/nvidia.conf` | `/etc/modprobe.d/nvidia.conf` (nvidia/hybrid only) |
 | `system/modprobe/*` | `/etc/modprobe.d/*` (other modprobe files) |
 
-> **Pi-hole password reset.** `system/pihole/pihole.toml.example` is copied
-> over `/etc/pihole/pihole.toml` and has an empty `pwhash`. Installing it
-> **resets the Pi-hole admin password**. Run `pihole setpassword` afterwards.
-
-`pihole.toml` itself is excluded. The example also has empty `totp_secret` and
-`app_pwhash`, and sets `cli_pw = false`; review it and copy secrets yourself.
+The Pi-hole settings are changed through `pihole-FTL --config`, so
+`/etc/pihole/pihole.toml` is never overwritten. `system/pihole/pihole.toml.example`
+stays in the repository as a reference only. Blocklists come from
+`system/pihole/adlists.txt` and the gravity database is rebuilt once after an
+insert. `system/unbound/pi-hole.conf` is validated with `unbound-checkconf`
+before it replaces a working drop-in.
 
 `pacman.conf` and `makepkg.conf` are merged, not copied: the installer shows a
 diff, asks for confirmation and creates a backup. The merge is skipped with

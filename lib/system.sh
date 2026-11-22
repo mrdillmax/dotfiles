@@ -6,6 +6,8 @@ _DOTFILES_SYSTEM=1
 
 # shellcheck source=lib/dns.sh
 source "$DOTFILES_DIR/lib/dns.sh"
+# shellcheck source=lib/dns_config.sh
+source "$DOTFILES_DIR/lib/dns_config.sh"
 
 # Optional filter: --system-components dns,zram,... Empty means "everything".
 if [[ -z ${SYSTEM_COMPONENTS+x} ]]; then
@@ -48,12 +50,11 @@ system_file_map() {
             continue
         fi
         case "$rel" in
-            README.md|*/README.md|services/services.conf|pacman/pacman.conf.preset|makepkg/makepkg.conf.preset)
+            README.md|*/README.md|services/services.conf|pacman/pacman.conf.preset|makepkg/makepkg.conf.preset|pihole/adlists.txt|pihole/pihole.toml.example)
                 continue
                 ;;
-            unbound/unbound.conf)            printf '%s\t%s\t%s\n' "$src" "/etc/unbound/unbound.conf" "0644" ;;
-            pihole/dnsmasq.conf)             printf '%s\t%s\t%s\n' "$src" "/etc/pihole/dnsmasq.conf" "0644" ;;
-            pihole/pihole.toml.example)      printf '%s\t%s\t%s\n' "$src" "/etc/pihole/pihole.toml" "0640" ;;
+            unbound/pi-hole.conf)            printf '%s\t%s\t%s\n' "$src" "$(dns_unbound_conf_path)" "0644" ;;
+            pihole/dotfiles-dnsmasq.conf)    printf '%s\t%s\t%s\n' "$src" "/etc/dnsmasq.d/dotfiles.conf" "0644" ;;
             wait-iface/wait-iface.sh)        printf '%s\t%s\t%s\n' "$src" "/usr/local/bin/wait-iface.sh" "0755" ;;
             zram/zram-generator.conf)        printf '%s\t%s\t%s\n' "$src" "/etc/systemd/zram-generator.conf" "0644" ;;
             cpupower/cpupower)               printf '%s\t%s\t%s\n' "$src" "/etc/default/cpupower" "0644" ;;
@@ -455,7 +456,7 @@ install_system_configs() {
     fi
 
     local src dst mode tmp_src iface user
-    local count=0 dns_ok=1 dns_skipped=0
+    local count=0
     local boot_changed=0 dns_changed=0 zram_changed=0
     local rows=()
 
@@ -472,29 +473,12 @@ install_system_configs() {
         printf '  %s -> %s\n' "$src" "$dst"
     done
 
-    # Fail closed: if the resolver chain cannot be verified, leave every DNS
-    # file alone but keep reviewing the rest of /etc.
-    if system_component_wanted dns && ! dns_chain_ok; then
-        dns_ok=0
-        warn "DNS chain is not healthy; only DNS files will be skipped."
-        while IFS= read -r row; do
-            [[ -n $row ]] && warn "  $row"
-        done < <(dns_failures)
-        while IFS= read -r row; do
-            [[ -n $row ]] && warn "  $row"
-        done < <(dns_warnings)
-        dns_emergency_help
-    fi
-
+    # DNS files are written even when the chain is currently broken: the point
+    # of this run is to repair it. The chain is probed after the files are in
+    # place and any remaining failure is reported as a warning.
     for row in "${rows[@]}"; do
         IFS=$'\t' read -r src dst mode <<<"$row"
         tmp_src=""
-
-        if ((!dns_ok)) && dns_is_dns_file "$dst"; then
-            warn "skipping DNS file $dst (resolver chain is not healthy)"
-            dns_skipped=$((dns_skipped + 1))
-            continue
-        fi
 
         if [[ $dst == /etc/NetworkManager/conf.d/* ]]; then
             if [[ ! -e /etc/pihole/pihole.toml || ! -e /etc/unbound/unbound.conf ]]; then
@@ -546,6 +530,9 @@ install_system_configs() {
 
         if (( DRY_RUN )); then
             log "${C_DIM}[dry-run]${C_RESET} install $src -> $dst (mode $mode)"
+        elif [[ $dst == "$(dns_unbound_conf_path)" ]]; then
+            # unbound refuses to start on a bad drop-in; validate and roll back.
+            dns_write_unbound "$src" "$dst" || continue
         else
             mkdir -p "$(dirname "$dst")"
             install -m "$mode" -- "$src" "$dst"
@@ -560,8 +547,18 @@ install_system_configs() {
         count=$((count + 1))
     done
 
-    if ((dns_skipped)); then
-        warn "skipped $dns_skipped DNS file(s); fix the resolver chain and re-run --system"
+    printf '\n'
+    if (( dns_changed )); then
+        info "Configuring the Pi-hole + unbound chain"
+        if command -v pihole-FTL >/dev/null 2>&1; then
+            dns_pihole_apply || warn "could not apply the Pi-hole settings"
+            dns_adlists_sync "$DOTFILES_DIR/system/pihole/adlists.txt" \
+                || warn "could not update the adlists"
+        else
+            warn "pihole-FTL is not installed; Pi-hole settings were not applied"
+        fi
+        dns_root_hints_install "https://www.internic.net/domain/named.root" \
+            || warn "root hints were not updated"
     fi
 
     printf '\n'
@@ -592,6 +589,17 @@ install_system_configs() {
         fi
         if command -v pihole >/dev/null 2>&1; then
             run pihole restartdns || warn "could not restart Pi-hole DNS"
+        fi
+        if (( ! DRY_RUN )); then
+            if dns_chain_ok; then
+                ok "resolver chain is healthy"
+            else
+                warn "resolver chain still has problems:"
+                while IFS= read -r row; do
+                    [[ -n $row ]] && warn "  $row"
+                done < <(dns_failures)
+                dns_emergency_help
+            fi
         fi
     fi
     if (( boot_changed )); then

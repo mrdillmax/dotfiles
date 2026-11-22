@@ -754,9 +754,8 @@ Drop-in завжди потребує окремого підтвердженн�
 | `system/cpupower/cpupower` | `/etc/default/cpupower` |
 | `system/networkmanager/dns.conf` | `/etc/NetworkManager/conf.d/dns.conf` (лише з Pi-hole + Unbound) |
 | `system/networkmanager/rc-manager.conf` | `/etc/NetworkManager/conf.d/rc-manager.conf` (лише з Pi-hole + Unbound) |
-| `system/unbound/unbound.conf` | `/etc/unbound/unbound.conf` |
-| `system/pihole/dnsmasq.conf` | `/etc/pihole/dnsmasq.conf` |
-| `system/pihole/pihole.toml.example` | `/etc/pihole/pihole.toml` (лише після огляду) |
+| `system/unbound/pi-hole.conf` | `/etc/unbound/unbound.conf.d/pi-hole.conf` |
+| `system/pihole/dotfiles-dnsmasq.conf` | `/etc/dnsmasq.d/dotfiles.conf` |
 | `system/wait-iface/wait-iface.sh` | `/usr/local/bin/wait-iface.sh` |
 | `system/systemd/...` | `/etc/systemd/system/...` |
 | `system/ram-cache/99-ram-cache.conf` | `/etc/sysctl.d/99-ram-cache.conf` (лише компонент ram) |
@@ -765,13 +764,12 @@ Drop-in завжди потребує окремого підтвердженн�
 | `system/modprobe/nvidia.conf` | `/etc/modprobe.d/nvidia.conf` (лише nvidia/hybrid) |
 | `system/modprobe/*` | `/etc/modprobe.d/*` (інші modprobe-файли) |
 
-> **Скидання пароля Pi-hole.** `system/pihole/pihole.toml.example` копіюється
-> поверх `/etc/pihole/pihole.toml` і має порожній `pwhash`. Встановлення
-> **скидає пароль адміністратора Pi-hole**. Після нього виконайте
-> `pihole setpassword`.
-
-Сам `pihole.toml` виключений. Приклад також має порожні `totp_secret` і
-`app_pwhash` та `cli_pw = false`; огляньте його й додайте секрети самостійно.
+Налаштування Pi-hole змінюються через `pihole-FTL --config`, тому
+`/etc/pihole/pihole.toml` ніколи не перезаписується. `system/pihole/pihole.toml.example`
+лишається в репозиторії лише як довідка. Блок-листи беруться з
+`system/pihole/adlists.txt`, а база gravity перебудовується один раз після
+додавання. `system/unbound/pi-hole.conf` проходить `unbound-checkconf`, перш
+ніж замінити робочий drop-in.
 
 `pacman.conf` і `makepkg.conf` зливаються, а не копіюються: інсталятор показує
 diff, питає підтвердження й робить бекап. Злиття пропускається з `--yes`.
