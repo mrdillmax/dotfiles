@@ -256,6 +256,25 @@ description, packages and dependencies; [`docs/modules.md`](docs/modules.md)
 is generated from those files and lists every module, package and helper.
 
 
+### Optional modules
+
+These are installed only with `--modules <name>` or from the interactive
+checklist; `--all` never selects them.
+
+| Module | What it adds |
+|--------|--------------|
+| `osd` | swayosd volume, microphone and brightness overlay with media keys |
+| `nightlight` | hyprsunset blue-light filter and a toggle on the Style page |
+| `udisks` | udiskie automounting with a tray icon |
+| `recorder` | wf-recorder region recording on `SUPER+ALT+R` |
+| `emoji` | rofimoji picker on `SUPER+.` |
+| `hyprtools` | hyprshutdown logout, hyprpwcenter for Sound, hyprsysteminfo in Docs |
+
+Brightness control needs write access to the backlight device (the `video`
+group). `hyprsysteminfo` comes from the AUR; the other packages are in the
+official repositories.
+
+
 Spicetify CLI is a selected Music entry, not a pacman package. The installer
 downloads the official release archive into `~/.spicetify` instead of running
 the upstream shell installer, which needs an initialised Spotify. Launch

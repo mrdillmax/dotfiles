@@ -10,6 +10,7 @@ set -uo pipefail
 
 REAL_HOME="${HOME:?HOME is not set}"
 CONFIG="${HYPRLAND_CONFIG:-$REAL_HOME/.config/hypr/hyprland.lua}"
+FILE_ARG=""
 
 MODE="plain"
 CHECK_DUPLICATES=0
@@ -44,7 +45,7 @@ while (($#)); do
         --rofi-edit)  MODE="rofi-edit" ;;
         --add)        MODE="add"; ADD_KEY="${2:?missing key for --add}"; ADD_COMMAND="${3:?missing command for --add}"; shift 2 ;;
         --duplicates) CHECK_DUPLICATES=1 ;;
-        --file)       CONFIG="${2:?missing value for --file}"; shift ;;
+        --file)       CONFIG="${2:?missing value for --file}"; FILE_ARG="$CONFIG"; shift ;;
         -h|--help)    usage; exit 0 ;;
         *)            die "unknown option: $1 (see --help)" ;;
     esac
@@ -231,29 +232,44 @@ KEYS=()
 ACTIONS=()
 DYNAMIC=()
 LINES=()
-line_number=0
+SOURCES=()
 
-while IFS= read -r line; do
-    ((line_number++))
-    [[ $line == *'hl.bind('* ]] || continue
+collect_binds() {
+    local file="$1" line line_number=0 key_expr action_expr key dynamic action rest
 
-    rest="${line#*hl.bind(}"
-    IFS=$'\t' read -r key_expr action_expr < <(split_bind_args "$rest")
-    [[ -n $key_expr ]] || continue
+    while IFS= read -r line; do
+        ((line_number++))
+        [[ $line == *'hl.bind('* ]] || continue
 
-    IFS=$'\t' read -r key dynamic < <(normalize_key "$key_expr")
-    action="$(normalize_action "$action_expr")"
+        rest="${line#*hl.bind(}"
+        IFS=$'\t' read -r key_expr action_expr < <(split_bind_args "$rest")
+        [[ -n $key_expr ]] || continue
 
-    KEYS+=("$key")
-    ACTIONS+=("$action")
-    DYNAMIC+=("$dynamic")
-    LINES+=("$line_number")
-done <"$CONFIG"
+        IFS=$'\t' read -r key dynamic < <(normalize_key "$key_expr")
+        action="$(normalize_action "$action_expr")"
+
+        KEYS+=("$key")
+        ACTIONS+=("$action")
+        DYNAMIC+=("$dynamic")
+        LINES+=("$line_number")
+        SOURCES+=("$file")
+    done <"$file"
+}
+
+collect_binds "$CONFIG"
+
+# Optional modules ship their own bind files next to the main config. They are
+# part of the cheatsheet unless --file narrows the source on purpose.
+if [[ -z $FILE_ARG ]]; then
+    for extra in osd recorder emoji nightlight; do
+        extra_file="${CONFIG%/*}/$extra.lua"
+        [[ -r $extra_file ]] && collect_binds "$extra_file"
+    done
+fi
 
 if ((${#KEYS[@]} == 0)); then
     die "no hl.bind() lines found in $CONFIG"
 fi
-
 add_bind() {
     local suffix command candidate escaped line_no i
 
@@ -434,7 +450,7 @@ print_rofi_edit() {
     fi
     bind_index=$((index - 1))
     ((bind_index < ${#KEYS[@]})) || return 1
-    printf '%s:%s\n' "$CONFIG" "${LINES[$bind_index]}"
+    printf '%s:%s\n' "${SOURCES[$bind_index]}" "${LINES[$bind_index]}"
 }
 
 case "$MODE" in

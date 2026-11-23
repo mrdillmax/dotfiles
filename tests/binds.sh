@@ -73,5 +73,17 @@ if command -v luac >/dev/null 2>&1; then
     fi
 fi
 
+# Optional module files next to the main config are part of the cheatsheet.
+mkdir -p "$work/.config/hypr"
+cp "$SOURCE" "$work/.config/hypr/hyprland.lua"
+printf 'hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("swayosd-client --output-volume raise"))\n' \
+    >"$work/.config/hypr/osd.lua"
+json="$(HOME="$work" "$SCRIPT" --json)"
+if [[ $json == *XF86AudioRaiseVolume* ]]; then
+    pass "binds from optional module files are listed"
+else
+    fail "optional module binds are missing from the cheatsheet"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
