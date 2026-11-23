@@ -876,6 +876,57 @@ render_uwsm() {
     rm -f -- "$tmp"
 }
 
+# Waybar reads the first config it finds (config, then config.jsonc). Remove
+# the names we no longer manage so an old copy cannot shadow the new layout.
+cleanup_legacy_waybar_config() {
+    local dir="$REAL_HOME/.config/waybar" legacy
+
+    [[ -d $dir ]] || return 0
+    for legacy in config config.json; do
+        [[ -e $dir/$legacy || -L $dir/$legacy ]] || continue
+        LAST_BACKUP=""
+        backup_path "$dir/$legacy"
+        run rm -f -- "$dir/$legacy"
+        warn "removed legacy Waybar $legacy (backup: ${LAST_BACKUP:-none})"
+    done
+}
+
+# A plain SIGUSR2 reload keeps the config path the process started with. When
+# Waybar started on a legacy file, restart it with the managed paths instead.
+refresh_waybar() {
+    local conf="$REAL_HOME/.config/waybar/config.jsonc"
+    local style="$REAL_HOME/.config/waybar/style.css"
+    local pid cmd
+
+    (( EUID == 0 )) && return 0
+    pid="$(pgrep -x waybar | head -n1)" || return 0
+    cmd="$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null || true)"
+
+    if [[ $cmd == *"$conf"* ]]; then
+        pkill -SIGUSR2 waybar 2>/dev/null || true
+        info "Waybar reloaded"
+        return 0
+    fi
+
+    if [[ -z ${WAYLAND_DISPLAY:-} && -z ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+        warn "Waybar uses a legacy config path; restart it after the next login"
+        return 0
+    fi
+
+    warn "Waybar is running with a legacy config path; restarting it"
+    pkill -x waybar 2>/dev/null || true
+    for _ in {1..20}; do
+        pgrep -x waybar >/dev/null 2>&1 || break
+        sleep 0.1
+    done
+    if command -v uwsm >/dev/null 2>&1; then
+        (setsid uwsm app -- waybar -c "$conf" -s "$style" >/dev/null 2>&1 &)
+    else
+        (setsid waybar -c "$conf" -s "$style" >/dev/null 2>&1 &)
+    fi
+    info "Waybar restarted with the managed config"
+}
+
 install_selected_modules() {
     local name
 
@@ -907,6 +958,10 @@ install_selected_modules() {
                 ;;
         esac
     done
+
+    if [[ " ${MODULES[*]} " == *" waybar "* ]]; then
+        cleanup_legacy_waybar_config
+    fi
 
     # Not tied to hypr: a fresh install should always have a wallpaper.
     install_default_wallpaper || true
@@ -1060,10 +1115,7 @@ fi
 
 if (( !DRY_RUN )); then
     enable_services
-    if pgrep -x waybar >/dev/null 2>&1; then
-        pkill -SIGUSR2 waybar 2>/dev/null || true
-        info "Waybar reloaded"
-    fi
+    refresh_waybar
 fi
 
 printf '\n'

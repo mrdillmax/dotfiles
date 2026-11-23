@@ -557,9 +557,14 @@ Brightness appears in Waybar when the machine exposes a backlight
 keys and the scroll wheel. Users need write access to the backlight device
 (the `video` group) or the packaged udev rule.
 
-The installer reloads a running Waybar with `SIGUSR2`, so config changes apply
-immediately. `./install.sh --doctor` also executes each Waybar helper and
-checks that it emits valid JSON.
+The bar also shows the active `power-profiles-daemon` profile (laptops) and a
+Bluetooth indicator that stays hidden without an adapter. Waybar is started
+with `-c ~/.config/waybar/config.jsonc -s ~/.config/waybar/style.css`, so an
+old `config` file cannot shadow the managed layout; the installer backs up and
+removes those legacy names. It reloads a running Waybar with `SIGUSR2`, and
+restarts it when the process was started on a different config path.
+`./install.sh --doctor` executes each Waybar helper, checks the live layout and
+reports when Waybar is older than its config.
 
 On laptops the `battery` module warns once at 20% and 10% (thresholds in
 `~/.config/dotfiles/battery.conf`) and switches `power-profiles-daemon` to

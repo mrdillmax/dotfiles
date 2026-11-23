@@ -529,7 +529,7 @@ fi
 
 if [[ -r $STATE_FILE ]]; then
     bad_managed=()
-    while IFS=$'\t' read -r kind path source _; do
+    while IFS=$'\t' read -r kind path source digest _; do
         [[ -n ${kind:-} ]] || continue
         case "$kind" in
             link)
@@ -542,7 +542,7 @@ if [[ -r $STATE_FILE ]]; then
             copy)
                 if [[ ! -e $path ]]; then
                     bad_managed+=("missing copy: $path")
-                elif [[ $digest != - ]]; then
+                elif [[ ${digest:-} != - ]]; then
                     [[ "$(file_digest "$path")" == "$digest" ]] \
                         || bad_managed+=("copy differs from the recorded digest: $path")
                 elif ! cmp -s -- "$source" "$path"; then
@@ -633,8 +633,9 @@ if [[ -r $waybar_conf ]]; then
             warn "$REAL_HOME/.config/waybar/$legacy can shadow config.jsonc; remove it"
         fi
     done
-    for module in custom/battery custom/brightness custom/network custom/units \
-        custom/update group/zvuk group/hardware; do
+    for module in custom/battery custom/brightness power-profiles-daemon \
+        custom/network bluetooth custom/units custom/update group/zvuk \
+        group/hardware; do
         if grep -q "\"$module\"" "$waybar_conf"; then
             ok "the live Waybar config declares $module"
         else
@@ -658,6 +659,11 @@ fi
 
 if compgen -G '/sys/class/power_supply/BAT*' >/dev/null; then
     note "battery hardware: $(compgen -G '/sys/class/power_supply/BAT*' | xargs -n1 basename | tr '\n' ' ')"
+    if has powerprofilesctl && powerprofilesctl get >/dev/null 2>&1; then
+        ok "power-profiles-daemon reports $(powerprofilesctl get 2>/dev/null)"
+    else
+        warn "power-profiles-daemon is not responding; the profile module stays empty"
+    fi
 else
     note "no battery hardware in /sys/class/power_supply"
 fi
@@ -677,6 +683,15 @@ if has wpctl; then
     else
         warn "wpctl cannot reach the audio server; group/zvuk stays hidden"
     fi
+fi
+if compgen -G '/sys/class/bluetooth/hci*' >/dev/null; then
+    if has bluetoothctl; then
+        ok "bluetooth hardware and bluetoothctl are present"
+    else
+        warn "bluetooth hardware exists but bluez-utils is missing"
+    fi
+else
+    note "no bluetooth controller in /sys/class/bluetooth"
 fi
 
 if command -v jq >/dev/null 2>&1; then

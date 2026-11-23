@@ -17,12 +17,18 @@ STATE_FILE="$STATE_DIR/autostart.tsv"
 LOG_FILE="$STATE_DIR/autostart.log"
 SELF="$(readlink -f -- "${BASH_SOURCE[0]}")"
 
+# Pass the managed files explicitly: a leftover ~/.config/waybar/config from an
+# older setup must not shadow the current config.jsonc.
+WAYBAR_CONFIG="$REAL_HOME/.config/waybar/config.jsonc"
+WAYBAR_STYLE="$REAL_HOME/.config/waybar/style.css"
+WAYBAR_CMD="uwsm app -- waybar -c $WAYBAR_CONFIG -s $WAYBAR_STYLE"
+
 DRY_RUN=0
 COMMAND=""
 
 # Seeded on the first run. Keep in sync with the old hyprland.lua start block.
 DEFAULTS=(
-    "waybar|uwsm app -- waybar"
+    "waybar|$WAYBAR_CMD"
     "dunst|uwsm app -- dunst"
     "awww-daemon|uwsm app -- awww-daemon"
     "hyprpolkitagent|uwsm app -- env QT_QUICK_BACKEND=software /usr/lib/hyprpolkitagent/hyprpolkitagent"
@@ -312,6 +318,10 @@ migrate_entries() {
         if [[ $name == hyprpolkitagent && $cmd == 'uwsm app -- /usr/lib/hyprpolkitagent/hyprpolkitagent' ]]; then
             ENTRIES[i]="$(printf '%s\t%s\t%s' "$enabled" "$name" \
                 'uwsm app -- env QT_QUICK_BACKEND=software /usr/lib/hyprpolkitagent/hyprpolkitagent')"
+            changed=1
+        fi
+        if [[ $name == waybar && ( $cmd == 'uwsm app -- waybar' || $cmd == 'waybar' ) ]]; then
+            ENTRIES[i]="$(printf '%s\t%s\t%s' "$enabled" "$name" "$WAYBAR_CMD")"
             changed=1
         fi
     done

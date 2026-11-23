@@ -34,7 +34,9 @@
     "group/zvuk",
     "custom/brightness",
     "custom/battery",
+    "power-profiles-daemon",
     "custom/network",
+    "bluetooth",
     "custom/units",
     "custom/update",
     "group/hardware",
@@ -88,12 +90,36 @@
     "tooltip": true,
     "on-click": "kitty --hold sh -c 'upower -i $(upower -e | grep -m1 BAT)'"
   },
+  // Active power-profiles-daemon profile. The module stays empty on machines
+  // without PPD, so the same config works on desktops and laptops.
+  "power-profiles-daemon": {
+    "format": "{icon}",
+    "tooltip": true,
+    "format-icons": {
+      "performance": "\uf0e7",
+      "balanced": "\uf24e",
+      "power-saver": "\uf06c"
+    }
+  },
   "custom/network": {
     "exec": "~/.local/bin/waybar-network.sh",
     "return-type": "json",
     "hide-empty-text": true,
     "tooltip": true,
     "on-click": "sh -c 'command -v nm-connection-editor >/dev/null && nm-connection-editor || kitty --hold nmtui'"
+  },
+
+  // Bluetooth stays hidden on machines without an adapter.
+  "bluetooth": {
+    "format": "{icon}",
+    "format-icons": {
+      "on": "\uf293",
+      "off": "\uf294",
+      "connected": "\uf293"
+    },
+    "format-no-controller": "",
+    "tooltip-format": "{controller_alias}\n{controller_address}\n{device_alias}",
+    "on-click": "bluetoothctl power toggle"
   },
 
   // Failed systemd units and repository updates stay hidden until they matter.

@@ -425,10 +425,12 @@ docs_page() {
 # ---------------------------------------------------------------- menu -------
 
 waybar_start() {
+    local conf="$REAL_HOME/.config/waybar/config.jsonc"
+    local style="$REAL_HOME/.config/waybar/style.css"
     if have uwsm; then
-        (uwsm app -- waybar >/dev/null 2>&1 &)
+        (uwsm app -- waybar -c "$conf" -s "$style" >/dev/null 2>&1 &)
     else
-        (waybar >/dev/null 2>&1 &)
+        (waybar -c "$conf" -s "$style" >/dev/null 2>&1 &)
     fi
 }
 

@@ -84,5 +84,54 @@ else
     fail "network output: $out"
 fi
 
+# The streaming modules read their own events; Waybar must not poll them.
+CONFIG="$ROOT/modules/waybar/home/.config/waybar/config.jsonc"
+config_json="$(sed -E 's#^[[:space:]]*//.*$##' "$CONFIG")"
+if jq -e '."custom/battery" | has("interval") | not' >/dev/null <<<"$config_json" &&
+    jq -e '."custom/brightness" | has("interval") | not' >/dev/null <<<"$config_json" &&
+    jq -e '."custom/network" | has("interval") | not' >/dev/null <<<"$config_json"; then
+    pass "event-driven Waybar modules are not polled"
+else
+    fail "a streaming Waybar module still has an interval"
+fi
+if jq -e '."modules-right" | index("power-profiles-daemon")' >/dev/null <<<"$config_json" &&
+    jq -e '."power-profiles-daemon".tooltip' >/dev/null <<<"$config_json"; then
+    pass "the power profile module is in the right block"
+else
+    fail "the power profile module is missing"
+fi
+if jq -e '."modules-right" | index("bluetooth")' >/dev/null <<<"$config_json" &&
+    jq -e '."bluetooth"."format-no-controller" == ""' >/dev/null <<<"$config_json"; then
+    pass "the Bluetooth module hides without an adapter"
+else
+    fail "the Bluetooth module is missing or not gated"
+fi
+
+# Old autostart entries must move to the explicit managed config path.
+AUTOSTART="$ROOT/modules/autostart/home/.local/bin/autostart.sh"
+mkdir -p "$work/home/.local/state/dotfiles" "$work/autostart-bin" "$work/run"
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s/uwsm.args"\n' "$work" >"$work/autostart-bin/uwsm"
+printf '#!/bin/sh\nexit 0\n' >"$work/autostart-bin/waybar"
+chmod +x "$work/autostart-bin/uwsm" "$work/autostart-bin/waybar"
+state="$work/home/.local/state/dotfiles/autostart.tsv"
+printf '1\twaybar\tuwsm app -- waybar\n' >"$state"
+HOME="$work/home" XDG_RUNTIME_DIR="$work/run" XDG_STATE_HOME="$work/home/.local/state" \
+    PATH="$work/autostart-bin:$PATH" "$AUTOSTART" run >/dev/null 2>&1
+for _ in {1..20}; do
+    [[ -e $work/uwsm.args ]] && break
+    sleep 0.05
+done
+if grep -qF -- "-c $work/home/.config/waybar/config.jsonc" "$state" &&
+    grep -qF -- "-s $work/home/.config/waybar/style.css" "$state"; then
+    pass "the autostart entry names the managed Waybar config"
+else
+    fail "the autostart entry was not migrated: $(cat "$state")"
+fi
+if grep -qF -- "-c $work/home/.config/waybar/config.jsonc" "$work/uwsm.args" 2>/dev/null; then
+    pass "Waybar starts with the managed config, not a leftover file"
+else
+    fail "Waybar started without explicit paths: $(cat "$work/uwsm.args" 2>/dev/null)"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
