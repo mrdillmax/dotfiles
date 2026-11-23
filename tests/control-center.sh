@@ -100,7 +100,8 @@ else
     fail "update row did not refresh the status"
 fi
 
-printf '#!/bin/sh\necho "$*" >"%s/nightlight.calls"\n' "$stub" >"$stub/nightlight.sh"
+# shellcheck disable=SC2016 # the stub expands $1 at its own runtime
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s/nightlight.calls"\ncase "$1" in status) echo "night light: enabled" ;; esac\n' "$stub" >"$stub/nightlight.sh"
 chmod +x "$stub/nightlight.sh"
 (
     # shellcheck disable=SC2329 # called by style_page
@@ -110,13 +111,14 @@ chmod +x "$stub/nightlight.sh"
         printf '%s\n' "Night light"
     }
     # shellcheck disable=SC2329
-    notify() { :; }
+    notify() { printf '%s\n' "$*" >>"$stub/notify"; }
     style_page
 )
-if grep -q toggle "$stub/nightlight.calls" 2>/dev/null; then
-    pass "the Style page toggles the night light"
+if grep -q toggle "$stub/nightlight.calls" 2>/dev/null &&
+    grep -q 'Night light on' "$stub/notify"; then
+    pass "the Style page toggles the night light and names the state"
 else
-    fail "the Style page did not call nightlight.sh"
+    fail "the Style page did not toggle or report the night light"
 fi
 
 (
@@ -134,24 +136,30 @@ else
     fail "the Night light row appeared without nightlight.sh"
 fi
 
-mkdir -p "$stub/sound-only"
-printf '#!/bin/sh\nexit 0\n' >"$stub/sound-only/hyprpwcenter"
-chmod +x "$stub/sound-only/hyprpwcenter"
-ln -s "$(command -v cat)" "$stub/sound-only/cat"
 (
-    # shellcheck disable=SC2123 # deliberately a one-directory PATH
-    PATH="$stub/sound-only"
-    # shellcheck disable=SC2329
+    # shellcheck disable=SC2329 # called by configuration_page
     pick_icon() {
-        printf '%s\n' "$@" >"$stub/sound-only/rows"
+        printf '%s\n' "$@" >"$stub/config-rows"
         return 1
     }
     configuration_page
 )
-if grep -q "Sound" "$stub/sound-only/rows"; then
-    pass "the Sound row appears with only hyprpwcenter"
+missing=0
+for label in Sound Monitors "Lock screen" Keybinds Tide; do
+    grep -q "$label" "$stub/config-rows" || missing=1
+done
+if ((missing == 0)); then
+    pass "Configuration lists the installable entries before they exist"
 else
-    fail "the Sound row ignored hyprpwcenter"
+    fail "Configuration hid an installable entry: $(cat "$stub/config-rows")"
+fi
+
+if [[ $(config_check_cmd Sound) == pavucontrol &&
+    $(config_install_cmd Monitors) == *"--modules monitor-profiles"* &&
+    $(config_install_cmd Tide) == *"--modules fish"* ]]; then
+    pass "Configuration knows how to install what each entry needs"
+else
+    fail "Configuration dependency map is incomplete"
 fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"

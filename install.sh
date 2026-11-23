@@ -398,7 +398,6 @@ list_all() {
                 printf '%s\t%s\n' "${DESCRIPTION:-}" "${OPTIONAL:-0}"
             )
         fi
-        [[ $optional == 1 ]] && desc+=" [optional]"
         printf '  %-20s %s\n' "$name" "$desc"
     done
     printf '\nGPU profiles:\n'
@@ -443,7 +442,7 @@ monitor_count() {
 }
 
 select_modules() {
-    local required=() labels=() required_labels=()
+    local required=() labels=()
     local dir name desc count monitors optional label
     monitors="$(monitor_count)"
 
@@ -467,11 +466,9 @@ select_modules() {
         optional=$OPTIONAL
         label="$name — ${DESCRIPTION:-} (${count} pkgs)"
         label="${label//,/;}"
-        ((optional)) && label+=" [optional]"
         labels+=("$label")
         if ((!optional)); then
             required+=("$name")
-            required_labels+=("$label")
         fi
     done
 
@@ -486,7 +483,7 @@ select_modules() {
     fi
 
     if (( !ASSUME_YES )) && [[ -t 0 ]]; then
-        TUI_CHECKED_ITEMS=("${required_labels[@]}")
+        TUI_CHECKED_ITEMS=("${labels[@]}")
         tui_checklist "Modules to install" "${labels[@]}"
         local line
         for line in "${TUI_SELECTION[@]}"; do

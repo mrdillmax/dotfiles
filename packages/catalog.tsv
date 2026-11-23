@@ -201,7 +201,7 @@ ttf-roboto	Fonts	pkg	yes	any	any	Google's signature family of fonts
 woff2-font-awesome	Fonts	pkg	no	any	any	Iconic font designed for Bootstrap - woff2 format
 swayosd	Desktop	pkg	no	any	any	A GTK on-screen display for volume and brightness
 hyprsunset	Desktop	pkg	no	any	any	Blue-light filter for Hyprland
-udiskie	Files	pkg	no	any	any	Removable disk automounter with a tray icon
+udiskie	Files	pkg	yes	any	any	Removable disk automounter with a tray icon
 wf-recorder	Media	pkg	no	any	any	Screen recorder for wlroots compositors
 rofimoji	Desktop	pkg	no	any	any	Emoji and Unicode picker for rofi
 intel-media-driver	Drivers	pkg	no	any	any	Intel media driver for Gen9+

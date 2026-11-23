@@ -395,7 +395,7 @@ docs_page() {
             $'\uf02d|README'
             $'\uf0c1|Links'
         )
-        have hyprsysteminfo && specs+=($'\uf108|System info')
+        specs+=($'\uf108|System info')
         choice="$(pick_icon "Docs" "${specs[@]}")" || return 0
         case "$choice" in
             "Keybinds")
@@ -408,7 +408,11 @@ docs_page() {
             "Versions") docs_versions ;;
             "README") open_readme; exit 0 ;;
             "Links") docs_links ;;
-            "System info") (hyprsysteminfo >/dev/null 2>&1 &) ;;
+            "System info")
+                if ensure_config_dep "System info"; then
+                    run_terminal "fastfetch"
+                fi
+                ;;
             "") return 0 ;;
         esac
     done
@@ -930,8 +934,15 @@ style_page() {
             "Accent color") theme_accent_page ;;
             "Fonts and icons") appearance_page ;;
             "Night light")
-                nightlight.sh toggle >/dev/null 2>&1
-                notify "Night light toggled"
+                if nightlight.sh toggle >/dev/null 2>&1; then
+                    if nightlight.sh status 2>/dev/null | grep -q enabled; then
+                        notify "Night light on"
+                    else
+                        notify "Night light off"
+                    fi
+                else
+                    notify "Night light failed"
+                fi
                 ;;
             "") return 0 ;;
         esac
@@ -1061,9 +1072,7 @@ monitors_page() {
 }
 
 sound_page() {
-    if have hyprpwcenter; then
-        (hyprpwcenter >/dev/null 2>&1 &)
-    elif have pavucontrol; then
+    if have pavucontrol; then
         (pavucontrol >/dev/null 2>&1 &)
     elif have wpctl; then
         run_terminal --hold "wpctl status"
@@ -1126,32 +1135,96 @@ config_files_page() {
     done
 }
 
+# What each Configuration entry needs, and how to install it.
+config_check_cmd() {
+    case "$1" in
+        Sound)         printf '%s' pavucontrol ;;
+        Wi-Fi)         printf '%s' nmcli ;;
+        Bluetooth)     printf '%s' bluetoothctl ;;
+        Monitors)      printf '%s' monitor-profiles.sh ;;
+        "Lock screen") printf '%s' hyprlock ;;
+        Keybinds)      printf '%s' binds-cheatsheet.sh ;;
+        Mouse*)        printf '%s' mouse-tune.sh ;;
+        Tide)          printf '%s' fish ;;
+        "System info") printf '%s' fastfetch ;;
+    esac
+}
+
+config_install_cmd() {
+    local installer
+    [[ -n ${ROOT:-} ]] || return 1
+    installer="$ROOT/install.sh"
+    case "$1" in
+        Sound)         printf '%s --only-packages --packages pavucontrol --yes' "$installer" ;;
+        Wi-Fi)         printf '%s --only-packages --packages networkmanager --yes && sudo systemctl enable --now NetworkManager' "$installer" ;;
+        Bluetooth)     printf '%s --only-packages --packages bluez,bluez-utils --yes && sudo systemctl enable --now bluetooth' "$installer" ;;
+        Monitors)      printf '%s --modules monitor-profiles --yes' "$installer" ;;
+        "Lock screen") printf '%s --modules idle --yes' "$installer" ;;
+        Keybinds)      printf '%s --modules binds-cheatsheet --yes' "$installer" ;;
+        Mouse*)        printf '%s --modules mouse-sensitivity --yes' "$installer" ;;
+        Tide)          printf '%s --modules fish --yes' "$installer" ;;
+        "System info") printf '%s --only-packages --packages fastfetch --yes' "$installer" ;;
+        *) return 1 ;;
+    esac
+}
+
+# Selecting an entry installs what it needs instead of hiding it.
+ensure_config_dep() {
+    local choice="$1" check install
+    check="$(config_check_cmd "$choice")"
+    [[ -n $check ]] || return 0
+    have "$check" && return 0
+    if ! install="$(config_install_cmd "$choice")"; then
+        notify "Cannot install $check: repository not found"
+        return 1
+    fi
+    notify "Installing the packages for $choice"
+    run_terminal --hold "$install"
+    if have "$check"; then
+        return 0
+    fi
+    notify "$choice is still missing: $check"
+    return 1
+}
+
 configuration_page() {
     local choice mouse_label="Mouse"
     host_is_laptop && mouse_label="Mouse and touchpad"
     local -a specs=()
 
     while :; do
-        specs=()
-        { have hyprpwcenter || have pavucontrol || have wpctl || have pactl; } && specs+=($'|Sound')
-        wifi_hardware_present && specs+=($'|Wi-Fi')
-        bluetooth_hardware_present && specs+=($'|Bluetooth')
-        have monitor-profiles.sh && specs+=($'|Monitors')
-        have hyprlock && specs+=($'|Lock screen')
-        have binds-cheatsheet.sh && specs+=($'|Keybinds')
-        have mouse-tune.sh && specs+=($'|'"$mouse_label")
-        have fish && specs+=($'|Tide')
-        specs+=($'|Config files')
+        specs=(
+            $'\uf0a8|Sound'
+        )
+        wifi_hardware_present && specs+=($'\uf1eb|Wi-Fi')
+        bluetooth_hardware_present && specs+=($'\uf293|Bluetooth')
+        specs+=(
+            $'\uf108|Monitors'
+            $'\uf023|Lock screen'
+            $'\uf11c|Keybinds'
+            $'\uf245|'"$mouse_label"
+            $'\uf120|Tide'
+            $'\uf15c|Config files'
+        )
         choice="$(pick_icon "Configuration" "${specs[@]}")" || return 0
         case "$choice" in
-            "Sound") sound_page; exit 0 ;;
-            "Wi-Fi") wifi_page ;;
-            "Bluetooth") bluetooth_page ;;
-            "Monitors") monitors_page ;;
-            "Lock screen") lock_screen_page ;;
-            "Keybinds") edit_bind_page ;;
-            Mouse*) run_terminal "mouse-tune.sh"; exit 0 ;;
-            "Tide") tide_configure; exit 0 ;;
+            "Sound")
+                ensure_config_dep "Sound" && sound_page
+                exit 0
+                ;;
+            "Wi-Fi") ensure_config_dep "Wi-Fi" && wifi_page ;;
+            "Bluetooth") ensure_config_dep "Bluetooth" && bluetooth_page ;;
+            "Monitors") ensure_config_dep "Monitors" && monitors_page ;;
+            "Lock screen") ensure_config_dep "Lock screen" && lock_screen_page ;;
+            "Keybinds") ensure_config_dep "Keybinds" && edit_bind_page ;;
+            Mouse*)
+                ensure_config_dep "$choice" && run_terminal "mouse-tune.sh"
+                exit 0
+                ;;
+            "Tide")
+                ensure_config_dep "Tide" && tide_configure
+                exit 0
+                ;;
             "Config files") config_files_page ;;
             *) return 0 ;;
         esac

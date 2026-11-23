@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hypr tools replace the matching paths only when installed.
+# Hypr tools and the working fallbacks: logout, sound and system info.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -18,7 +18,8 @@ printf '#!/bin/sh\necho ran >"%s/hyprshutdown.ran"\n' "$work" >"$work/bin/hyprsh
 # Even if hyprshutdown disappears, logout must never reach the real session.
 printf '#!/bin/sh\necho ran >"%s/uwsm.ran"\n' "$work" >"$work/bin/uwsm"
 printf '#!/bin/sh\necho ran >"%s/hyprpwcenter.ran"\n' "$work" >"$work/bin/hyprpwcenter"
-printf '#!/bin/sh\necho ran >"%s/hyprsysteminfo.ran"\n' "$work" >"$work/bin/hyprsysteminfo"
+printf '#!/bin/sh\necho ran >"%s/pavucontrol.ran"\n' "$work" >"$work/bin/pavucontrol"
+printf '#!/bin/sh\necho ran >"%s/fastfetch.ran"\n' "$work" >"$work/bin/fastfetch"
 chmod +x "$work/bin"/*
 PATH="$work/bin:$PATH"
 
@@ -41,19 +42,21 @@ fi
     sound_page
 )
 for _ in {1..20}; do
-    [[ -e $work/hyprpwcenter.ran ]] && break
+    [[ -e $work/pavucontrol.ran ]] && break
     sleep 0.05
 done
-if [[ -e $work/hyprpwcenter.ran ]]; then
-    pass "Sound prefers hyprpwcenter"
+if [[ -e $work/pavucontrol.ran && ! -e $work/hyprpwcenter.ran ]]; then
+    pass "Sound prefers pavucontrol even when hyprpwcenter is installed"
 else
-    fail "Sound did not run hyprpwcenter"
+    fail "Sound used the wrong tool (hyprpwcenter: $(ls "$work/hyprpwcenter.ran" 2>/dev/null))"
 fi
 
 (
     # shellcheck source=/dev/null
     source "$CC"
-    # shellcheck disable=SC2329 # called by docs_page
+    # shellcheck disable=SC2329
+    run_terminal() { printf '%s\n' "$*" >"$work/terminal.cmd"; }
+    # shellcheck disable=SC2329
     pick_icon() {
         [[ -e $work/picked-docs ]] && return 1
         : >"$work/picked-docs"
@@ -61,14 +64,10 @@ fi
     }
     docs_page
 )
-for _ in {1..20}; do
-    [[ -e $work/hyprsysteminfo.ran ]] && break
-    sleep 0.05
-done
-if [[ -e $work/hyprsysteminfo.ran ]]; then
-    pass "Docs lists and launches hyprsysteminfo"
+if grep -q 'fastfetch' "$work/terminal.cmd" 2>/dev/null; then
+    pass "System info opens fastfetch in a terminal"
 else
-    fail "Docs did not launch hyprsysteminfo"
+    fail "System info did not run fastfetch: $(cat "$work/terminal.cmd" 2>/dev/null)"
 fi
 
 # Fallbacks when the Hypr tools are absent: only uwsm and pavucontrol exist.
@@ -96,7 +95,7 @@ else
 fi
 
 (
-    # shellcheck disable=SC2123 # deliberately a one-directory PATH
+    # shellcheck disable=SC2123
     PATH="$work/fallback"
     # shellcheck source=/dev/null
     source "$CC"
@@ -107,27 +106,9 @@ for _ in {1..20}; do
     sleep 0.05
 done
 if [[ -e $work/fallback/pavucontrol.ran ]]; then
-    pass "Sound falls back to pavucontrol"
+    pass "Sound works without the Hypr tools"
 else
     fail "Sound did not reach the pavucontrol fallback"
-fi
-
-(
-    # shellcheck disable=SC2123 # deliberately a one-directory PATH
-    PATH="$work/fallback"
-    # shellcheck source=/dev/null
-    source "$CC"
-    # shellcheck disable=SC2329
-    pick_icon() {
-        printf '%s\n' "$@" >"$work/fallback/docs-rows"
-        return 1
-    }
-    docs_page
-)
-if ! grep -q "System info" "$work/fallback/docs-rows"; then
-    pass "the Docs row is hidden without hyprsysteminfo"
-else
-    fail "the Docs row appeared without the app"
 fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"

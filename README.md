@@ -265,14 +265,16 @@ checklist; `--all` never selects them.
 |--------|--------------|
 | `osd` | swayosd volume, microphone and brightness overlay with media keys |
 | `nightlight` | hyprsunset blue-light filter and a toggle on the Style page |
-| `udisks` | udiskie automounting with a tray icon |
 | `recorder` | wf-recorder region recording on `SUPER+ALT+R` |
 | `emoji` | rofimoji picker on `SUPER+.` |
-| `hyprtools` | hyprshutdown logout, hyprpwcenter for Sound, hyprsysteminfo in Docs |
+| `hyprtools` | hyprshutdown logout, plus hyprpwcenter and hyprsysteminfo for manual use |
 
+`udisks` (udiskie automounting with a tray icon) is installed by default.
 Brightness control needs write access to the backlight device (the `video`
 group). `hyprsysteminfo` comes from the AUR; the other packages are in the
-official repositories.
+official repositories. Sound uses `pavucontrol` and System info uses
+`fastfetch`, because the Hypr toolkit apps can crash on GPUs without working
+EGL.
 
 
 Spicetify CLI is a selected Music entry, not a pacman package. The installer
@@ -503,7 +505,8 @@ Press `SUPER + Space` or launch **Control Center** from rofi. Pages cover:
 - **Style**: wallpapers with thumbnails, dark/light/smart mode, matugen
   schemes, font and icon status
 - **Configuration**: sound, Wi-Fi, Bluetooth, monitors, lock screen, keybinds,
-  mouse/touchpad, Tide and the main text configs in an editor
+  mouse/touchpad, Tide and the main text configs in an editor. Selecting an
+  entry installs the module or package it needs when that is missing
 - **Install**: repository and AUR packages through `fzf`
 - **Uninstall**: `fzf` multi-select removal and package inspection
 - **Update**: GitHub status for the dotfiles repo (cached for six hours), then

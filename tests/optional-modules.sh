@@ -78,10 +78,10 @@ else
 fi
 
 udisks="$ROOT/modules/udisks"
-if [[ -r $udisks/module.conf ]] && grep -qx 'OPTIONAL=1' "$udisks/module.conf"; then
-    pass "udisks is optional"
+if [[ -r $udisks/module.conf ]] && ! grep -qx 'OPTIONAL=1' "$udisks/module.conf"; then
+    pass "udisks is installed by default"
 else
-    fail "udisks module missing or required"
+    fail "udisks is still optional or missing"
 fi
 unit="$udisks/home/.config/systemd/user/udiskie.service"
 if grep -q 'ExecStart=/usr/bin/udiskie --automount --notify --tray' "$unit"; then
@@ -89,10 +89,10 @@ if grep -q 'ExecStart=/usr/bin/udiskie --automount --notify --tray' "$unit"; the
 else
     fail "udiskie unit is missing its flags"
 fi
-if awk -F'\t' '$1 == "udiskie" && $4 == "no" {found=1} END{exit !found}' "$ROOT/packages/catalog.tsv"; then
-    pass "udiskie is an opt-in catalog row"
+if awk -F'\t' '$1 == "udiskie" && $4 == "yes" {found=1} END{exit !found}' "$ROOT/packages/catalog.tsv"; then
+    pass "udiskie is a default catalog row"
 else
-    fail "udiskie has no opt-in catalog row"
+    fail "udiskie is not a default catalog row"
 fi
 
 recorder="$ROOT/modules/recorder"

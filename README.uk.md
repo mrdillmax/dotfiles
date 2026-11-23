@@ -263,13 +263,15 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 |--------|----------|
 | `osd` | swayosd: гучність, мікрофон і яскравість з медіаклавішами |
 | `nightlight` | синій фільтр hyprsunset і перемикач на сторінці Style |
-| `udisks` | автомонтування udiskie з іконкою в треї |
 | `recorder` | запис області wf-recorder на `SUPER+ALT+R` |
 | `emoji` | вибір емодзі rofimoji на `SUPER+.` |
-| `hyprtools` | hyprshutdown для logout, hyprpwcenter для Sound, hyprsysteminfo у Docs |
+| `hyprtools` | hyprshutdown для logout, а hyprpwcenter і hyprsysteminfo — для ручного запуску |
 
+`udisks` (автомонтування udiskie з іконкою в треї) ставиться за замовчуванням.
 Для керування яскравістю потрібен запис у пристрій підсвічування (група
 `video`). `hyprsysteminfo` — з AUR; решта пакетів є в офіційних репозиторіях.
+Звук відкривається через `pavucontrol`, а System info — через `fastfetch`:
+застосунки Hypr toolkit можуть падати на GPU без робочого EGL.
 
 
 Spicetify CLI — вибраний Music-пункт, а не pacman-пакет. Інсталятор качає
@@ -507,7 +509,8 @@ dotfiles-control-center
 - **Style**: шпалери з мініатюрами, dark/light/smart, схеми matugen, статус
   шрифтів та іконок
 - **Configuration**: звук, Wi-Fi, Bluetooth, монітори, екран блокування,
-  бінди, мишка/тачпад, Tide і основні текстові конфіги у редакторі
+  бінди, мишка/тачпад, Tide і основні текстові конфіги у редакторі. Вибір
+  пункту доставляє потрібний модуль або пакет, якщо його бракує
 - **Install**: пакети з репозиторіїв і AUR через `fzf`
 - **Uninstall**: видалення кількох пакетів через `fzf` і перегляд інформації
 - **Update**: статус дотфайлів на GitHub (кеш на шість годин), далі
