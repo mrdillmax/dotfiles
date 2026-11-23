@@ -59,11 +59,14 @@ if grep -q 'ExecStart=/usr/bin/swayosd-server' "$unit" &&
 else
     fail "swayosd unit is not ordered after the session"
 fi
-if awk -F'\t' '$1 == "swayosd" {found=1} END{exit !found}' "$ROOT/packages/catalog.tsv"; then
-    pass "swayosd is in the catalog"
-else
-    fail "swayosd has no catalog row"
-fi
+for package in swayosd brightnessctl; do
+    if awk -F'\t' -v name="$package" '$1 == name {found=1} END{exit !found}' \
+        "$ROOT/packages/catalog.tsv"; then
+        pass "$package is in the catalog"
+    else
+        fail "$package has no catalog row"
+    fi
+done
 
 nightlight="$ROOT/modules/nightlight"
 if [[ -x $nightlight/home/.local/bin/nightlight.sh ]] &&

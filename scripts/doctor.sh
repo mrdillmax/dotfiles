@@ -627,7 +627,7 @@ waybar_script() {
 }
 
 if command -v jq >/dev/null 2>&1; then
-    for module in units update battery network; do
+    for module in units update brightness battery network; do
         script="$(waybar_script "$module")"
         if [[ ! -x $script ]]; then
             skip "waybar-$module.sh is not installed"

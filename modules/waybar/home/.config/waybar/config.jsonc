@@ -32,6 +32,7 @@
     "privacy",
     "hyprland/language",
     "group/zvuk",
+    "custom/brightness",
     "custom/battery",
     "custom/network",
     "custom/units",
@@ -71,6 +72,16 @@
 
   // Battery and network are event-driven custom modules: their scripts listen
   // to udev / NetworkManager and print a new JSON line per change.
+  "custom/brightness": {
+    "exec": "~/.local/bin/waybar-brightness.sh",
+    "return-type": "json",
+    "interval": "once",
+    "hide-empty-text": true,
+    "tooltip": true,
+    "on-click": "brightnessctl set 5%+",
+    "on-scroll-up": "brightnessctl set 5%+",
+    "on-scroll-down": "brightnessctl set 5%-"
+  },
   "custom/battery": {
     "exec": "~/.local/bin/waybar-battery.sh",
     "return-type": "json",

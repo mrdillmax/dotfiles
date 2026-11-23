@@ -547,6 +547,11 @@ something needs attention. Battery and network are custom modules driven by
 events (`udevadm monitor` and `nmcli monitor`), so charge and link changes
 appear without a polling timer.
 
+Brightness appears in Waybar when the machine exposes a backlight
+(`/sys/class/backlight`); the `osd` module installs `brightnessctl` for the
+keys and the scroll wheel. Users need write access to the backlight device
+(the `video` group) or the packaged udev rule.
+
 The installer reloads a running Waybar with `SIGUSR2`, so config changes apply
 immediately. `./install.sh --doctor` also executes each Waybar helper and
 checks that it emits valid JSON.

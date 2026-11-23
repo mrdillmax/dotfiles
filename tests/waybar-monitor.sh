@@ -47,6 +47,22 @@ else
     fail "click did not notify: $(cat "$work/notify" 2>/dev/null)"
 fi
 
+mkdir -p "$work/backlight/panel" "$work/emptylight"
+printf '40\n' >"$work/backlight/panel/brightness"
+printf '100\n' >"$work/backlight/panel/max_brightness"
+out="$(BACKLIGHT_DIR="$work/backlight/panel" "$BIN/waybar-brightness.sh" --once)"
+if [[ $out == *'40%'* ]]; then
+    pass "brightness reports the backlight percentage"
+else
+    fail "brightness output: $out"
+fi
+out="$(BACKLIGHT_DIR="$work/emptylight" "$BIN/waybar-brightness.sh" --once)"
+if [[ $out == '{"text": ""}' ]]; then
+    pass "no backlight produces an empty module"
+else
+    fail "empty brightness output: $out"
+fi
+
 out="$(BAT_DIR="$work/bat" "$BIN/waybar-battery.sh" --once)"
 if [[ $out == *'42%'* && $out == *Discharging* ]]; then
     pass "battery reports capacity and state"
