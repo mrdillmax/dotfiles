@@ -153,7 +153,12 @@ etag_args=()
 # The two responses are small and flat, so sed reads them. That keeps the
 # checker free of a JSON dependency.
 json_sha() {
-    sed -nE 's/.*"sha"[[:space:]]*:[[:space:]]*"([0-9a-fA-F]{40})".*/\1/p' "$1" | head -n1
+    # The API answers on one line with several SHA fields: the commit first,
+    # then its tree and parents. Take the first match; a greedy sed returns the
+    # parent and makes an up-to-date checkout look one commit ahead.
+    grep -oE '"sha"[[:space:]]*:[[:space:]]*"[0-9a-fA-F]{40}"' "$1" \
+        | head -n1 \
+        | sed -E 's/.*"([0-9a-fA-F]{40})"/\1/'
 }
 
 json_int() {

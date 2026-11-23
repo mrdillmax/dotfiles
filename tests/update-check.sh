@@ -21,6 +21,11 @@ git -C "$DOTFILES_REPO" -c user.email=test@example.test -c user.name=test \
     commit -q --allow-empty -m initial
 LOCAL_SHA="$(git -C "$DOTFILES_REPO" rev-parse HEAD)"
 REMOTE_SHA="1111111111111111111111111111111111111111"
+# Real API responses are compact and carry the commit, tree and parent SHAs on
+# one line. The parent is not a valid "latest commit".
+TREE_SHA="2222222222222222222222222222222222222222"
+PARENT_SHA="3333333333333333333333333333333333333333"
+export TREE_SHA PARENT_SHA
 
 cat >"$work/curl" <<'STUB'
 #!/bin/sh
@@ -44,7 +49,8 @@ case "$url" in
             printf '304'
         else
             printf 'HTTP/2 200\r\nETag: "fresh-etag"\r\n\r\n' >"$hdr"
-            printf '[\n  {\n    "sha": "%s",\n    "node_id": "abc"\n  }\n]\n' "$REMOTE_SHA" >"$out"
+            printf '[{"sha":"%s","node_id":"abc","commit":{"tree":{"sha":"%s"},"message":"x"},"parents":[{"sha":"%s"}]}]\n' \
+                "$REMOTE_SHA" "$TREE_SHA" "$PARENT_SHA" >"$out"
             printf '200'
         fi
         ;;
@@ -111,6 +117,14 @@ if grep -qE '"status":"behind"' <<<"$out" && grep -qE '"behind":3' <<<"$out" &&
     pass "--json carries status and count"
 else
     fail "--json payload is wrong: $out"
+fi
+
+rm -f "$UPDATE_CACHE"
+out="$(run_check --json)"
+if [[ $out == *"\"remote\":\"$REMOTE_SHA\""* ]]; then
+    pass "the latest commit sha is not confused with its tree or parent"
+else
+    fail "wrong remote sha: $out"
 fi
 
 STUB_MODE="online"

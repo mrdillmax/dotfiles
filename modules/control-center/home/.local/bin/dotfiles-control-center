@@ -409,7 +409,11 @@ docs_page() {
             "README") open_readme; exit 0 ;;
             "Links") docs_links ;;
             "System info")
-                if ensure_config_dep "System info"; then
+                if have hyprsysteminfo; then
+                    # Prefer the Hypr toolkit window when the optional hyprtools
+                    # module is installed; fastfetch stays the fallback.
+                    (hyprsysteminfo >/dev/null 2>&1 &)
+                elif ensure_config_dep "System info"; then
                     run_terminal --hold "fastfetch"
                 fi
                 ;;

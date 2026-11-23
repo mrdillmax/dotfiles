@@ -626,6 +626,59 @@ waybar_script() {
     printf '%s/.local/bin/waybar-%s.sh\n' "$REAL_HOME" "$1"
 }
 
+waybar_conf="$REAL_HOME/.config/waybar/config.jsonc"
+if [[ -r $waybar_conf ]]; then
+    for legacy in config config.json; do
+        if [[ -e $REAL_HOME/.config/waybar/$legacy ]]; then
+            warn "$REAL_HOME/.config/waybar/$legacy can shadow config.jsonc; remove it"
+        fi
+    done
+    for module in custom/battery custom/brightness custom/network custom/units \
+        custom/update group/zvuk group/hardware; do
+        if grep -q "\"$module\"" "$waybar_conf"; then
+            ok "the live Waybar config declares $module"
+        else
+            warn "the live Waybar config is missing $module"
+        fi
+    done
+    if pgrep -x waybar >/dev/null 2>&1; then
+        pid="$(pgrep -x waybar | head -n1)"
+        elapsed="$(ps -o etimes= -p "$pid" 2>/dev/null | tr -d ' ')"
+        modified="$(stat -c %Y "$waybar_conf" 2>/dev/null || printf '0')"
+        if [[ $elapsed =~ ^[0-9]+$ && $modified =~ ^[0-9]+$ ]] &&
+            ((elapsed < $(date +%s) - modified)); then
+            warn "Waybar started before its config changed; reload it with SIGUSR2"
+        fi
+    else
+        skip "Waybar is not running"
+    fi
+else
+    warn "the live Waybar config is missing; install the waybar module"
+fi
+
+if compgen -G '/sys/class/power_supply/BAT*' >/dev/null; then
+    note "battery hardware: $(compgen -G '/sys/class/power_supply/BAT*' | xargs -n1 basename | tr '\n' ' ')"
+else
+    note "no battery hardware in /sys/class/power_supply"
+fi
+if compgen -G '/sys/class/backlight/*' >/dev/null; then
+    note "backlight hardware: $(compgen -G '/sys/class/backlight/*' | xargs -n1 basename | tr '\n' ' ')"
+    if has brightnessctl; then
+        ok "brightnessctl is installed"
+    else
+        warn "backlight hardware exists but brightnessctl is missing"
+    fi
+else
+    note "no backlight hardware in /sys/class/backlight"
+fi
+if has wpctl; then
+    if wpctl status >/dev/null 2>&1; then
+        ok "the audio server responds to wpctl"
+    else
+        warn "wpctl cannot reach the audio server; group/zvuk stays hidden"
+    fi
+fi
+
 if command -v jq >/dev/null 2>&1; then
     for module in units update brightness battery network; do
         script="$(waybar_script "$module")"
@@ -638,6 +691,22 @@ if command -v jq >/dev/null 2>&1; then
             *)            output="$("$script" --once 2>/dev/null)" ;;
         esac
         if [[ -n $output ]] && jq -e . >/dev/null 2>&1 <<<"$output"; then
+            case "$module" in
+                battery)
+                    if compgen -G '/sys/class/power_supply/BAT*' >/dev/null &&
+                        jq -e '.text == ""' >/dev/null 2>&1 <<<"$output"; then
+                        fail "battery hardware exists but waybar-battery.sh returns empty text"
+                        continue
+                    fi
+                    ;;
+                brightness)
+                    if compgen -G '/sys/class/backlight/*' >/dev/null &&
+                        jq -e '.text == ""' >/dev/null 2>&1 <<<"$output"; then
+                        fail "backlight hardware exists but waybar-brightness.sh returns empty text"
+                        continue
+                    fi
+                    ;;
+            esac
             ok "waybar-$module.sh emits valid JSON"
         else
             fail "waybar-$module.sh did not emit JSON: ${output:-empty}"

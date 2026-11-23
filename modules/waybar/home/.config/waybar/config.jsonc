@@ -75,7 +75,6 @@
   "custom/brightness": {
     "exec": "~/.local/bin/waybar-brightness.sh",
     "return-type": "json",
-    "interval": "once",
     "hide-empty-text": true,
     "tooltip": true,
     "on-click": "brightnessctl set 5%+",
@@ -85,7 +84,6 @@
   "custom/battery": {
     "exec": "~/.local/bin/waybar-battery.sh",
     "return-type": "json",
-    "interval": "once",
     "hide-empty-text": true,
     "tooltip": true,
     "on-click": "kitty --hold sh -c 'upower -i $(upower -e | grep -m1 BAT)'"
@@ -93,7 +91,6 @@
   "custom/network": {
     "exec": "~/.local/bin/waybar-network.sh",
     "return-type": "json",
-    "interval": "once",
     "hide-empty-text": true,
     "tooltip": true,
     "on-click": "sh -c 'command -v nm-connection-editor >/dev/null && nm-connection-editor || kitty --hold nmtui'"

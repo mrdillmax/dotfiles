@@ -54,6 +54,10 @@ fi
 (
     # shellcheck source=/dev/null
     source "$CC"
+    # Hide a real hyprsysteminfo from the fallback check; the binary is
+    # optional and may be installed on the development machine.
+    # shellcheck disable=SC2329
+    have() { [[ $1 == hyprsysteminfo ]] && return 1; command -v "$1" >/dev/null 2>&1; }
     # shellcheck disable=SC2329
     run_terminal() { printf '%s\n' "$*" >"$work/terminal.cmd"; }
     # shellcheck disable=SC2329
@@ -65,9 +69,37 @@ fi
     docs_page
 )
 if grep -q -- '--hold fastfetch' "$work/terminal.cmd" 2>/dev/null; then
-    pass "System info opens fastfetch in a terminal"
+    pass "System info falls back to fastfetch in a terminal"
 else
     fail "System info did not run fastfetch: $(cat "$work/terminal.cmd" 2>/dev/null)"
+fi
+
+# hyprsysteminfo is the preferred window whenever the package is installed.
+printf '#!/bin/sh\necho ran >"%s/hyprsysteminfo.ran"\n' "$work" >"$work/bin/hyprsysteminfo"
+chmod +x "$work/bin/hyprsysteminfo"
+rm -f "$work/picked-docs" "$work/terminal.cmd" "$work/fastfetch.ran"
+(
+    # shellcheck source=/dev/null
+    source "$CC"
+    # shellcheck disable=SC2329
+    run_terminal() { printf '%s\n' "$*" >"$work/terminal.cmd"; }
+    # shellcheck disable=SC2329
+    pick_icon() {
+        [[ -e $work/picked-docs ]] && return 1
+        : >"$work/picked-docs"
+        printf '%s\n' "System info"
+    }
+    docs_page
+)
+for _ in {1..20}; do
+    [[ -e $work/hyprsysteminfo.ran ]] && break
+    sleep 0.05
+done
+if [[ -e $work/hyprsysteminfo.ran && ! -e $work/fastfetch.ran &&
+    ! -e $work/terminal.cmd ]]; then
+    pass "System info prefers hyprsysteminfo when installed"
+else
+    fail "System info ignored hyprsysteminfo (fastfetch: $(ls "$work/fastfetch.ran" 2>/dev/null))"
 fi
 
 # Fallbacks when the Hypr tools are absent: only uwsm and pavucontrol exist.
