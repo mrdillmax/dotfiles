@@ -48,7 +48,7 @@ run_idle() { "$SCRIPT" "$@" >/dev/null 2>&1; }
 # --- rendered configuration -------------------------------------------------
 
 if grep -q 'hl.dsp.dpms("off")' "$STATIC" &&
-    grep -q 'hl.dsp.dpms("on")' "$STATIC" &&
+    grep -q 'lock-screen.sh unlocked' "$STATIC" &&
     ! grep -Eq 'hyprctl dispatch dpms (off|on)' "$STATIC"; then
     pass "the shipped hypridle template uses the Lua dispatcher"
 else
@@ -62,10 +62,22 @@ else
     fail "the dim stage still uses DPMS: $static_dim"
 fi
 
+if grep -q 'before_sleep_cmd = loginctl lock-session' "$STATIC" &&
+    grep -q 'after_sleep_cmd = lock-screen.sh resume' "$STATIC" &&
+    grep -q 'unlock_cmd = lock-screen.sh unlocked' "$STATIC" &&
+    grep -q 'inhibit_sleep = 3' "$STATIC" &&
+    grep -q 'on-timeout = loginctl lock-session' "$STATIC" &&
+    grep -q 'condition_cmd = lock-screen.sh can-dpms-off' "$STATIC" &&
+    grep -q 'condition_cmd = lock-screen.sh can-suspend' "$STATIC"; then
+    pass "the shipped template locks through logind and restores the panel on resume"
+else
+    fail "the shipped template does not use the logind lock path"
+fi
+
 run_idle apply --profile battery
 config="$XDG_CONFIG_HOME/hypr/hypridle.conf"
 if grep -q 'hl.dsp.dpms("off")' "$config" &&
-    grep -q 'hl.dsp.dpms("on")' "$config" &&
+    grep -q 'lock-screen.sh unlocked' "$config" &&
     ! grep -Eq 'hyprctl dispatch dpms (off|on)' "$config"; then
     pass "idle-tune renders the Lua dispatcher"
 else
@@ -74,9 +86,11 @@ fi
 rendered_dim="$(sed -n '/timeout = 150/,/^}/p' "$config")"
 if [[ $rendered_dim == *'idle-dim.sh dim'* &&
     $rendered_dim == *'idle-dim.sh restore'* &&
-    $rendered_dim != *'dpms("off")'* &&
-    $(grep 'after_sleep_cmd' "$config") == *'idle-dim.sh restore'* ]]; then
-    pass "idle-tune renders a brightness dim and restores it after sleep"
+    $rendered_dim != *'dpms("off")'* ]] &&
+    grep -q 'after_sleep_cmd = lock-screen.sh resume' "$config" &&
+    grep -q 'condition_cmd = lock-screen.sh can-suspend' "$config" &&
+    grep -q 'inhibit_sleep = 3' "$config"; then
+    pass "idle-tune renders a brightness dim and restores the panel after sleep"
 else
     fail "rendered dim stage: $rendered_dim"
 fi
@@ -160,6 +174,49 @@ if grep -q -- '--user restart hypridle.service' "$SYSTEMCTL_LOG"; then
     pass "applying a profile restarts the service"
 else
     fail "apply did not restart the service: $(cat "$SYSTEMCTL_LOG")"
+fi
+
+# --- resume guard -----------------------------------------------------------
+
+LOCK="$ROOT/modules/hypr/home/.local/bin/lock-screen.sh"
+mkdir -p "$work/lock-state/dotfiles"
+date +%s >"$work/lock-state/dotfiles/resumed-at"
+if ! XDG_STATE_HOME="$work/lock-state" "$LOCK" can-dpms-off; then
+    pass "the DPMS-off listener is skipped just after a resume"
+else
+    fail "can-dpms-off allowed an immediate screen-off after resume"
+fi
+printf '%s\n' "$(($(date +%s) - 60))" >"$work/lock-state/dotfiles/resumed-at"
+if XDG_STATE_HOME="$work/lock-state" "$LOCK" can-dpms-off; then
+    pass "the DPMS-off listener works again after the resume guard expires"
+else
+    fail "can-dpms-off stayed blocked a minute after resume"
+fi
+date +%s >"$work/lock-state/dotfiles/resumed-at"
+if ! XDG_STATE_HOME="$work/lock-state" "$LOCK" can-suspend; then
+    pass "the suspend listener is skipped just after a resume"
+else
+    fail "can-suspend allowed an immediate re-suspend after resume"
+fi
+printf '%s\n' "$(($(date +%s) - 60))" >"$work/lock-state/dotfiles/resumed-at"
+if XDG_STATE_HOME="$work/lock-state" "$LOCK" can-suspend; then
+    pass "the suspend listener works again after the resume guard expires"
+else
+    fail "can-suspend stayed blocked a minute after resume"
+fi
+
+mkdir -p "$work/lock-bin"
+printf '#!/bin/sh\nexit 0\n' >"$work/lock-bin/hyprlock"
+printf '#!/bin/sh\nexit 1\n' >"$work/lock-bin/pgrep"
+printf '#!/bin/sh\nprintf "hyprctl %%s\\n" "$*" >>"%s/lock-calls"\n' "$work" >"$work/lock-bin/hyprctl"
+printf '#!/bin/sh\nprintf "idle-dim %%s\\n" "$*" >>"%s/lock-calls"\n' "$work" >"$work/lock-bin/idle-dim.sh"
+chmod +x "$work/lock-bin"/*
+XDG_STATE_HOME="$work/lock-state" PATH="$work/lock-bin:$PATH" "$LOCK" lock
+if grep -q 'hyprctl dispatch hl.dsp.dpms("on")' "$work/lock-calls" &&
+    grep -q 'idle-dim restore' "$work/lock-calls"; then
+    pass "unlocking restores DPMS and the backlight"
+else
+    fail "the locker did not restore the panel: $(cat "$work/lock-calls" 2>/dev/null)"
 fi
 
 # --- brightness dim ---------------------------------------------------------

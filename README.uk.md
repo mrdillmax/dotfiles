@@ -262,7 +262,7 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 | Модуль | Що додає |
 |--------|----------|
 | `osd` | swayosd: гучність, мікрофон і яскравість з медіаклавішами |
-| `nightlight` | синій фільтр hyprsunset і перемикач на сторінці Style |
+| `nightlight` | синій фільтр hyprsunset, перемикач зі станом у **Menu** і розклад за фіксованим часом або від закату до світанку |
 | `recorder` | запис області wf-recorder на `SUPER+ALT+R` |
 | `emoji` | вибір емодзі rofimoji на `SUPER+.` |
 | `hyprtools` | hyprshutdown, hyprpwcenter і hyprsysteminfo для ручного запуску; меню й Control Center використовують uwsm і pavucontrol |
@@ -270,7 +270,8 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 `udisks` (автомонтування udiskie з іконкою в треї) ставиться за замовчуванням.
 Для керування яскравістю потрібен запис у пристрій підсвічування (група
 `video`). `hyprsysteminfo` — з AUR; решта пакетів є в офіційних репозиторіях.
-Звук відкривається через `pavucontrol`. System info запускає `hyprsysteminfo`,
+Звук завжди відкриває `pavucontrol` (або `pavucontrol-qt`), навіть коли
+встановлений `hyprpwcenter`. System info запускає `hyprsysteminfo`,
 коли опційний модуль встановлений, інакше — `fastfetch`: застосунки Hypr
 toolkit можуть падати на GPU без робочого EGL. Logout завжди йде через
 `uwsm stop`.
@@ -470,8 +471,45 @@ DOCK_LAYOUT=right      # right|left|mirror|ask
 зберігається в `idle.conf`, тож autostart не запускає `hypridle` під час
 наступного входу. Гасіння екрана йде через Lua-диспетчер Hyprland 0.57
 (`hl.dsp.dpms("off")`), а не через видалену рядкову форму.
+
+Блокування перед сном іде через `loginctl lock-session`, тож сесія позначена
+заблокованою до suspend; `hyprlock` запускає `lock_cmd` у hypridle.
+`inhibit_sleep = 3` змушує suspend чекати на це блокування. Після
+пробудження `lock-screen.sh resume` вмикає DPMS, відновлює приглушене
+підсвічування й запам'ятовує час пробудження. Стадії гасіння екрана й suspend
+пропускаються на 30 секунд після цього, тому панель не показує lock screen і
+одразу не чорніє. `key_press_enables_dpms` і `mouse_move_enables_dpms` будять
+панель від першого натискання чи руху миші.
+
 Попередній `hypridle.conf` бекапиться перед заміною. Модуль `lid` лишається
 лише для ноутбука й залежить від `idle` для спільного екрана блокування.
+
+### Нічне світло
+
+Опційний модуль `nightlight` запускає `hyprsunset` і зберігає стан у
+`~/.local/state/dotfiles/nightlight.conf`. У **Control Center → Menu** є один
+рядок зі станом (`Night light: on` або `Night light: off`).
+
+**Control Center → Configuration → Night light** керує розкладом:
+
+| Режим | Поведінка |
+|-------|-----------|
+| Off | лише ручний перемикач |
+| Фіксований час | вмикати й вимикати у вибрані години |
+| Від закату до світанку | обчислюється за latitude,longitude (типово Київ) |
+
+```bash
+nightlight.sh on|off|toggle|status
+nightlight.sh schedule times
+nightlight.sh on-time 18:30
+nightlight.sh off-time 07:00
+nightlight.sh schedule sun
+nightlight.sh location 50.45,30.52
+```
+
+`nightlight.lua` запускає один watcher. Він перевіряє раз на хвилину і діє
+лише на межі вмикання/вимикання, тож ручний перемикач тримається до
+наступної межі.
 
 ### Вхід через hyprlock
 

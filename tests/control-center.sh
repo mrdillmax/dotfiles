@@ -159,39 +159,50 @@ else
 fi
 
 # shellcheck disable=SC2016 # the stub expands $1 at its own runtime
-printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s/nightlight.calls"\ncase "$1" in status) echo "night light: enabled" ;; esac\n' "$stub" >"$stub/nightlight.sh"
+printf '#!/bin/sh
+printf "%%s\\n" "$*" >>"%s/nightlight.calls"
+case "$1" in
+    status) echo "night light: enabled" ;;
+    get) case "$2" in
+        enabled) echo 1 ;;
+        schedule) echo times ;;
+        on-time) echo 18:00 ;;
+        off-time) echo 07:00 ;;
+        location) echo 50.45,30.52 ;;
+    esac ;;
+esac
+' "$stub" >"$stub/nightlight.sh"
 chmod +x "$stub/nightlight.sh"
-(
-    # shellcheck disable=SC2329 # called by style_page
-    pick_icon() {
-        [[ -e $stub/picked-style ]] && return 1
-        : >"$stub/picked-style"
-        printf '%s\n' "Night light"
-    }
-    # shellcheck disable=SC2329
-    notify() { printf '%s\n' "$*" >>"$stub/notify"; }
-    style_page
-)
-if grep -q toggle "$stub/nightlight.calls" 2>/dev/null &&
-    grep -q 'Night light on' "$stub/notify"; then
-    pass "the Style page toggles the night light and names the state"
+
+if [[ $(nightlight_label) == "Night light: on" ]]; then
+    pass "the menu label names the night light state"
 else
-    fail "the Style page did not toggle or report the night light"
+    fail "night light label: $(nightlight_label)"
 fi
 
 (
-    PATH="/usr/bin:/bin"
-    # shellcheck disable=SC2329
+    # shellcheck disable=SC2329 # called by menu_page
     pick_icon() {
-        printf '%s\n' "$@" >"$stub/style-rows"
+        printf '%s\n' "$@" >"$stub/menu-rows"
         return 1
     }
+    menu_page
+)
+if grep -q 'Night light: on' "$stub/menu-rows"; then
+    pass "the Menu carries the stateful night light row"
+else
+    fail "the Menu does not list the night light"
+fi
+
+(
+    # shellcheck disable=SC2329
+    pick_icon() { printf '%s\n' "$@" >"$stub/style-rows"; return 1; }
     style_page
 )
 if ! grep -q "Night light" "$stub/style-rows"; then
-    pass "the Night light row is hidden without its helper"
+    pass "the night light moved out of the Style page"
 else
-    fail "the Night light row appeared without nightlight.sh"
+    fail "the Style page still lists the night light"
 fi
 
 (
@@ -203,7 +214,7 @@ fi
     configuration_page
 )
 missing=0
-for label in Sound Monitors "Lock screen" Keybinds Tide; do
+for label in Sound Monitors "Lock screen" Keybinds Tide "Night light"; do
     grep -q "$label" "$stub/config-rows" || missing=1
 done
 if ((missing == 0)); then
@@ -213,7 +224,9 @@ else
 fi
 
 if [[ $(config_check_cmd Sound) == pavucontrol &&
+    $(config_check_cmd "Night light") == nightlight.sh &&
     $(config_install_cmd Monitors) == *"--modules monitor-profiles"* &&
+    $(config_install_cmd "Night light") == *"--modules nightlight"* &&
     $(config_install_cmd Tide) == *"--modules fish"* ]]; then
     pass "Configuration knows how to install what each entry needs"
 else

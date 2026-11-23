@@ -92,6 +92,12 @@ hl.config({
         resize_on_border = false,
         allow_tearing = false,
         layout = "dwindle",
+
+        -- A key press or mouse move must wake the panel after DPMS-off; without
+        -- these, unlocking a locked screen can leave a black display until the
+        -- idle timeout fires again.
+        key_press_enables_dpms = true,
+        mouse_move_enables_dpms = true,
     },
 
     decoration = {

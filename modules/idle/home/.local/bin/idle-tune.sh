@@ -204,9 +204,12 @@ render_config() {
         printf '# Source of truth: ~/.local/state/dotfiles/idle.conf\n'
         printf '# 0 disables a stage. Tune with: idle-tune.sh set --help\n\n'
         printf 'general {\n'
-        printf '    lock_cmd = pidof hyprlock || hyprlock\n'
-        printf '    before_sleep_cmd = pidof hyprlock || hyprlock\n'
-        printf '    after_sleep_cmd = idle-dim.sh restore; hyprctl dispatch '\''hl.dsp.dpms("on")'\''\n'
+        printf '    lock_cmd = lock-screen.sh lock --from-idle\n'
+        printf '    unlock_cmd = lock-screen.sh unlocked\n'
+        printf '    on_unlock_cmd = lock-screen.sh unlocked\n'
+        printf '    before_sleep_cmd = loginctl lock-session\n'
+        printf '    after_sleep_cmd = lock-screen.sh resume\n'
+        printf '    inhibit_sleep = 3\n'
         printf '}\n\n'
 
         if ((dim > 0)); then
@@ -219,20 +222,22 @@ render_config() {
         if ((lock > 0)); then
             printf 'listener {\n'
             printf '    timeout = %s\n' "$lock"
-            printf '    on-timeout = pidof hyprlock || hyprlock\n'
+            printf '    on-timeout = loginctl lock-session\n'
             printf '}\n\n'
         fi
         if ((off > 0)); then
             printf 'listener {\n'
             printf '    timeout = %s\n' "$off"
             printf '    on-timeout = hyprctl dispatch '\''hl.dsp.dpms("off")'\''\n'
-            printf '    on-resume = idle-dim.sh restore; hyprctl dispatch '\''hl.dsp.dpms("on")'\''\n'
+            printf '    on-resume = lock-screen.sh unlocked\n'
+            printf '    condition_cmd = lock-screen.sh can-dpms-off\n'
             printf '}\n\n'
         fi
         if ((suspend > 0)); then
             printf 'listener {\n'
             printf '    timeout = %s\n' "$suspend"
             printf '    on-timeout = systemctl suspend\n'
+            printf '    condition_cmd = lock-screen.sh can-suspend\n'
             printf '}\n'
         fi
     } >"$target"

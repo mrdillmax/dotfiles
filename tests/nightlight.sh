@@ -88,5 +88,72 @@ else
     fail "startup race: $(cat "$work/race-calls" 2>/dev/null)"
 fi
 
+# --- schedule --------------------------------------------------------------
+
+if [[ $(run get schedule) == off ]]; then
+    pass "the schedule starts off"
+else
+    fail "unexpected default schedule: $(run get schedule)"
+fi
+
+if run on-time 25:00 2>/dev/null; then
+    fail "an invalid on-time was accepted"
+else
+    pass "an invalid on-time is rejected"
+fi
+
+run on-time 00:00
+run off-time 23:59
+run schedule times
+if [[ $(run get schedule) == times && $(run get enabled) == 1 ]] &&
+    [[ $(sed -n 's/^enabled=//p' "$STATE_DIR/nightlight.conf") == 1 ]]; then
+    pass "fixed times turn the filter on inside the window"
+else
+    fail "fixed times did not turn on: $(cat "$STATE_DIR/nightlight.conf")"
+fi
+
+later_on="$(date -d '+60 minutes' +%H:%M)"
+later_off="$(date -d '+120 minutes' +%H:%M)"
+run on-time "$later_on"
+run off-time "$later_off"
+run tick
+if [[ $(sed -n 's/^enabled=//p' "$STATE_DIR/nightlight.conf") == 0 ]] &&
+    grep -q 'hyprsunset identity' "$work/calls"; then
+    pass "fixed times turn the filter off outside the window"
+else
+    fail "outside the window stayed enabled: $(cat "$STATE_DIR/nightlight.conf")"
+fi
+
+run schedule off
+if [[ $(run get schedule) == off ]]; then
+    pass "the schedule can be disabled without touching the filter"
+else
+    fail "schedule off did not stick"
+fi
+
+run location 50.45,30.52
+if [[ $(run get location) == 50.45,30.52 ]]; then
+    pass "the sun schedule stores its coordinates"
+else
+    fail "location not stored: $(run get location)"
+fi
+if run location 100,30 2>/dev/null; then
+    fail "an invalid latitude was accepted"
+else
+    pass "an invalid latitude is rejected"
+fi
+
+run schedule sun
+if [[ $(run get schedule) == sun ]]; then
+    pass "the sunset-to-sunrise schedule is selectable"
+else
+    fail "sun schedule not selected: $(run get schedule)"
+fi
+if run status | grep -q 'sunset to sunrise'; then
+    pass "status names the sunset schedule"
+else
+    fail "status misses the sunset schedule"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

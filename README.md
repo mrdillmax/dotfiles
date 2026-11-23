@@ -264,7 +264,7 @@ These are preselected in the interactive checklist and can be picked with
 | Module | What it adds |
 |--------|--------------|
 | `osd` | swayosd volume, microphone and brightness overlay with media keys |
-| `nightlight` | hyprsunset blue-light filter and a toggle on the Style page |
+| `nightlight` | hyprsunset blue-light filter, a stateful toggle in **Menu**, and a fixed-time or sunset-to-sunrise schedule |
 | `recorder` | wf-recorder region recording on `SUPER+ALT+R` |
 | `emoji` | rofimoji picker on `SUPER+.` |
 | `hyprtools` | hyprshutdown, hyprpwcenter and hyprsysteminfo for manual use; the menu and Control Center use uwsm and pavucontrol |
@@ -272,7 +272,8 @@ These are preselected in the interactive checklist and can be picked with
 `udisks` (udiskie automounting with a tray icon) is installed by default.
 Brightness control needs write access to the backlight device (the `video`
 group). `hyprsysteminfo` comes from the AUR; the other packages are in the
-official repositories. Sound uses `pavucontrol`. System info opens
+official repositories. Sound always opens `pavucontrol` (or `pavucontrol-qt`),
+even when `hyprpwcenter` is installed. System info opens
 `hyprsysteminfo` when the optional module is installed and falls back to
 `fastfetch` otherwise, because the Hypr toolkit apps can crash on GPUs without
 working EGL. Logout always uses `uwsm stop`.
@@ -459,6 +460,15 @@ disabled idle is remembered in `idle.conf`, so autostart does not start
 `hypridle` at the next login. Screen power-off uses the Hyprland 0.57 Lua
 dispatcher (`hl.dsp.dpms("off")`), not the removed string form.
 
+Locking before sleep goes through `loginctl lock-session`, so the session is
+marked locked before the machine suspends; `hyprlock` is started by hypridle's
+`lock_cmd`. `inhibit_sleep = 3` makes the suspend wait for that lock. On
+resume, `lock-screen.sh resume` turns DPMS back on, restores the dimmed
+backlight and records the wake-up time. The screen-off and suspend listeners
+are skipped for 30 seconds after that record, which prevents the panel from
+flashing the lock screen and going black. `key_press_enables_dpms` and
+`mouse_move_enables_dpms` wake the panel on the first key or mouse move.
+
 | Profile | Dim | Lock | Screen off | Suspend |
 |---------|-----|------|------------|---------|
 | battery | 150 | 300 | 330 | 900 |
@@ -468,6 +478,33 @@ dispatcher (`hl.dsp.dpms("off")`), not the removed string form.
 Settings live in `~/.local/state/dotfiles/idle.conf`. The previous
 `hypridle.conf` is backed up before it is replaced. The `lid` module is laptop
 only and depends on `idle` for the shared lock screen.
+
+### Night light
+
+The optional `nightlight` module starts `hyprsunset` and keeps its state in
+`~/.local/state/dotfiles/nightlight.conf`. **Control Center → Menu** has one row
+that names the current state (`Night light: on` or `Night light: off`).
+
+**Control Center → Configuration → Night light** controls the schedule:
+
+| Mode | Behaviour |
+|------|-----------|
+| Off | manual toggle only |
+| Fixed times | on at the chosen time, off at the chosen time |
+| Sunset to sunrise | computed from latitude,longitude (default Kyiv) |
+
+```bash
+nightlight.sh on|off|toggle|status
+nightlight.sh schedule times
+nightlight.sh on-time 18:30
+nightlight.sh off-time 07:00
+nightlight.sh schedule sun
+nightlight.sh location 50.45,30.52
+```
+
+`nightlight.lua` starts a single-instance watcher. It checks once a minute and
+acts only when the schedule crosses an on/off boundary, so a manual toggle
+stays in effect until the next boundary.
 
 ### Lock at boot (hyprlock greeter)
 

@@ -512,6 +512,82 @@ idle_label() {
     fi
 }
 
+nightlight_label() {
+    if ! have nightlight.sh; then
+        printf 'Night light: off'
+    elif [[ $(nightlight.sh get enabled 2>/dev/null) == 1 ]]; then
+        printf 'Night light: on'
+    else
+        printf 'Night light: off'
+    fi
+}
+
+nightlight_page() {
+    local choice mode value schedule schedule_label
+    while :; do
+        schedule="$(nightlight.sh get schedule 2>/dev/null || printf 'off')"
+        case "$schedule" in
+            times) schedule_label="Fixed times" ;;
+            sun) schedule_label="Sunset to sunrise" ;;
+            *) schedule_label="Off" ;;
+        esac
+        choice="$(pick_icon "Night light" \
+            $'\uf185|'"$(nightlight_label)" \
+            $'\uf073|Schedule: '"$schedule_label" \
+            $'\uf017|On at: '"$(nightlight.sh get on-time 2>/dev/null)" \
+            $'\uf017|Off at: '"$(nightlight.sh get off-time 2>/dev/null)" \
+            $'\uf3c5|Location: '"$(nightlight.sh get location 2>/dev/null)")" || return 0
+        case "$choice" in
+            "Night light: on"|"Night light: off")
+                if nightlight.sh toggle >/dev/null 2>&1; then
+                    notify "$(nightlight_label)"
+                else
+                    notify "Night light could not be toggled"
+                fi
+                ;;
+            Schedule:*)
+                mode="$(pick_icon "Night light schedule" \
+                    $'\uf00d|Off' \
+                    $'\uf017|Fixed times' \
+                    $'\uf185|Sunset to sunrise')" || continue
+                case "$mode" in
+                    Off) nightlight.sh schedule off ;;
+                    "Fixed times") nightlight.sh schedule times ;;
+                    "Sunset to sunrise") nightlight.sh schedule sun ;;
+                esac
+                ;;
+            "On at:"*)
+                value="$(ask_text "Turn on at (HH:MM)")" || continue
+                [[ -n $value ]] || continue
+                if nightlight.sh on-time "$value" >/dev/null 2>&1; then
+                    notify "Night light turns on at $value"
+                else
+                    notify "Use a 24-hour time such as 18:30"
+                fi
+                ;;
+            "Off at:"*)
+                value="$(ask_text "Turn off at (HH:MM)")" || continue
+                [[ -n $value ]] || continue
+                if nightlight.sh off-time "$value" >/dev/null 2>&1; then
+                    notify "Night light turns off at $value"
+                else
+                    notify "Use a 24-hour time such as 07:00"
+                fi
+                ;;
+            "Location:"*)
+                value="$(ask_text "Latitude,Longitude")" || continue
+                [[ -n $value ]] || continue
+                if nightlight.sh location "$value" >/dev/null 2>&1; then
+                    notify "Night light location: $value"
+                else
+                    notify "Use latitude,longitude such as 50.45,30.52"
+                fi
+                ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
 idle_page() {
     local choice
     while :; do
@@ -575,6 +651,7 @@ menu_page() {
         have dunstctl && specs+=($'|'"$(notifications_label)")
         have autostart.sh && specs+=($'|Autostart')
         have idle-tune.sh && specs+=($'\uf011|'"$(idle_label)")
+        have nightlight.sh && specs+=($'\uf185|'"$(nightlight_label)")
         if host_is_laptop && have lid-handler.sh; then
             specs+=($'|Lid status')
         fi
@@ -597,6 +674,13 @@ menu_page() {
             "Pause notifications"|"Resume notifications") notifications_toggle; exit 0 ;;
             "Autostart") autostart.sh pick </dev/null ;;
             "Enable idle"|"Disable idle") run_terminal "idle-tune.sh toggle"; exit 0 ;;
+            "Night light: on"|"Night light: off")
+                if nightlight.sh toggle >/dev/null 2>&1; then
+                    notify "$(nightlight_label)"
+                else
+                    notify "Night light could not be toggled"
+                fi
+                ;;
             "Lid status") run_terminal --hold "lid-handler.sh status"; exit 0 ;;
             "Enable game mode"|"Disable game mode") run_and_notify "Game mode toggled" gamemode.sh toggle; exit 0 ;;
             "") return 0 ;;
@@ -652,10 +736,10 @@ make_wallpaper_card() {
     font="$(fc-match -f '%{file}' Inter 2>/dev/null)"
     [[ -n $font ]] && font_args=(-font "$font")
 
-    timeout 5 magick "$image" -auto-orient -thumbnail '320x180^' \
-        -gravity center -extent 320x180 \
-        \( -background "$CARD_BG" -fill "$CARD_FG" "${font_args[@]}" -pointsize 13 \
-           -size 320x40 -gravity center caption:"$label" \) \
+    timeout 5 magick "$image" -auto-orient -thumbnail '240x135^' \
+        -gravity center -extent 240x135 \
+        \( -background "$CARD_BG" -fill "$CARD_FG" "${font_args[@]}" -pointsize 12 \
+           -size 240x32 -gravity center caption:"$label" \) \
         -append -depth 8 -strip "$out" >/dev/null 2>&1
 }
 
@@ -739,7 +823,9 @@ wallpaper_page() {
 
     local -a args=()
     if ((icons)); then
-        args=(-show-icons -theme-str 'window { width: 400px; } listview { lines: 3; } element-icon { size: 330px; }')
+        # Keep three cards inside a 768px-tall laptop panel instead of
+        # overflowing the screen: a 190px icon box is ~620px for three rows.
+        args=(-show-icons -theme-str 'window { width: 340px; } listview { lines: 3; } element-icon { size: 190px; }')
     fi
     selected="$(rofi_pick "Wallpaper" "${args[@]}" <"$CACHE_DIR/rows")" || return 0
     [[ -n ${paths[$selected]:-} ]] || return 0
@@ -984,7 +1070,6 @@ style_page() {
             $'\uf0eb|Accent color'
             $'\uf031|Fonts and icons'
         )
-        have nightlight.sh && specs+=($'\uf185|Night light')
         choice="$(pick_icon "Style" "${specs[@]}")" || return 0
         case "$choice" in
             "Wallpaper") wallpaper_page ;;
@@ -992,17 +1077,6 @@ style_page() {
             "Color scheme") theme_scheme_page ;;
             "Accent color") theme_accent_page ;;
             "Fonts and icons") appearance_page ;;
-            "Night light")
-                if nightlight.sh toggle >/dev/null 2>&1; then
-                    if nightlight.sh status 2>/dev/null | grep -q enabled; then
-                        notify "Night light on"
-                    else
-                        notify "Night light off"
-                    fi
-                else
-                    notify "Night light failed"
-                fi
-                ;;
             "") return 0 ;;
         esac
     done
@@ -1172,9 +1246,20 @@ monitors_page() {
 }
 
 sound_page() {
-    if have pavucontrol; then
-        (pavucontrol >/dev/null 2>&1 &)
-    elif have wpctl; then
+    local mixer
+    # pavucontrol is the documented mixer; some installs only ship the Qt
+    # frontend. Prefer both over any other audio tool that may be present.
+    for mixer in pavucontrol pavucontrol-qt; do
+        if have "$mixer"; then
+            if have setsid; then
+                (setsid "$mixer" >/dev/null 2>&1 &)
+            else
+                ("$mixer" >/dev/null 2>&1 &)
+            fi
+            return 0
+        fi
+    done
+    if have wpctl; then
         run_terminal --hold "wpctl status"
     elif have pactl; then
         run_terminal --hold "pactl info"
@@ -1244,6 +1329,7 @@ config_check_cmd() {
         Monitors)      printf '%s' monitor-profiles.sh ;;
         "Lock screen") printf '%s' hyprlock ;;
         Idle)          printf '%s' idle-tune.sh ;;
+        "Night light") printf '%s' nightlight.sh ;;
         Keybinds)      printf '%s' binds-cheatsheet.sh ;;
         Mouse*)        printf '%s' mouse-tune.sh ;;
         Tide)          printf '%s' fish ;;
@@ -1262,6 +1348,7 @@ config_install_cmd() {
         Monitors)      printf '%s --modules monitor-profiles --yes' "$installer" ;;
         "Lock screen") printf '%s --modules idle --yes' "$installer" ;;
         Idle)          printf '%s --modules idle --yes' "$installer" ;;
+        "Night light") printf '%s --modules nightlight --yes' "$installer" ;;
         Keybinds)      printf '%s --modules binds-cheatsheet --yes' "$installer" ;;
         Mouse*)        printf '%s --modules mouse-sensitivity --yes' "$installer" ;;
         Tide)          printf '%s --modules fish --yes' "$installer" ;;
@@ -1304,6 +1391,7 @@ configuration_page() {
             $'\uf108|Monitors'
             $'\uf023|Lock screen'
             $'\uf017|Idle'
+            $'\uf185|Night light'
             $'\uf11c|Keybinds'
             $'\uf245|'"$mouse_label"
             $'\uf120|Tide'
@@ -1320,6 +1408,7 @@ configuration_page() {
             "Monitors") ensure_config_dep "Monitors" && monitors_page ;;
             "Lock screen") ensure_config_dep "Lock screen" && lock_screen_page ;;
             "Idle") ensure_config_dep "Idle" && idle_page ;;
+            "Night light") ensure_config_dep "Night light" && nightlight_page ;;
             "Keybinds") ensure_config_dep "Keybinds" && edit_bind_page ;;
             Mouse*)
                 ensure_config_dep "$choice" && run_terminal "mouse-tune.sh"

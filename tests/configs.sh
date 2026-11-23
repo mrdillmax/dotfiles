@@ -26,8 +26,9 @@ fi
 
 LOCK="$ROOT/modules/hypr/home/.local/bin/lock-screen.sh"
 if grep -q 'mainMod .. " + L"' "$HYPR" &&
-    [[ -x $LOCK ]] && grep -q 'exec hyprlock' "$LOCK"; then
-    pass "SUPER+L locks the session and prefers hyprlock"
+    [[ -x $LOCK ]] && grep -q 'hyprlock' "$LOCK" &&
+    grep -q 'restore_session' "$LOCK"; then
+    pass "SUPER+L locks the session and restores the panel after unlock"
 else
     fail "the lock bind or helper is missing"
 fi
