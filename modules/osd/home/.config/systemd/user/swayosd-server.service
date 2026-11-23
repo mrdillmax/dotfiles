@@ -1,0 +1,10 @@
+# swayosd-server — on-screen display daemon.
+[Unit]
+Description=SwayOSD server
+
+[Service]
+ExecStart=/usr/bin/swayosd-server
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

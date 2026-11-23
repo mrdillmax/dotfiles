@@ -29,5 +29,35 @@ else
     fail "docs/modules.md is stale"
 fi
 
+osd="$ROOT/modules/osd"
+if [[ -r $osd/module.conf ]] && grep -qx 'OPTIONAL=1' "$osd/module.conf"; then
+    pass "osd is optional"
+else
+    fail "osd module missing or required"
+fi
+if luac -p "$osd/home/.config/hypr/osd.lua" 2>/dev/null; then
+    pass "osd.lua compiles"
+else
+    fail "osd.lua does not compile"
+fi
+for key in XF86AudioRaiseVolume XF86AudioMute XF86MonBrightnessUp; do
+    if grep -q "$key" "$osd/home/.config/hypr/osd.lua"; then
+        pass "osd binds $key"
+    else
+        fail "osd does not bind $key"
+    fi
+done
+if grep -q 'ExecStart=/usr/bin/swayosd-server' \
+    "$osd/home/.config/systemd/user/swayosd-server.service"; then
+    pass "the swayosd unit starts the server"
+else
+    fail "swayosd unit is missing ExecStart"
+fi
+if awk -F'\t' '$1 == "swayosd" {found=1} END{exit !found}' "$ROOT/packages/catalog.tsv"; then
+    pass "swayosd is in the catalog"
+else
+    fail "swayosd has no catalog row"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

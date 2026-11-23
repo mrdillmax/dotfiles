@@ -55,6 +55,8 @@ local mainMod     = "SUPER"
 
 -- Optional: the control-center module renders this bind and its launcher.
 pcall(dofile, HOME .. "/.config/hypr/control-center.lua")
+-- Optional: osd, recorder and emoji add their binds only when installed.
+pcall(dofile, HOME .. "/.config/hypr/osd.lua")
 
 
 
@@ -352,14 +354,6 @@ hl.window_rule({
     match = {
         class = "qalculate-gtk",
         title = "Qalculate!",
-    },
-    float = true,
-})
-
--- OnlyOffice settings is a modal dialog; float it at its natural size.
-hl.window_rule({
-    match = {
-        title = "OFLL Settings",
     },
     float = true,
 })

@@ -199,6 +199,7 @@ ttf-liberation	Fonts	pkg	yes	any	any	Font family which aims at metric compatibil
 ttf-ms-fonts	Fonts	pkg	yes	any	any	Core TTF Fonts from Microsoft
 ttf-roboto	Fonts	pkg	yes	any	any	Google's signature family of fonts
 woff2-font-awesome	Fonts	pkg	no	any	any	Iconic font designed for Bootstrap - woff2 format
+swayosd	Desktop	pkg	no	any	any	A GTK on-screen display for volume and brightness
 intel-media-driver	Drivers	pkg	no	any	any	Intel media driver for Gen9+
 lact	Drivers	pkg	yes	any	nvidia,hybrid	Linux GPU Configuration Tool
 lib32-mesa	Drivers	pkg	no	any	any	32-bit Mesa drivers for Steam
