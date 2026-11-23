@@ -168,7 +168,8 @@ menu_items_for() {
                 'doctor|Doctor|read-only health check' \
                 'dns-check|DNS check|resolv.conf -> Pi-hole -> unbound' \
                 'menu:restore|Restore|list backups and restore one' \
-                'uninstall|Uninstall|remove installed files and restore originals' \
+                'remove-modules|Remove modules|choose modules to uninstall, optionally with packages' \
+                'uninstall|Uninstall all|remove every installed file and restore originals' \
                 'menu:sync|Sync|status, diff, pull or packages' \
                 'menu:pkg-sync|Package drift|compare installed packages with the lists' \
                 'hooks|Git hooks|install the repository pre-commit hook'
@@ -355,6 +356,47 @@ menu_action_restore_date() {
     menu_run --restore "$date"
 }
 
+# Choose installed modules and uninstall just those, with an optional package
+# removal. Full uninstall stays a separate entry.
+menu_action_remove_modules() {
+    local state="${XDG_STATE_HOME:-${REAL_HOME:-$HOME}/.local/state}/dotfiles/managed.tsv"
+    local source mod line
+    local -a modules=() selected=() flags=()
+
+    if [[ -r $state ]]; then
+        while IFS=$'\t' read -r _ _ source _; do
+            [[ $source == "$DOTFILES_DIR/modules/"* ]] || continue
+            mod="${source#"$DOTFILES_DIR"/modules/}"
+            mod="${mod%%/*}"
+            [[ " ${modules[*]} " == *" $mod "* ]] && continue
+            modules+=("$mod")
+        done <"$state"
+    fi
+
+    if ((${#modules[@]} == 0)); then
+        warn "no installed modules were recorded"
+        return 0
+    fi
+
+    # shellcheck disable=SC2034 # read by tui_checklist
+    TUI_CHECKED_ITEMS=()
+    tui_checklist "Modules to uninstall" "${modules[@]}"
+    for line in "${TUI_SELECTION[@]}"; do
+        selected+=("$line")
+    done
+    ((${#selected[@]})) || { info "no modules selected"; return 0; }
+
+    if ! tui_confirm "Uninstall ${#selected[@]} module(s)?" no; then
+        info "module removal cancelled"
+        return 0
+    fi
+    if tui_confirm "Also remove their packages?" no; then
+        flags+=(--remove-packages)
+    fi
+
+    menu_run --uninstall --modules "$(menu_join "${selected[@]}")" "${flags[@]}"
+}
+
 menu_action() {
     case "$1" in
         setup)            menu_run --setup ;;
@@ -394,6 +436,7 @@ menu_action() {
         dns-check)        menu_run --dns-check ;;
         restore-list)     menu_run --restore ;;
         restore-date)     menu_action_restore_date ;;
+        remove-modules)   menu_action_remove_modules ;;
         uninstall)        menu_run --uninstall ;;
         sync-status)      menu_run --sync status ;;
         sync-diff)        menu_run --sync diff ;;

@@ -41,5 +41,32 @@ else
     fail "verbose forwarding: $(cat "$ARGS_FILE" 2>/dev/null)"
 fi
 
+# Removing selected modules is its own menu entry, not the full uninstall.
+if menu_items_for maintenance | grep -q '^remove-modules|'; then
+    pass "the maintenance menu offers module removal"
+else
+    fail "the maintenance menu has no module removal entry"
+fi
+
+mkdir -p "$work/state/dotfiles"
+printf 'link\t/home/x/.config/a\t%s/modules/demo/home/.config/a\t-\t-\n' "$work" \
+    >"$work/state/dotfiles/managed.tsv"
+(
+    export XDG_STATE_HOME="$work/state"
+    capture="$work/remove-args"
+    # shellcheck disable=SC2329
+    tui_checklist() { TUI_SELECTION=("demo"); }
+    # shellcheck disable=SC2329
+    tui_confirm() { return 0; }
+    # shellcheck disable=SC2329
+    menu_run() { printf '%s\n' "$*" >"$capture"; }
+    menu_action_remove_modules
+)
+if [[ $(cat "$work/remove-args" 2>/dev/null) == "--uninstall --modules demo --remove-packages" ]]; then
+    pass "module removal passes the selection and the package flag"
+else
+    fail "module removal command: $(cat "$work/remove-args" 2>/dev/null)"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
