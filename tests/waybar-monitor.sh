@@ -78,8 +78,8 @@ else
 fi
 
 out="$(NMCLI_BIN="$work/bin/nmcli" IP_BIN="$work/bin/ip" "$BIN/waybar-network.sh" --once)"
-if [[ $out == *HomeNet* && $out == *10.0.0.5* ]]; then
-    pass "network reports the connection and address"
+if [[ $out != *HomeNet* && $out == *'"alt":"wifi"'* && $out == *10.0.0.5* ]]; then
+    pass "network hides the SSID but keeps the link type and address"
 else
     fail "network output: $out"
 fi
@@ -101,10 +101,18 @@ else
     fail "the power profile module is missing"
 fi
 if jq -e '."modules-right" | index("bluetooth")' >/dev/null <<<"$config_json" &&
-    jq -e '."bluetooth"."format-no-controller" == ""' >/dev/null <<<"$config_json"; then
-    pass "the Bluetooth module hides without an adapter"
+    jq -e '."bluetooth"."format-no-controller" == ""' >/dev/null <<<"$config_json" &&
+    jq -e '."bluetooth"."format-disabled" != ""' >/dev/null <<<"$config_json"; then
+    pass "the Bluetooth module hides without an adapter and shows a blocked state"
 else
     fail "the Bluetooth module is missing or not gated"
+fi
+if jq -e '."custom/battery" | has("on-click") | not' >/dev/null <<<"$config_json" &&
+    jq -e '."custom/network"."on-click" | endswith("--wifi")' >/dev/null <<<"$config_json" &&
+    jq -e '."bluetooth"."on-click" | endswith("--bluetooth")' >/dev/null <<<"$config_json"; then
+    pass "battery has no click action and link modules open the Control Center"
+else
+    fail "Waybar click actions are wrong"
 fi
 
 STYLE="$ROOT/modules/waybar/home/.config/waybar/style.css"

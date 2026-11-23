@@ -87,8 +87,7 @@
     "exec": "~/.local/bin/waybar-battery.sh",
     "return-type": "json",
     "hide-empty-text": true,
-    "tooltip": true,
-    "on-click": "kitty --hold sh -c 'upower -i $(upower -e | grep -m1 BAT)'"
+    "tooltip": true
   },
   // Active power-profiles-daemon profile. The module stays empty on machines
   // without PPD, so the same config works on desktops and laptops.
@@ -106,7 +105,7 @@
     "return-type": "json",
     "hide-empty-text": true,
     "tooltip": true,
-    "on-click": "sh -c 'command -v nm-connection-editor >/dev/null && nm-connection-editor || kitty --hold nmtui'"
+    "on-click": "~/.local/bin/dotfiles-control-center --wifi"
   },
 
   // Bluetooth stays hidden on machines without an adapter.
@@ -117,9 +116,10 @@
       "off": "\uf294",
       "connected": "\uf293"
     },
+    "format-disabled": "\uf294",
     "format-no-controller": "",
     "tooltip-format": "{controller_alias}\n{controller_address}\n{device_alias}",
-    "on-click": "bluetoothctl power toggle"
+    "on-click": "~/.local/bin/dotfiles-control-center --bluetooth"
   },
 
   // Failed systemd units and repository updates stay hidden until they matter.

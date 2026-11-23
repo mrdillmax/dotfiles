@@ -173,5 +173,21 @@ else
     fail "Bluetooth hardware was missed when bluetoothctl is absent"
 fi
 
+wifi_dispatch="$(
+    # shellcheck disable=SC2329
+    wifi_page() { printf 'wifi'; }
+    control_center_main --wifi
+)"
+bluetooth_dispatch="$(
+    # shellcheck disable=SC2329
+    bluetooth_page() { printf 'bluetooth'; }
+    control_center_main --bluetooth
+)"
+if [[ $wifi_dispatch == wifi && $bluetooth_dispatch == bluetooth ]]; then
+    pass "Waybar can open the Wi-Fi and Bluetooth pages directly"
+else
+    fail "direct page dispatch: wifi=$wifi_dispatch bluetooth=$bluetooth_dispatch"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

@@ -1566,10 +1566,11 @@ control_center_main() {
 case "${1:-}" in
     --help|-h)
         cat <<'EOF'
-Usage: dotfiles-control-center
+Usage: dotfiles-control-center [--wifi|--bluetooth]
 
 Opens the rofi control center: docs, menu toggles, style, configuration,
-install, uninstall, updates and power.
+install, uninstall, updates and power. --wifi and --bluetooth open those
+pages directly, which is what the Waybar status modules do.
 
 Esc closes the current page. Run a single action from the installer flags
 instead when scripting.
@@ -1577,6 +1578,12 @@ EOF
         ;;
     --list-actions)
         control_center_pages
+        ;;
+    --wifi|--network)
+        wifi_page
+        ;;
+    --bluetooth)
+        bluetooth_page
         ;;
     "")
         have rofi || die "rofi is not installed"

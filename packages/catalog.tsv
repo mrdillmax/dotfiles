@@ -8,6 +8,8 @@
 ananicy-cpp	System	pkg	yes	any	any	Ananicy Cpp is a full rewrite of Ananicy in C++, featuring lower CPU and RAM usage.
 archlinux-xdg-menu	System	pkg	yes	any	any	Generate window-manager menus from XDG files
 bat	System	pkg	yes	any	any	Cat clone with syntax highlighting and git integration
+bluez	System	pkg	no	any	any	Bluetooth protocol stack and bluetoothd
+bluez-utils	System	pkg	no	any	any	Bluetooth management utilities (bluetoothctl)
 btrfs-progs	System	pkg	no	any	any	Btrfs filesystem utilities
 cachyos-ananicy-rules	System	pkg	yes	any	any	CachyOS ananicy rules
 compsize	System	pkg	no	any	any	Calculate compression ratio of a set of files on Btrfs

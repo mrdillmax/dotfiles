@@ -550,7 +550,10 @@ optional `~/.config/hypr/control-center.lua`.
 Waybar shows failed systemd units and the dotfiles update status only when
 something needs attention. Battery and network are custom modules driven by
 events (`udevadm monitor` and `nmcli monitor`), so charge and link changes
-appear without a polling timer.
+appear without a polling timer. The network module shows only the link icon,
+never the SSID; clicking it opens the Control Center Wi-Fi page. Bluetooth opens
+its Control Center page and stays hidden when no controller or service is
+present. Battery has no click action.
 
 Brightness appears in Waybar when the machine exposes a backlight
 (`/sys/class/backlight`); the `osd` module installs `brightnessctl` for the

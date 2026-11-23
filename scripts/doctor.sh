@@ -699,6 +699,9 @@ if compgen -G '/sys/class/bluetooth/hci*' >/dev/null; then
     else
         warn "bluetooth hardware exists but bluez-utils is missing"
     fi
+    if has systemctl && ! systemctl is-active --quiet bluetooth 2>/dev/null; then
+        warn "bluetooth.service is not active; Waybar hides the Bluetooth module"
+    fi
 else
     note "no bluetooth controller in /sys/class/bluetooth"
 fi
