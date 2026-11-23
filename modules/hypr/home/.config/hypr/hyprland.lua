@@ -59,6 +59,7 @@ pcall(dofile, HOME .. "/.config/hypr/control-center.lua")
 pcall(dofile, HOME .. "/.config/hypr/osd.lua")
 pcall(dofile, HOME .. "/.config/hypr/nightlight.lua")
 pcall(dofile, HOME .. "/.config/hypr/recorder.lua")
+pcall(dofile, HOME .. "/.config/hypr/emoji.lua")
 
 
 

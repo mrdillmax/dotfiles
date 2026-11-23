@@ -114,5 +114,24 @@ else
     fail "wf-recorder has no opt-in catalog row"
 fi
 
+emoji="$ROOT/modules/emoji"
+if [[ -r $emoji/module.conf ]] && grep -qx 'OPTIONAL=1' "$emoji/module.conf"; then
+    pass "emoji is optional"
+else
+    fail "emoji module missing or required"
+fi
+if luac -p "$emoji/home/.config/hypr/emoji.lua" 2>/dev/null &&
+    grep -q 'rofimoji --action type' "$emoji/home/.config/hypr/emoji.lua" &&
+    grep -q 'period' "$emoji/home/.config/hypr/emoji.lua"; then
+    pass "emoji.lua binds the picker"
+else
+    fail "emoji.lua is missing its bind"
+fi
+if awk -F'\t' '$1 == "rofimoji" && $4 == "no" {found=1} END{exit !found}' "$ROOT/packages/catalog.tsv"; then
+    pass "rofimoji is an opt-in catalog row"
+else
+    fail "rofimoji has no opt-in catalog row"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

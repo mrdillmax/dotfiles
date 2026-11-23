@@ -203,6 +203,7 @@ swayosd	Desktop	pkg	no	any	any	A GTK on-screen display for volume and brightness
 hyprsunset	Desktop	pkg	no	any	any	Blue-light filter for Hyprland
 udiskie	Files	pkg	no	any	any	Removable disk automounter with a tray icon
 wf-recorder	Media	pkg	no	any	any	Screen recorder for wlroots compositors
+rofimoji	Desktop	pkg	no	any	any	Emoji and Unicode picker for rofi
 intel-media-driver	Drivers	pkg	no	any	any	Intel media driver for Gen9+
 lact	Drivers	pkg	yes	any	nvidia,hybrid	Linux GPU Configuration Tool
 lib32-mesa	Drivers	pkg	no	any	any	32-bit Mesa drivers for Steam
