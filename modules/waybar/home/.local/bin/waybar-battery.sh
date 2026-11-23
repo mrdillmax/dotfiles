@@ -26,7 +26,7 @@ print_status() {
     else
         icon="\uf240"
     fi
-    printf '{"text":"%s %s%%","alt":"%s","tooltip":"Battery: %s%% (%s)","class":"%s"}\n' \
+    printf '{"text":"%s  %s%%","alt":"%s","tooltip":"Battery: %s%% (%s)","class":"%s"}\n' \
         "$icon" "$capacity" "$status" "$capacity" "$status" "$class"
 }
 

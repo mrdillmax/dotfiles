@@ -21,7 +21,7 @@ print_status() {
     else
         icon="\uf185"
     fi
-    printf '{"text":"%s %d%%","alt":"brightness","tooltip":"Brightness: %d%%"}\n' \
+    printf '{"text":"%s  %d%%","alt":"brightness","tooltip":"Brightness: %d%%"}\n' \
         "$icon" "$percent" "$percent"
 }
 

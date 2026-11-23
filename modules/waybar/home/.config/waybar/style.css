@@ -161,7 +161,7 @@ window#waybar > box {
 #custom-network,
 #bluetooth {
   font-weight: 700;
-  padding: 6px 5px;
+  padding: 6px 6px;
   border-radius: 6px;
 }
 #pulseaudio:hover,

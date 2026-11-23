@@ -460,6 +460,9 @@ DOCK_LAYOUT=right      # right|left|mirror|ask
 ./install.sh --idle toggle                 # увімкнути або вимкнути idle
 ```
 
+Ті самі статус, налаштування й перемикач є в **Control Center →
+Configuration → Idle**.
+
 `SUPER + SHIFT + I` перемикає idle у сесії. Інсталятор вмикає user-юніт
 `hypridle.service`, тож демоном керує systemd; запис в autostart лише піднімає
 його, якщо сесія стартувала раніше, і не запускає другу копію. Вимкнений стан

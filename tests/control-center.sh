@@ -173,6 +173,27 @@ else
     fail "Bluetooth hardware was missed when bluetoothctl is absent"
 fi
 
+printf '#!/bin/sh\nexit 0\n' >"$stub/idle-tune.sh"
+chmod +x "$stub/idle-tune.sh"
+(
+    # shellcheck disable=SC2329
+    pick_icon() { printf '%s\n' "$@" >"$stub/menu-specs"; return 1; }
+    # shellcheck disable=SC2329
+    pgrep() { return 1; }
+    menu_page
+) >/dev/null
+(
+    # shellcheck disable=SC2329
+    pick_icon() { printf '%s\n' "$@" >"$stub/config-specs"; return 1; }
+    configuration_page
+) >/dev/null
+if ! grep -q 'Configure idle' "$stub/menu-specs" &&
+    grep -q 'Idle' "$stub/config-specs"; then
+    pass "idle configuration lives in the Configuration tab"
+else
+    fail "idle is still in Menu or missing from Configuration"
+fi
+
 wifi_dispatch="$(
     # shellcheck disable=SC2329
     wifi_page() { printf 'wifi'; }

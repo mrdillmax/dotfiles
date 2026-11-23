@@ -448,6 +448,9 @@ uses the AC profile. The module is selected by default and idle starts enabled:
 ./install.sh --idle toggle                 # enable or disable idle
 ```
 
+The same status, configuration and toggle live in **Control Center →
+Configuration → Idle**.
+
 `SUPER + SHIFT + I` toggles idle from the session. The installer enables the
 `hypridle.service` user unit, so systemd owns the daemon; the autostart entry
 only starts it when the session came up first and never forks a second copy. A

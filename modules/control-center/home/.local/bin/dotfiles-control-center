@@ -481,6 +481,22 @@ idle_label() {
     fi
 }
 
+idle_page() {
+    local choice
+    while :; do
+        choice="$(pick_icon "Idle" \
+            $'\uf017|Status' \
+            $'\uf013|Configure' \
+            $'\uf011|'"$(idle_label)")" || return 0
+        case "$choice" in
+            "Status") run_terminal --hold "idle-tune.sh status"; exit 0 ;;
+            "Configure") run_terminal "idle-tune.sh configure"; exit 0 ;;
+            "Enable idle"|"Disable idle") run_terminal "idle-tune.sh toggle"; exit 0 ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
 gamemode_label() {
     if [[ -r $STATE_DIR/gamemode.conf ]]; then
         printf 'Disable game mode'
@@ -529,13 +545,6 @@ menu_page() {
         )
         have dunstctl && specs+=($'|'"$(notifications_label)")
         have autostart.sh && specs+=($'|Autostart')
-        if have idle-tune.sh; then
-            specs+=(
-                $'|Idle status'
-                $'|Configure idle'
-                $'|'"$(idle_label)"
-            )
-        fi
         if host_is_laptop && have lid-handler.sh; then
             specs+=($'|Lid status')
         fi
@@ -557,9 +566,6 @@ menu_page() {
                 ;;
             "Pause notifications"|"Resume notifications") notifications_toggle; exit 0 ;;
             "Autostart") autostart.sh pick </dev/null ;;
-            "Idle status") run_terminal --hold "idle-tune.sh status"; exit 0 ;;
-            "Configure idle") run_terminal "idle-tune.sh configure"; exit 0 ;;
-            "Enable idle"|"Disable idle") run_terminal "idle-tune.sh toggle"; exit 0 ;;
             "Lid status") run_terminal --hold "lid-handler.sh status"; exit 0 ;;
             "Enable game mode"|"Disable game mode") run_and_notify "Game mode toggled" gamemode.sh toggle; exit 0 ;;
             "") return 0 ;;
@@ -1153,6 +1159,7 @@ config_check_cmd() {
         Bluetooth)     printf '%s' bluetoothctl ;;
         Monitors)      printf '%s' monitor-profiles.sh ;;
         "Lock screen") printf '%s' hyprlock ;;
+        Idle)          printf '%s' idle-tune.sh ;;
         Keybinds)      printf '%s' binds-cheatsheet.sh ;;
         Mouse*)        printf '%s' mouse-tune.sh ;;
         Tide)          printf '%s' fish ;;
@@ -1170,6 +1177,7 @@ config_install_cmd() {
         Bluetooth)     printf '%s --only-packages --packages bluez,bluez-utils --yes && sudo systemctl enable --now bluetooth' "$installer" ;;
         Monitors)      printf '%s --modules monitor-profiles --yes' "$installer" ;;
         "Lock screen") printf '%s --modules idle --yes' "$installer" ;;
+        Idle)          printf '%s --modules idle --yes' "$installer" ;;
         Keybinds)      printf '%s --modules binds-cheatsheet --yes' "$installer" ;;
         Mouse*)        printf '%s --modules mouse-sensitivity --yes' "$installer" ;;
         Tide)          printf '%s --modules fish --yes' "$installer" ;;
@@ -1211,6 +1219,7 @@ configuration_page() {
         specs+=(
             $'\uf108|Monitors'
             $'\uf023|Lock screen'
+            $'\uf017|Idle'
             $'\uf11c|Keybinds'
             $'\uf245|'"$mouse_label"
             $'\uf120|Tide'
@@ -1226,6 +1235,7 @@ configuration_page() {
             "Bluetooth") ensure_config_dep "Bluetooth" && bluetooth_page ;;
             "Monitors") ensure_config_dep "Monitors" && monitors_page ;;
             "Lock screen") ensure_config_dep "Lock screen" && lock_screen_page ;;
+            "Idle") ensure_config_dep "Idle" && idle_page ;;
             "Keybinds") ensure_config_dep "Keybinds" && edit_bind_page ;;
             Mouse*)
                 ensure_config_dep "$choice" && run_terminal "mouse-tune.sh"
