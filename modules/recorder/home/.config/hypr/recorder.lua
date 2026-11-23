@@ -1,2 +1,2 @@
 -- Optional: screen recording toggle.
-hl.bind(mainMod .. " + ALT + R", hl.dsp.exec_cmd("record.sh toggle"))
+hl.bind("SUPER + ALT + R", hl.dsp.exec_cmd("record.sh toggle"))

@@ -38,6 +38,7 @@ fi
 
 stub="$(mktemp -d)"
 trap 'rm -rf "$stub"' EXIT
+BASE_PATH="$PATH"
 PATH="$stub:$PATH"
 
 printf '#!/bin/sh\necho ethernet\necho loopback\n' >"$stub/nmcli"
@@ -116,6 +117,41 @@ if grep -q toggle "$stub/nightlight.calls" 2>/dev/null; then
     pass "the Style page toggles the night light"
 else
     fail "the Style page did not call nightlight.sh"
+fi
+
+(
+    PATH="$BASE_PATH"
+    # shellcheck disable=SC2329
+    pick_icon() {
+        printf '%s\n' "$@" >"$stub/style-rows"
+        return 1
+    }
+    style_page
+)
+if ! grep -q "Night light" "$stub/style-rows"; then
+    pass "the Night light row is hidden without its helper"
+else
+    fail "the Night light row appeared without nightlight.sh"
+fi
+
+mkdir -p "$stub/sound-only"
+printf '#!/bin/sh\nexit 0\n' >"$stub/sound-only/hyprpwcenter"
+chmod +x "$stub/sound-only/hyprpwcenter"
+ln -s "$(command -v cat)" "$stub/sound-only/cat"
+(
+    # shellcheck disable=SC2123 # deliberately a one-directory PATH
+    PATH="$stub/sound-only"
+    # shellcheck disable=SC2329
+    pick_icon() {
+        printf '%s\n' "$@" >"$stub/sound-only/rows"
+        return 1
+    }
+    configuration_page
+)
+if grep -q "Sound" "$stub/sound-only/rows"; then
+    pass "the Sound row appears with only hyprpwcenter"
+else
+    fail "the Sound row ignored hyprpwcenter"
 fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"

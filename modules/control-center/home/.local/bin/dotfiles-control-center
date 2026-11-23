@@ -1133,7 +1133,7 @@ configuration_page() {
 
     while :; do
         specs=()
-        { have pavucontrol || have wpctl || have pactl; } && specs+=($'|Sound')
+        { have hyprpwcenter || have pavucontrol || have wpctl || have pactl; } && specs+=($'|Sound')
         wifi_hardware_present && specs+=($'|Wi-Fi')
         bluetooth_hardware_present && specs+=($'|Bluetooth')
         have monitor-profiles.sh && specs+=($'|Monitors')

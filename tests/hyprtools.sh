@@ -71,5 +71,64 @@ else
     fail "Docs did not launch hyprsysteminfo"
 fi
 
+# Fallbacks when the Hypr tools are absent: only uwsm and pavucontrol exist.
+mkdir -p "$work/fallback"
+for tool in uptime sed readlink dirname mktemp basename cat; do
+    ln -s "$(command -v "$tool")" "$work/fallback/$tool"
+done
+printf '#!/bin/sh\necho ran >"%s/fallback/uwsm.ran"\n' "$work" >"$work/fallback/uwsm"
+printf '#!/bin/sh\necho ran >"%s/fallback/pavucontrol.ran"\n' "$work" >"$work/fallback/pavucontrol"
+chmod +x "$work/fallback/uwsm" "$work/fallback/pavucontrol"
+
+(
+    # shellcheck disable=SC2123 # deliberately a one-directory PATH
+    PATH="$work/fallback"
+    # shellcheck source=/dev/null
+    source "$POWERMENU"
+    # shellcheck disable=SC2329,SC2154
+    confirm_exit() { printf '%s\n' "$yes"; }
+    run_cmd --logout
+)
+if [[ -e $work/fallback/uwsm.ran ]]; then
+    pass "logout falls back to uwsm stop"
+else
+    fail "logout did not reach the uwsm fallback"
+fi
+
+(
+    # shellcheck disable=SC2123 # deliberately a one-directory PATH
+    PATH="$work/fallback"
+    # shellcheck source=/dev/null
+    source "$CC"
+    sound_page
+)
+for _ in {1..20}; do
+    [[ -e $work/fallback/pavucontrol.ran ]] && break
+    sleep 0.05
+done
+if [[ -e $work/fallback/pavucontrol.ran ]]; then
+    pass "Sound falls back to pavucontrol"
+else
+    fail "Sound did not reach the pavucontrol fallback"
+fi
+
+(
+    # shellcheck disable=SC2123 # deliberately a one-directory PATH
+    PATH="$work/fallback"
+    # shellcheck source=/dev/null
+    source "$CC"
+    # shellcheck disable=SC2329
+    pick_icon() {
+        printf '%s\n' "$@" >"$work/fallback/docs-rows"
+        return 1
+    }
+    docs_page
+)
+if ! grep -q "System info" "$work/fallback/docs-rows"; then
+    pass "the Docs row is hidden without hyprsysteminfo"
+else
+    fail "the Docs row appeared without the app"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
