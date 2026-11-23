@@ -50,11 +50,14 @@ for key in XF86AudioRaiseVolume XF86AudioMute XF86MonBrightnessUp; do
         fail "osd does not bind $key"
     fi
 done
-if grep -q 'ExecStart=/usr/bin/swayosd-server' \
-    "$osd/home/.config/systemd/user/swayosd-server.service"; then
-    pass "the swayosd unit starts the server"
+unit="$osd/home/.config/systemd/user/swayosd-server.service"
+if grep -q 'ExecStart=/usr/bin/swayosd-server' "$unit" &&
+    grep -q 'After=graphical-session.target' "$unit" &&
+    grep -q 'WantedBy=graphical-session.target' "$unit" &&
+    grep -q 'StartLimitIntervalSec=0' "$unit"; then
+    pass "the swayosd unit waits for the graphical session and keeps retrying"
 else
-    fail "swayosd unit is missing ExecStart"
+    fail "swayosd unit is not ordered after the session"
 fi
 if awk -F'\t' '$1 == "swayosd" {found=1} END{exit !found}' "$ROOT/packages/catalog.tsv"; then
     pass "swayosd is in the catalog"

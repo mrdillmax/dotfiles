@@ -620,6 +620,33 @@ else
     warn "GTK4 user stylesheet is missing"
 fi
 
+section "Waybar modules"
+
+waybar_script() {
+    printf '%s/.local/bin/waybar-%s.sh\n' "$REAL_HOME" "$1"
+}
+
+if command -v jq >/dev/null 2>&1; then
+    for module in units update battery network; do
+        script="$(waybar_script "$module")"
+        if [[ ! -x $script ]]; then
+            skip "waybar-$module.sh is not installed"
+            continue
+        fi
+        case "$module" in
+            units|update) output="$("$script" 2>/dev/null)" ;;
+            *)            output="$("$script" --once 2>/dev/null)" ;;
+        esac
+        if [[ -n $output ]] && jq -e . >/dev/null 2>&1 <<<"$output"; then
+            ok "waybar-$module.sh emits valid JSON"
+        else
+            fail "waybar-$module.sh did not emit JSON: ${output:-empty}"
+        fi
+    done
+else
+    skip "jq is not installed; Waybar module check skipped"
+fi
+
 section "RAM cache"
 
 if has ramcache; then

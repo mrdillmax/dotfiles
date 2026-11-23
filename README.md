@@ -547,6 +547,10 @@ something needs attention. Battery and network are custom modules driven by
 events (`udevadm monitor` and `nmcli monitor`), so charge and link changes
 appear without a polling timer.
 
+The installer reloads a running Waybar with `SIGUSR2`, so config changes apply
+immediately. `./install.sh --doctor` also executes each Waybar helper and
+checks that it emits valid JSON.
+
 On laptops the `battery` module warns once at 20% and 10% (thresholds in
 `~/.config/dotfiles/battery.conf`) and switches `power-profiles-daemon` to
 `power-saver`; plugging in restores `balanced`. A desktop without a battery

@@ -38,6 +38,9 @@ enable_services() {
 
     ((${#labels[@]})) || return 0
 
+    # Unit files may have just been replaced; reload before enabling.
+    run systemctl --user daemon-reload || warn "could not reload user units"
+
     if ((ASSUME_YES)) || [[ ! -t 0 ]]; then
         if ((!explicit)); then
             info "skipping service selection (non-interactive)"

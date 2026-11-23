@@ -1060,6 +1060,10 @@ fi
 
 if (( !DRY_RUN )); then
     enable_services
+    if pgrep -x waybar >/dev/null 2>&1; then
+        pkill -SIGUSR2 waybar 2>/dev/null || true
+        info "Waybar reloaded"
+    fi
 fi
 
 printf '\n'
