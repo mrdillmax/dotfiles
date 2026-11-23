@@ -486,12 +486,10 @@ idle_page() {
     while :; do
         choice="$(pick_icon "Idle" \
             $'\uf017|Status' \
-            $'\uf013|Configure' \
-            $'\uf011|'"$(idle_label)")" || return 0
+            $'\uf013|Configure')" || return 0
         case "$choice" in
             "Status") run_terminal --hold "idle-tune.sh status"; exit 0 ;;
             "Configure") run_terminal "idle-tune.sh configure"; exit 0 ;;
-            "Enable idle"|"Disable idle") run_terminal "idle-tune.sh toggle"; exit 0 ;;
             "") return 0 ;;
         esac
     done
@@ -545,6 +543,7 @@ menu_page() {
         )
         have dunstctl && specs+=($'|'"$(notifications_label)")
         have autostart.sh && specs+=($'|Autostart')
+        have idle-tune.sh && specs+=($'\uf011|'"$(idle_label)")
         if host_is_laptop && have lid-handler.sh; then
             specs+=($'|Lid status')
         fi
@@ -566,6 +565,7 @@ menu_page() {
                 ;;
             "Pause notifications"|"Resume notifications") notifications_toggle; exit 0 ;;
             "Autostart") autostart.sh pick </dev/null ;;
+            "Enable idle"|"Disable idle") run_terminal "idle-tune.sh toggle"; exit 0 ;;
             "Lid status") run_terminal --hold "lid-handler.sh status"; exit 0 ;;
             "Enable game mode"|"Disable game mode") run_and_notify "Game mode toggled" gamemode.sh toggle; exit 0 ;;
             "") return 0 ;;

@@ -448,8 +448,8 @@ uses the AC profile. The module is selected by default and idle starts enabled:
 ./install.sh --idle toggle                 # enable or disable idle
 ```
 
-The same status, configuration and toggle live in **Control Center →
-Configuration → Idle**.
+Status and configuration live in **Control Center → Configuration → Idle**;
+the enable/disable toggle stays in **Menu**.
 
 `SUPER + SHIFT + I` toggles idle from the session. The installer enables the
 `hypridle.service` user unit, so systemd owns the daemon; the autostart entry

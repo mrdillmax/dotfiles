@@ -164,6 +164,12 @@ window#waybar > box {
   padding: 6px 6px;
   border-radius: 6px;
 }
+/* A little more air between the two link icons. */
+#custom-network,
+#bluetooth {
+  padding-left: 8px;
+  padding-right: 8px;
+}
 #pulseaudio:hover,
 #custom-brightness:hover,
 #custom-battery:hover,

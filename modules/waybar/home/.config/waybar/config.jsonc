@@ -179,7 +179,7 @@
     "modules": ["pulseaudio#output", "pulseaudio#input", "custom/brightness"]
   },
     "pulseaudio#output": {
-    "format": "{icon}  {volume}%",
+    "format": "{icon}   {volume}%",
     "format-muted": " ",
     "format-icons": {
       "headphone": "",

@@ -176,6 +176,8 @@ fi
 printf '#!/bin/sh\nexit 0\n' >"$stub/idle-tune.sh"
 chmod +x "$stub/idle-tune.sh"
 (
+    # shellcheck disable=SC2034 # read by idle_label
+    STATE_DIR="$stub/state"
     # shellcheck disable=SC2329
     pick_icon() { printf '%s\n' "$@" >"$stub/menu-specs"; return 1; }
     # shellcheck disable=SC2329
@@ -187,11 +189,18 @@ chmod +x "$stub/idle-tune.sh"
     pick_icon() { printf '%s\n' "$@" >"$stub/config-specs"; return 1; }
     configuration_page
 ) >/dev/null
-if ! grep -q 'Configure idle' "$stub/menu-specs" &&
-    grep -q 'Idle' "$stub/config-specs"; then
-    pass "idle configuration lives in the Configuration tab"
+(
+    # shellcheck disable=SC2329
+    pick_icon() { printf '%s\n' "$@" >"$stub/idle-specs"; return 1; }
+    idle_page
+) >/dev/null
+if grep -q 'Disable idle' "$stub/menu-specs" &&
+    grep -q 'Idle' "$stub/config-specs" &&
+    grep -q 'Configure' "$stub/idle-specs" &&
+    ! grep -q 'Configure idle' "$stub/menu-specs"; then
+    pass "idle configuration is in Configuration and the toggle stays in Menu"
 else
-    fail "idle is still in Menu or missing from Configuration"
+    fail "idle pages are split incorrectly"
 fi
 
 wifi_dispatch="$(
