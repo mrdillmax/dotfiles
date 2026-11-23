@@ -143,6 +143,28 @@ else
     fail "module filter left the wrong state"
 fi
 
+# Root processes only system rows; home rows are left for the desktop user.
+printf 'system file\n' >"$work/system.conf"
+printf 'original system\n' >"$work/original-system"
+printf 'system\t%s\t%s\t%s\t%s\n' "$work/system.conf" \
+    "$DOTFILES_DIR/system/demo.conf" \
+    "$(sha256sum "$work/system.conf" | cut -d' ' -f1)" "$work/original-system" >"$STATE_FILE"
+UNINSTALL_EUID=0 ASSUME_YES=1 DRY_RUN=0 DO_SYSTEM=1 FORCE=0 uninstall_run "" >/dev/null 2>&1
+if [[ $(cat "$work/system.conf") == "original system" ]]; then
+    pass "--system restores a system row"
+else
+    fail "system row restore: $(cat "$work/system.conf")"
+fi
+
+ln -sfn "$work/external-theme" "$REAL_HOME/.config/root-skip"
+printf 'link\t%s\t%s\t-\t-\n' "$REAL_HOME/.config/root-skip" "$work/external-theme" >"$STATE_FILE"
+UNINSTALL_EUID=0 ASSUME_YES=1 DRY_RUN=0 DO_SYSTEM=1 FORCE=0 uninstall_run "" >/dev/null 2>&1
+if [[ -L $REAL_HOME/.config/root-skip ]]; then
+    pass "root leaves home rows alone"
+else
+    fail "root removed a home row"
+fi
+
 # A three-column manifest from before v2 is readable.
 ln -sfn "$work/external-theme" "$REAL_HOME/.config/v1.conf"
 printf 'link\t%s\t%s\n' "$REAL_HOME/.config/v1.conf" "$work/external-theme" >"$STATE_FILE"

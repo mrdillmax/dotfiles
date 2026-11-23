@@ -13,6 +13,8 @@ uninstall_run() {
     local manifest="${STATE_FILE:-}"
     local path kind source digest original
     local mod pkgs="" manifest_mode=""
+    # Test seam: root-only branches must be provable without running as root.
+    local effective_euid="${UNINSTALL_EUID:-$EUID}"
     local -a modules=() plan_paths=() plan_actions=() plan_originals=()
     declare -A row_for=() handled=() handled_mods=()
 
@@ -47,7 +49,7 @@ uninstall_run() {
             fi
         fi
 
-        if [[ $path == "$REAL_HOME"/* ]] && ((EUID == 0)); then
+        if [[ $path == "$REAL_HOME"/* ]] && ((effective_euid == 0)); then
             warn "skipping $path: run uninstall as your desktop user, not root"
             skipped=$((skipped + 1))
             continue
@@ -59,7 +61,7 @@ uninstall_run() {
                 skipped=$((skipped + 1))
                 continue
             fi
-            if ((EUID != 0)); then
+            if ((effective_euid != 0)); then
                 warn "skipping $path: system files need root"
                 skipped=$((skipped + 1))
                 continue
