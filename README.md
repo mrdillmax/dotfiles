@@ -590,9 +590,12 @@ so a missing file is safe.
 `packages/catalog.tsv` is the source of truth. Each row carries the package,
 category, role, default flag, host, GPU list and a short description. The
 installer shows category tabs and a checklist inside each category, so you can
-drop one package without editing a list. Categories that contain default
-packages start checked, so pressing Enter keeps the curated set instead of
-silently selecting nothing.
+drop one package without editing a list. Every category starts checked, so
+pressing Enter keeps the curated set instead of silently selecting nothing.
+Individual packages keep their own default flag.
+
+The `host` column is informational: desktop applications are offered on
+laptops too. Only GPU-specific packages are filtered by the detected GPU.
 
 - ★ main: config in this repo, selected by default
 - ○ alternative: package only, not selected by default
