@@ -39,7 +39,7 @@ else
 fi
 
 # --- module.conf key order ------------------------------------------------
-expected=(DESCRIPTION PACKAGES SERVICES REQUIRES)
+expected=(DESCRIPTION PACKAGES SERVICES REQUIRES OPTIONAL)
 for conf in "$ROOT"/modules/*/module.conf; do
     name="$(basename "$(dirname "$conf")")"
     mapfile -t keys < <(sed -n 's/^\([A-Z_]*\)=.*/\1/p' "$conf")

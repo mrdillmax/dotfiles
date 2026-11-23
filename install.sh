@@ -388,10 +388,15 @@ list_all() {
     for dir in "$DOTFILES_DIR"/modules/*/; do
         name="$(basename "$dir")"
         desc=""
+        optional=0
         if [[ -r $dir/module.conf ]]; then
             # shellcheck source=/dev/null
-            desc="$(source "$dir/module.conf" 2>/dev/null; printf '%s' "${DESCRIPTION:-}")"
+            IFS=$'\t' read -r desc optional < <(
+                source "$dir/module.conf" 2>/dev/null
+                printf '%s\t%s\n' "${DESCRIPTION:-}" "${OPTIONAL:-0}"
+            )
         fi
+        [[ $optional == 1 ]] && desc+=" [optional]"
         printf '  %-20s %s\n' "$name" "$desc"
     done
     printf '\nGPU profiles:\n'
@@ -417,6 +422,7 @@ load_module_conf() {
     PACKAGES=()
     SERVICES=()
     REQUIRES=()
+    OPTIONAL=0
     SYMLINKS=()
     # shellcheck source=/dev/null
     source "$1"
@@ -456,10 +462,7 @@ select_modules() {
         fi
         load_module_conf "$dir/module.conf"
         count="${#PACKAGES[@]}"
-        optional=0
-        case "$name" in
-            ram-cache|workspaces-split) optional=1 ;;
-        esac
+        optional=$OPTIONAL
         label="$name — ${DESCRIPTION:-} (${count} pkgs)"
         label="${label//,/;}"
         ((optional)) && label+=" [optional]"

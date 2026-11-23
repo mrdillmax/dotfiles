@@ -25,7 +25,8 @@ read_conf() {
         printf "%s\t" "$DESCRIPTION"
         printf "%s " "${PACKAGES[@]}"; printf "\t"
         printf "%s " "${SERVICES[@]}"; printf "\t"
-        printf "%s " "${REQUIRES[@]}"; printf "\n"
+        printf "%s " "${REQUIRES[@]}"; printf "\t"
+        printf "%s" "${OPTIONAL:-0}"; printf "\n"
     ' _ "$1"
 }
 
@@ -37,11 +38,12 @@ generate() {
     printf '| Module | Purpose | Packages | Binaries |\n'
     printf '|--------|---------|----------|----------|\n'
 
-    local conf dir module purpose packages _services _requires binaries file names
+    local conf dir module purpose packages _services _requires optional binaries file names
     for conf in "$ROOT"/modules/*/module.conf; do
         dir="$(dirname "$conf")"
         module="$(basename "$dir")"
-        IFS=$'\t' read -r purpose packages _services _requires < <(read_conf "$conf")
+        IFS=$'\t' read -r purpose packages _services _requires optional < <(read_conf "$conf")
+        [[ ${optional:-0} == 1 ]] && purpose+=" (optional)"
         packages="$(printf '%s' "$packages" | tr ' ' '\n' | awk 'NF' | paste -sd, - | sed 's/,/, /g')"
         names=()
         if [[ -d $dir/home/.local/bin ]]; then
