@@ -70,6 +70,8 @@ backup_path() {
     rel="${rel#/}"
     local dest="$BACKUP_DIR/$rel"
 
+    LAST_BACKUP="$dest"
+
     if (( DRY_RUN )); then
         log "${C_DIM}[dry-run]${C_RESET} backup $target -> $dest"
         return 0
@@ -82,10 +84,36 @@ backup_path() {
     log "backup: $target -> $dest"
 }
 
+file_digest() {
+    sha256sum -- "$1" | cut -d' ' -f1
+}
+
+# The latest row for a path owns its original pointer. Old rows without a
+# fifth column report "-", so a pre-v2 install stays readable.
+managed_original_for() {
+    local want="$1" row found="" kind path source digest original
+    [[ -r $STATE_FILE ]] || return 0
+    while IFS= read -r row; do
+        [[ ${row%%$'\t'*} == "$want" ]] || continue
+        found="$row"
+    done <"$STATE_FILE"
+    [[ -n $found ]] || return 0
+    IFS=$'\t' read -r kind path source digest original <<<"$found"
+    printf '%s' "${original:--}"
+}
+
 record_managed() {
-    local kind="$1" path="$2" source="$3"
+    local kind="$1" path="$2" source="$3" digest="${4:--}" original="${5:-}"
     (( DRY_RUN )) && return 0
-    printf '%s\t%s\t%s\n' "$kind" "$path" "$source" >>"$STATE_FILE"
+    local previous
+    previous="$(managed_original_for "$path")"
+    [[ -n $previous ]] && original="$previous"
+    [[ -n $original ]] || original="-"
+    printf '%s\t%s\t%s\t%s\t%s\n' "$kind" "$path" "$source" "$digest" "$original" \
+        >>"$STATE_FILE"
+    if (( EUID == 0 )) && [[ -n ${SUDO_UID:-} && -n ${SUDO_GID:-} ]]; then
+        chown "$SUDO_UID:$SUDO_GID" "$STATE_FILE" 2>/dev/null || true
+    fi
 }
 
 # Symlink a repository file into $HOME, backing up anything it replaces.
@@ -97,6 +125,7 @@ link_path() {
         return 0
     fi
 
+    LAST_BACKUP=""
     if [[ -e $dst || -L $dst ]]; then
         backup_path "$dst"
     fi
@@ -109,7 +138,7 @@ link_path() {
     (( VERBOSE )) && log "${C_DIM}[cmd]${C_RESET} $(trace_cmd ln -sfn -- "$src" "$dst")"
     mkdir -p "$(dirname "$dst")"
     ln -sfn "$src" "$dst"
-    record_managed "link" "$dst" "$src"
+    record_managed "link" "$dst" "$src" - "$LAST_BACKUP"
     ok "linked $dst -> $src"
 }
 
@@ -125,6 +154,7 @@ copy_file() {
         return 0
     fi
 
+    LAST_BACKUP=""
     if [[ -e $dst || -L $dst ]]; then
         backup_path "$dst"
     fi
@@ -137,6 +167,6 @@ copy_file() {
     (( VERBOSE )) && log "${C_DIM}[cmd]${C_RESET} $(trace_cmd install -m "$mode" -- "$src" "$dst")"
     mkdir -p "$(dirname "$dst")"
     install -m "$mode" -- "$src" "$dst"
-    record_managed "copy" "$dst" "$src"
+    record_managed "copy" "$dst" "$src" "$(file_digest "$src")" "$LAST_BACKUP"
     ok "wrote $dst"
 }

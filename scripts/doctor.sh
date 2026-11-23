@@ -162,7 +162,7 @@ STATE_FILE="${XDG_STATE_HOME:-$REAL_HOME/.local/state}/dotfiles/managed.tsv"
 declare -A INSTALLED_MODULES=()
 
 if [[ -r $STATE_FILE ]]; then
-    while IFS=$'\t' read -r kind path source; do
+    while IFS=$'\t' read -r kind path source _; do
         [[ -n ${kind:-} ]] || continue
         case "$source" in
             "$DOTFILES_DIR"/modules/*)
@@ -508,7 +508,7 @@ fi
 
 if [[ -r $STATE_FILE ]]; then
     bad_managed=()
-    while IFS=$'\t' read -r kind path source; do
+    while IFS=$'\t' read -r kind path source _; do
         [[ -n ${kind:-} ]] || continue
         case "$kind" in
             link)
