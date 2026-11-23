@@ -79,5 +79,36 @@ else
     fail "file_digest mismatch"
 fi
 
+# A symlinked destination must not be chmod'ed or written through: both would
+# touch a file this repository does not own.
+host="$(mktemp)"
+cp -- /etc/hostname "$host"
+ln -sfn /etc/hostname "$REAL_HOME/.config/host-link"
+( set -e; copy_file "$host" "$REAL_HOME/.config/host-link" 0644 ) >/dev/null 2>&1
+rc=$?
+if ((rc == 0)); then
+    pass "an up-to-date symlink is not chmod'ed"
+else
+    fail "copy_file failed on an up-to-date symlink (rc=$rc)"
+fi
+if [[ -L $REAL_HOME/.config/host-link ]]; then
+    pass "the symlink is left in place"
+else
+    fail "the symlink was replaced"
+fi
+rm -f -- "$host"
+
+printf 'old\n' >"$work/target"
+printf 'new\n' >"$work/source"
+ln -sfn "$work/target" "$REAL_HOME/.config/changed-link"
+copy_file "$work/source" "$REAL_HOME/.config/changed-link" 0644
+if [[ ! -L $REAL_HOME/.config/changed-link ]] &&
+    [[ $(cat "$REAL_HOME/.config/changed-link") == new ]] &&
+    [[ $(cat "$work/target") == old ]]; then
+    pass "a changed symlink is replaced, not written through"
+else
+    fail "changed symlink: $(ls -l "$REAL_HOME/.config/changed-link" 2>&1) / $(cat "$work/target")"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

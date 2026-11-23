@@ -163,7 +163,9 @@ copy_file() {
 
     if [[ -f $dst ]] && cmp -s -- "$src" "$dst"; then
         log "up to date: $dst"
-        if (( !DRY_RUN )); then
+        # chmod follows a symlink into a file this repository does not own;
+        # leave the link and its target alone when the content already matches.
+        if (( !DRY_RUN )) && [[ ! -L $dst ]]; then
             chmod "$mode" "$dst"
         fi
         return 0
