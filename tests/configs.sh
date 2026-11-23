@@ -77,5 +77,30 @@ else
     fail "unregistered templates: ${unregistered[*]}"
 fi
 
+# Per-host input files are Lua too; # comments silently disabled them before.
+for input in "$ROOT"/hosts/*/input.lua; do
+    [[ -r $input ]] || continue
+    name="$(basename "$(dirname "$input")")"
+    if luac -p "$input" 2>/dev/null; then
+        pass "hosts/$name/input.lua compiles"
+    else
+        fail "hosts/$name/input.lua does not compile"
+    fi
+    if grep -q 'workspace_swipe_fingers = 3' "$input" &&
+        grep -q 'workspace_swipe_distance = 300' "$input" &&
+        grep -q 'workspace_swipe_cancel_ratio = 0.5' "$input"; then
+        pass "hosts/$name/input.lua sets the three-finger workspace swipe"
+    else
+        fail "hosts/$name/input.lua has no gesture block"
+    fi
+done
+
+if grep -q 'apply_gestures' "$ROOT/modules/mouse-sensitivity/home/.local/bin/mouse-tune.sh" &&
+    grep -q 'swipe_distance' "$ROOT/modules/mouse-sensitivity/home/.local/bin/mouse-tune.sh"; then
+    pass "the touchpad tuner exposes the gesture settings"
+else
+    fail "mouse-tune.sh has no gesture section"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

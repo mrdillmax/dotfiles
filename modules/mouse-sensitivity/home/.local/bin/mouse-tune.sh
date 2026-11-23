@@ -313,6 +313,13 @@ render_state() {
         printf '        },\n'
     fi
     printf '    },\n})\n'
+    printf '\nhl.config({\n    gestures = {\n'
+    printf '        workspace_swipe = %s,\n' "$GSWIPE"
+    printf '        workspace_swipe_fingers = %s,\n' "$GFINGERS"
+    printf '        workspace_swipe_distance = %s,\n' "$GDISTANCE"
+    printf '        workspace_swipe_cancel_ratio = %s,\n' "$GCANCEL"
+    printf '        workspace_swipe_min_speed_to_force = %s,\n' "$GMINSPEED"
+    printf '    },\n})\n'
 
     while IFS= read -r name; do
         [[ -n $name ]] || continue
@@ -453,6 +460,11 @@ toggle_bool() {
     ok "$label = $value"
 }
 
+apply_gestures() {
+    hyprctl eval "hl.config({ gestures = { workspace_swipe = $GSWIPE, workspace_swipe_fingers = $GFINGERS, workspace_swipe_distance = $GDISTANCE, workspace_swipe_cancel_ratio = $GCANCEL, workspace_swipe_min_speed_to_force = $GMINSPEED } })" >/dev/null 2>&1 \
+        || warn "failed to apply gesture settings"
+}
+
 touchpad_menu() {
     local choice
     while true; do
@@ -460,12 +472,42 @@ touchpad_menu() {
             "natural_scroll: $TP_NAT" \
             "tap_to_click: $TP_TAP" \
             "disable_while_typing: $TP_DWT" \
+            "workspace_swipe: $GSWIPE" \
+            "swipe_fingers: $GFINGERS" \
+            "swipe_distance: $GDISTANCE" \
+            "swipe_cancel_ratio: $GCANCEL" \
+            "swipe_min_speed: $GMINSPEED" \
             "Back")" || return 0
 
         case "$choice" in
             natural_scroll*)       toggle_bool natural_scroll TP_NAT apply_touchpad_field natural_scroll ;;
             tap_to_click*)         toggle_bool tap_to_click TP_TAP apply_touchpad_field tap_to_click ;;
             disable_while_typing*) toggle_bool disable_while_typing TP_DWT apply_touchpad_field disable_while_typing ;;
+            workspace_swipe*)
+                if [[ $GSWIPE == true ]]; then GSWIPE=false; else GSWIPE=true; fi
+                apply_gestures
+                ok "workspace_swipe = $GSWIPE"
+                ;;
+            swipe_fingers*)
+                case "$GFINGERS" in 2) GFINGERS=3 ;; 3) GFINGERS=4 ;; *) GFINGERS=2 ;; esac
+                apply_gestures
+                ok "swipe_fingers = $GFINGERS"
+                ;;
+            swipe_distance*)
+                case "$GDISTANCE" in 200) GDISTANCE=300 ;; 300) GDISTANCE=400 ;; 400) GDISTANCE=500 ;; *) GDISTANCE=200 ;; esac
+                apply_gestures
+                ok "swipe_distance = $GDISTANCE"
+                ;;
+            swipe_cancel_ratio*)
+                case "$GCANCEL" in 0.3) GCANCEL=0.5 ;; 0.5) GCANCEL=0.7 ;; *) GCANCEL=0.3 ;; esac
+                apply_gestures
+                ok "swipe_cancel_ratio = $GCANCEL"
+                ;;
+            swipe_min_speed*)
+                case "$GMINSPEED" in 0) GMINSPEED=5 ;; 5) GMINSPEED=10 ;; *) GMINSPEED=0 ;; esac
+                apply_gestures
+                ok "swipe_min_speed = $GMINSPEED"
+                ;;
             Back*)                 return 0 ;;
         esac
     done
@@ -593,6 +635,11 @@ TP_TAP_INIT="$(option_value input:touchpad:tap-to-click)"
 TP_TAP_INIT="${TP_TAP_INIT:-true}"
 TP_DWT_INIT="$(option_value input:touchpad:disable_while_typing)"
 TP_DWT_INIT="${TP_DWT_INIT:-true}"
+GSWIPE=true
+GFINGERS=3
+GDISTANCE=300
+GCANCEL=0.5
+GMINSPEED=5
 
 SENS="$SENS_INIT"
 ACCEL="$ACCEL_INIT"

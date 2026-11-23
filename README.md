@@ -559,7 +559,10 @@ What it can change live:
 - per-device overrides from `hyprctl devices` (sensitivity, acceleration,
   scroll factor);
 - laptop touchpad: `natural_scroll`, `tap_to_click`,
-  `disable_while_typing`.
+  `disable_while_typing`;
+- three-finger workspace swipe: on/off, fingers (2–4), distance (200–500),
+  cancel ratio and minimum speed. The defaults are written to
+  `hosts/<host>/input.lua`.
 
 Keys in the live slider: `←`/`→` or `-`/`+` change the value, `f` toggles the
 fine step, `r` resets to the session value, `Enter`/`q` finishes. Values are
