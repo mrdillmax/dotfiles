@@ -67,9 +67,19 @@ dns_adlists_sync() {
         sqlite_cmd=("${PIHOLE_FTL_BIN:-pihole-FTL}" sqlite3)
     fi
 
-    if [[ ! -e $db ]] && (( ! ${DRY_RUN:-0} )); then
-        warn "gravity database not found: $db (install Pi-hole first)"
-        return 1
+    if [[ ! -e $db ]]; then
+        # A fresh Pi-hole may not have run gravity yet. Build the database
+        # first; inserting into a missing file would fail with a sqlite error.
+        if (( ${DRY_RUN:-0} )); then
+            log "${C_DIM}[dry-run]${C_RESET} build the gravity database: $pihole -g"
+            return 0
+        fi
+        warn "gravity database missing: $db; running a gravity update first"
+        dns_cmd "$pihole" -g || { warn "gravity update failed"; return 1; }
+        if [[ ! -e $db ]]; then
+            warn "gravity update did not create $db"
+            return 1
+        fi
     fi
 
     sql=""
@@ -95,6 +105,18 @@ dns_adlists_sync() {
 
     ok "added $changed adlist(s)"
     dns_cmd "$pihole" -g
+}
+
+# Pi-hole v6 dropped the restartdns subcommand; restarting the unit also
+# reloads the upstream settings, with reloaddns as the fallback.
+dns_pihole_restart() {
+    local pihole="${PIHOLE_BIN:-pihole}"
+    local systemctl="${SYSTEMCTL_BIN:-systemctl}"
+    if dns_cmd "$systemctl" restart pihole-FTL 2>/dev/null; then
+        return 0
+    fi
+    warn "pihole-FTL restart failed; reloading the DNS lists instead"
+    dns_cmd "$pihole" reloaddns
 }
 
 # Write the unbound drop-in, check it, and put the old file back on failure.

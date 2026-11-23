@@ -551,6 +551,13 @@ install_system_configs() {
             continue
         fi
 
+        # The drop-in points at root.hints; it must exist before
+        # unbound-checkconf runs or a valid drop-in is rejected.
+        if [[ $dst == "$(dns_unbound_conf_path)" ]]; then
+            dns_root_hints_install "https://www.internic.net/domain/named.root" \
+                || warn "could not refresh root hints before validating $dst"
+        fi
+
         LAST_BACKUP=""
         if [[ -e $dst ]]; then
             backup_path "$dst"
@@ -607,8 +614,6 @@ install_system_configs() {
         else
             warn "pihole-FTL is not installed; Pi-hole settings were not applied"
         fi
-        dns_root_hints_install "https://www.internic.net/domain/named.root" \
-            || warn "root hints were not updated"
     fi
 
     printf '\n'
@@ -640,7 +645,7 @@ install_system_configs() {
             run systemctl restart unbound || warn "could not restart unbound"
         fi
         if command -v pihole >/dev/null 2>&1; then
-            run pihole restartdns || warn "could not restart Pi-hole DNS"
+            dns_pihole_restart || warn "could not restart Pi-hole DNS"
         fi
         if (( ! DRY_RUN )); then
             if dns_chain_ok; then

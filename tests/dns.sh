@@ -109,6 +109,34 @@ else
     fail "gravity rebuild count is wrong: $(cat "$work/pihole.log")"
 fi
 
+# 2b. A missing gravity database is created by a gravity update, not skipped.
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s/pihole-missing.log"\n' "$work" >"$work/pihole"
+chmod +x "$work/pihole"
+PIHOLE_BIN="$work/pihole"
+export PIHOLE_BIN
+if dns_adlists_sync "$work/adlists.txt" "$work/missing.db" >/dev/null 2>&1; then
+    fail "a missing gravity database reported success"
+else
+    pass "a missing gravity database is not treated as success"
+fi
+if grep -q -- '-g' "$work/pihole-missing.log"; then
+    pass "a missing gravity database triggers a gravity update"
+else
+    fail "no gravity update for a missing database"
+fi
+
+# 2c. Pi-hole v6 has no restartdns; restart FTL and fall back to reloaddns.
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s/systemctl.log"\n' "$work" >"$work/systemctl"
+chmod +x "$work/systemctl"
+SYSTEMCTL_BIN="$work/systemctl"
+export SYSTEMCTL_BIN
+dns_pihole_restart
+if grep -q 'restart pihole-FTL' "$work/systemctl.log"; then
+    pass "the Pi-hole DNS restart goes through systemctl"
+else
+    fail "pihole-FTL was not restarted: $(cat "$work/systemctl.log")"
+fi
+
 # 3. Unbound drop-in: a failing check restores the previous file.
 printf 'server:\n    port: 5335\n' >"$work/pi-hole.conf"
 printf 'server:\n    port: 53\n' >"$work/unbound.conf"
