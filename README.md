@@ -523,6 +523,18 @@ updating and rare one-shot actions.
 The bind is stored in `hosts/<host>/control-center.conf` and rendered into the
 optional `~/.config/hypr/control-center.lua`.
 
+## Monitoring
+
+Waybar shows failed systemd units and the dotfiles update status only when
+something needs attention. Battery and network are custom modules driven by
+events (`udevadm monitor` and `nmcli monitor`), so charge and link changes
+appear without a polling timer.
+
+On laptops the `battery` module warns once at 20% and 10% (thresholds in
+`~/.config/dotfiles/battery.conf`) and switches `power-profiles-daemon` to
+`power-saver`; plugging in restores `balanced`. A desktop without a battery
+skips the module.
+
 ## Mouse and touchpad tuner
 
 ```bash

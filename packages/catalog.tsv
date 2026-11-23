@@ -200,6 +200,7 @@ ttf-ms-fonts	Fonts	pkg	yes	any	any	Core TTF Fonts from Microsoft
 ttf-roboto	Fonts	pkg	yes	any	any	Google's signature family of fonts
 woff2-font-awesome	Fonts	pkg	no	any	any	Iconic font designed for Bootstrap - woff2 format
 swayosd	Desktop	pkg	no	any	any	A GTK on-screen display for volume and brightness
+power-profiles-daemon	System	pkg	no	any	any	Power profile switching for laptops
 hyprsunset	Desktop	pkg	no	any	any	Blue-light filter for Hyprland
 udiskie	Files	pkg	yes	any	any	Removable disk automounter with a tray icon
 wf-recorder	Media	pkg	no	any	any	Screen recorder for wlroots compositors

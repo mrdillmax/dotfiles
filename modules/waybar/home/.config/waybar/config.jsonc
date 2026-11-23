@@ -32,6 +32,10 @@
     "privacy",
     "hyprland/language",
     "group/zvuk",
+    "custom/battery",
+    "custom/network",
+    "custom/units",
+    "custom/update",
     "group/hardware",
     "tray"
   ],
@@ -64,6 +68,44 @@
   },
 
 
+
+  // Battery and network are event-driven custom modules: their scripts listen
+  // to udev / NetworkManager and print a new JSON line per change.
+  "custom/battery": {
+    "exec": "~/.local/bin/waybar-battery.sh",
+    "return-type": "json",
+    "interval": "once",
+    "hide-empty-text": true,
+    "tooltip": true,
+    "on-click": "kitty --hold sh -c 'upower -i $(upower -e | grep -m1 BAT)'"
+  },
+  "custom/network": {
+    "exec": "~/.local/bin/waybar-network.sh",
+    "return-type": "json",
+    "interval": "once",
+    "hide-empty-text": true,
+    "tooltip": true,
+    "on-click": "sh -c 'command -v nm-connection-editor >/dev/null && nm-connection-editor || kitty --hold nmtui'"
+  },
+
+  // Failed systemd units and repository updates stay hidden until they matter.
+  "custom/units": {
+    "exec": "~/.local/bin/waybar-units.sh",
+    "return-type": "json",
+    "interval": 30,
+    "hide-empty-text": true,
+    "tooltip": true,
+    "on-click": "kitty --class dotfiles-control-center -e bash -lc 'systemctl --failed; read -rsn1'"
+  },
+  "custom/update": {
+    "exec": "~/.local/bin/waybar-update.sh",
+    "return-type": "json",
+    "interval": 21600,
+    "signal": 9,
+    "hide-empty-text": true,
+    "tooltip": true,
+    "on-click": "~/.local/bin/waybar-update.sh --click"
+  },
 
   // Date and clock. The calendar appears in the tooltip.
   "group/time": {

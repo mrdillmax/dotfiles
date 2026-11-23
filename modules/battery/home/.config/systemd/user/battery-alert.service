@@ -1,0 +1,10 @@
+# battery-alert — warnings and power saving on power_supply events.
+[Unit]
+Description=Battery warnings and power profile
+
+[Service]
+ExecStart=%h/.local/bin/battery-alert.sh daemon
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

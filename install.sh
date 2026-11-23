@@ -455,6 +455,9 @@ select_modules() {
         name="$(basename "$dir")"
         [[ -r $dir/module.conf ]] || continue
         [[ $name == lid && ${HOST_NAME:-} != laptop ]] && continue
+        if [[ $name == battery ]] && ! compgen -G "/sys/class/power_supply/BAT*" >/dev/null 2>&1; then
+            continue
+        fi
         if [[ $name == ram-cache ]]; then
             local mem_gib
             mem_gib="$(awk '/^MemTotal:/{print int($2 / 1048576)}' /proc/meminfo 2>/dev/null || printf '0')"

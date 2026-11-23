@@ -223,3 +223,15 @@ button:hover {
 background: inherit;
 border: none;
 }
+
+
+/* Monitoring: only visible when something needs attention. */
+#custom-units.failed,
+#custom-battery.critical {
+  color: @error;
+}
+
+#custom-battery.warning,
+#custom-update.behind {
+  color: @primary;
+}
