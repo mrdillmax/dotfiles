@@ -24,6 +24,7 @@ export DOTFILES_DIR
 
 DRY_RUN=0
 ASSUME_YES=0
+VERBOSE=0
 ALL=0
 DO_PACKAGES=1
 DO_SYSTEM=0
@@ -172,6 +173,7 @@ Maintenance:
 
 Other:
   --dry-run             show what would happen, change nothing
+  --verbose             print each command before running it
   --yes, -y             answer "yes" to confirmations
   --list                list modules, GPU profiles and package categories
   -h, --help            this help
@@ -183,6 +185,7 @@ while (($#)); do
     case "$1" in
         --all)        ALL=1; HAS_ACTION=1 ;;
         --dry-run)    DRY_RUN=1 ;;
+        --verbose)    VERBOSE=1 ;;
         --yes|-y)     ASSUME_YES=1 ;;
         --no-packages) DO_PACKAGES=0; HAS_ACTION=1 ;;
         --only-packages) ONLY_PACKAGES=1; HAS_ACTION=1 ;;

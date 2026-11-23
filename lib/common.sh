@@ -6,6 +6,7 @@ _DOTFILES_COMMON=1
 : "${DOTFILES_DIR:?DOTFILES_DIR must be set}"
 : "${DRY_RUN:=0}"
 : "${ASSUME_YES:=0}"
+: "${VERBOSE:=0}"
 
 if [[ -t 1 ]]; then
     C_RESET=$'\033[0m'
@@ -31,13 +32,24 @@ warn()  { log "${C_YELLOW}warning:${C_RESET} $*"; }
 err()   { log "${C_RED}error:${C_RESET} $*" >&2; }
 die()   { err "$*"; exit 1; }
 
-# Run a mutating command, or print it in dry-run mode.
+# Quote an argv so a verbose line can be pasted back into a shell.
+trace_cmd() {
+    local arg out=""
+    for arg in "$@"; do
+        out+="$(printf '%q ' "$arg")"
+    done
+    printf '%s' "${out% }"
+}
+
+# Run a mutating command, or print it in dry-run mode. Verbose mode prints
+# the exact argv before running it.
 run() {
     if (( DRY_RUN )); then
-        log "${C_DIM}[dry-run]${C_RESET} $*"
-    else
-        "$@"
+        log "${C_DIM}[dry-run]${C_RESET} $(trace_cmd "$@")"
+        return 0
     fi
+    (( VERBOSE )) && log "${C_DIM}[cmd]${C_RESET} $(trace_cmd "$@")"
+    "$@"
 }
 
 # yay 13 accepts --pgpfetch but never reads it. With --noconfirm it imports the
@@ -63,6 +75,7 @@ backup_path() {
         return 0
     fi
 
+    (( VERBOSE )) && log "${C_DIM}[cmd]${C_RESET} $(trace_cmd cp -a -- "$target" "$dest")"
     mkdir -p "$(dirname "$dest")"
     cp -a "$target" "$dest"
     printf '%s\t%s\n' "$target" "$dest" >>"$BACKUP_DIR/manifest.tsv"
@@ -93,6 +106,7 @@ link_path() {
         return 0
     fi
 
+    (( VERBOSE )) && log "${C_DIM}[cmd]${C_RESET} $(trace_cmd ln -sfn -- "$src" "$dst")"
     mkdir -p "$(dirname "$dst")"
     ln -sfn "$src" "$dst"
     record_managed "link" "$dst" "$src"
@@ -120,6 +134,7 @@ copy_file() {
         return 0
     fi
 
+    (( VERBOSE )) && log "${C_DIM}[cmd]${C_RESET} $(trace_cmd install -m "$mode" -- "$src" "$dst")"
     mkdir -p "$(dirname "$dst")"
     install -m "$mode" -- "$src" "$dst"
     record_managed "copy" "$dst" "$src"
