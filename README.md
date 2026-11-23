@@ -755,6 +755,7 @@ Manifest:
 | `system/cpupower/cpupower` | `/etc/default/cpupower` |
 | `system/networkmanager/dns.conf` | `/etc/NetworkManager/conf.d/dns.conf` (Pi-hole + Unbound only) |
 | `system/networkmanager/rc-manager.conf` | `/etc/NetworkManager/conf.d/rc-manager.conf` (Pi-hole + Unbound only) |
+| `system/resolv.conf` | `/etc/resolv.conf` (Pi-hole + Unbound only) |
 | `system/unbound/pi-hole.conf` | `/etc/unbound/unbound.conf.d/pi-hole.conf` |
 | `system/pihole/dotfiles-dnsmasq.conf` | `/etc/dnsmasq.d/dotfiles.conf` |
 | `system/wait-iface/wait-iface.sh` | `/usr/local/bin/wait-iface.sh` |

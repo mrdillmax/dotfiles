@@ -31,6 +31,7 @@ or the invoking login. It always requires a separate confirmation.
 | `cpupower/cpupower` | `/etc/default/cpupower` | `governor='performance'`; `cpupower.service` is enabled |
 | `networkmanager/dns.conf` | `/etc/NetworkManager/conf.d/dns.conf` | only with Pi-hole + Unbound |
 | `networkmanager/rc-manager.conf` | `/etc/NetworkManager/conf.d/rc-manager.conf` | only with Pi-hole + Unbound |
+| `resolv.conf` | `/etc/resolv.conf` | only with Pi-hole + Unbound |
 | `pihole/dotfiles-dnsmasq.conf` | `/etc/dnsmasq.d/dotfiles.conf` | extra dnsmasq settings; FTL reads it when `misc.etc_dnsmasq_d` is true |
 | `pihole/adlists.txt` | gravity database | URLs inserted by `install.sh`; `pihole -g` runs once when something was added |
 | `unbound/pi-hole.conf` | `/etc/unbound/unbound.conf.d/pi-hole.conf` | validated with `unbound-checkconf`; the stock config is untouched |

@@ -65,6 +65,7 @@ system_file_map() {
             pacman/hooks/*)                  printf '%s\t%s\t%s\n' "$src" "/etc/pacman.d/hooks/${rel#pacman/hooks/}" "0644" ;;
             networkmanager/dns.conf)         printf '%s\t%s\t%s\n' "$src" "/etc/NetworkManager/conf.d/dns.conf" "0644" ;;
             networkmanager/rc-manager.conf)  printf '%s\t%s\t%s\n' "$src" "/etc/NetworkManager/conf.d/rc-manager.conf" "0644" ;;
+            resolv.conf)                     printf '%s\t%s\t%s\n' "$src" "/etc/resolv.conf" "0644" ;;
             systemd/*)                       printf '%s\t%s\t%s\n' "$src" "/etc/systemd/system/${rel#systemd/}" "0644" ;;
             grub/99-dotfiles.cfg)
                 if [[ ${GPU_PROFILE:-} == nvidia || ${GPU_PROFILE:-} == hybrid ]]; then
@@ -507,7 +508,7 @@ install_system_configs() {
         repo_src="$src"
         tmp_src=""
 
-        if [[ $dst == /etc/NetworkManager/conf.d/* ]]; then
+        if [[ $dst == /etc/NetworkManager/conf.d/* || $dst == /etc/resolv.conf ]]; then
             if [[ ! -e /etc/pihole/pihole.toml || ! -e /etc/unbound/unbound.conf ]]; then
                 warn "skipping $dst: install and configure Pi-hole + Unbound first"
                 continue

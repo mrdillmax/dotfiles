@@ -121,6 +121,7 @@ dns_is_dns_file() {
         /etc/pihole/*|\
         /etc/NetworkManager/conf.d/dns.conf|\
         /etc/NetworkManager/conf.d/rc-manager.conf|\
+        /etc/resolv.conf|\
         /etc/systemd/system/pihole-FTL.service.d/*)
             return 0
             ;;

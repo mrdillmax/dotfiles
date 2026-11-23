@@ -255,6 +255,17 @@ if grep -q '/etc/dnsmasq.d/dotfiles.conf' <<<"$map"; then
 else
     fail "map does not install the dnsmasq drop-in"
 fi
+if grep -q '/etc/resolv.conf' <<<"$map"; then
+    pass "map installs the system resolver pointing at Pi-hole"
+else
+    fail "map does not install /etc/resolv.conf"
+fi
+if [[ -r $ROOT/system/resolv.conf ]] &&
+    grep -qx 'nameserver 127.0.0.1' "$ROOT/system/resolv.conf"; then
+    pass "resolv.conf points at localhost"
+else
+    fail "system/resolv.conf is missing or wrong"
+fi
 if grep -Eq '/etc/unbound/unbound\.conf[[:space:]]|/etc/pihole/dnsmasq\.conf' <<<"$map"; then
     fail "map still overwrites a stock or generated file"
 else
