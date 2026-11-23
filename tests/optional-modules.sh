@@ -95,5 +95,24 @@ else
     fail "udiskie has no opt-in catalog row"
 fi
 
+recorder="$ROOT/modules/recorder"
+if [[ -x $recorder/home/.local/bin/record.sh ]] &&
+    grep -qx 'OPTIONAL=1' "$recorder/module.conf"; then
+    pass "recorder helper and optional marker are present"
+else
+    fail "recorder module is incomplete"
+fi
+if luac -p "$recorder/home/.config/hypr/recorder.lua" 2>/dev/null &&
+    grep -q 'ALT + R' "$recorder/home/.config/hypr/recorder.lua"; then
+    pass "recorder.lua binds SUPER+ALT+R"
+else
+    fail "recorder.lua is missing its bind"
+fi
+if awk -F'\t' '$1 == "wf-recorder" && $4 == "no" {found=1} END{exit !found}' "$ROOT/packages/catalog.tsv"; then
+    pass "wf-recorder is an opt-in catalog row"
+else
+    fail "wf-recorder has no opt-in catalog row"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
