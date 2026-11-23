@@ -52,3 +52,5 @@ __pycache__/
 
 # ── Disabled grep-only tests (kept locally, not part of the suite) ─────────
 tests/legacy/
+docs/superpowers/
+.superpowers/
