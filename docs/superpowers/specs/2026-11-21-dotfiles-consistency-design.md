@@ -1,7 +1,7 @@
 # Dotfiles consistency pass — design addendum
 
 Date: 2026-11-21
-Status: awaiting approval
+Status: implemented
 Extends: `2026-11-20-dotfiles-reliability-design.md`
 
 ## Intent

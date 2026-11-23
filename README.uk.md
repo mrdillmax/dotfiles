@@ -492,8 +492,8 @@ dotfiles-control-center
   бінди, мишка/тачпад, Tide і основні текстові конфіги у редакторі
 - **Install**: пакети з репозиторіїв і AUR через `fzf`
 - **Uninstall**: видалення кількох пакетів через `fzf` і перегляд інформації
-- **Update**: pacman/AUR, дзеркала reflector, дотфайли і
-  `spicetify backup apply`
+- **Update**: статус дотфайлів на GitHub (кеш на шість годин), далі
+  pacman/AUR, дзеркала reflector, дотфайли і `spicetify backup apply`
 - **Power**: відкриває меню живлення
 
 Пункти для відсутніх помічників і функцій ноутбука приховані, а не сірі.

@@ -486,8 +486,8 @@ Press `SUPER + Space` or launch **Control Center** from rofi. Pages cover:
   mouse/touchpad, Tide and the main text configs in an editor
 - **Install**: repository and AUR packages through `fzf`
 - **Uninstall**: `fzf` multi-select removal and package inspection
-- **Update**: pacman/AUR, reflector mirrors, dotfiles and
-  `spicetify backup apply`
+- **Update**: GitHub status for the dotfiles repo (cached for six hours), then
+  pacman/AUR, reflector mirrors, dotfiles and `spicetify backup apply`
 - **Power**: opens the power menu
 
 Entries for missing helpers and laptop-only features are hidden, not greyed.

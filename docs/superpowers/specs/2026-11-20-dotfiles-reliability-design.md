@@ -1,7 +1,7 @@
 # Dotfiles reliability pass — design
 
 Date: 2026-11-20
-Status: awaiting approval
+Status: implemented
 
 ## Intent
 
