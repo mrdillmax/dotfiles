@@ -78,8 +78,10 @@ install_default_wallpaper() {
     [[ -f $src ]] || return 1
 
     state="$(wallpaper_state_file)"
-    if [[ -r $state ]] && [[ -n $(<"$state") ]]; then
-        return 0
+    if [[ -r $state ]]; then
+        local recorded
+        recorded="$(<"$state")"
+        [[ -n $recorded && -f $recorded ]] && return 0
     fi
     # The generated Hyprland config also records a wallpaper; respect it.
     if declare -F theme_wallpaper_path >/dev/null 2>&1 \

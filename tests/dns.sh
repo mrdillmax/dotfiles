@@ -125,6 +125,16 @@ else
     fail "no gravity update for a missing database"
 fi
 
+# 2b2. FTL cannot start when its log directory is missing.
+PIHOLE_LOG_DIRS="$work/log/pihole $work/run/pihole"
+export PIHOLE_LOG_DIRS
+dns_pihole_prepare_logs
+if [[ -d $work/log/pihole && -d $work/run/pihole ]]; then
+    pass "the Pi-hole log directories are created before a restart"
+else
+    fail "Pi-hole log directories were not created"
+fi
+
 # 2c. Pi-hole v6 has no restartdns; restart FTL and fall back to reloaddns.
 printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s/systemctl.log"\n' "$work" >"$work/systemctl"
 chmod +x "$work/systemctl"

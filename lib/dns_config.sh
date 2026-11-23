@@ -109,9 +109,20 @@ dns_adlists_sync() {
 
 # Pi-hole v6 dropped the restartdns subcommand; restarting the unit also
 # reloads the upstream settings, with reloaddns as the fallback.
+dns_pihole_prepare_logs() {
+    local dir
+    (( ${DRY_RUN:-0} )) && return 0
+    for dir in ${PIHOLE_LOG_DIRS:-/var/log/pihole /run/log/pihole}; do
+        [[ -d $dir ]] || mkdir -p "$dir" || { warn "cannot create $dir"; continue; }
+        chown pihole:pihole "$dir" 2>/dev/null || true
+        chmod 0755 "$dir" 2>/dev/null || true
+    done
+}
+
 dns_pihole_restart() {
     local pihole="${PIHOLE_BIN:-pihole}"
     local systemctl="${SYSTEMCTL_BIN:-systemctl}"
+    dns_pihole_prepare_logs
     if dns_cmd "$systemctl" restart pihole-FTL 2>/dev/null; then
         return 0
     fi

@@ -863,9 +863,8 @@ install_selected_modules() {
         esac
     done
 
-    if [[ " ${MODULES[*]} " == *" hypr "* ]]; then
-        install_default_wallpaper || true
-    fi
+    # Not tied to hypr: a fresh install should always have a wallpaper.
+    install_default_wallpaper || true
     if [[ " ${MODULES[*]} " == *" matugen "* ]]; then
         generate_theme_if_possible || true
     fi

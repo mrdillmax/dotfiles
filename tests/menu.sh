@@ -54,7 +54,7 @@ printf 'link\t/home/x/.config/a\t%s/modules/demo/home/.config/a\t-\t-\n' "$work"
 (
     export XDG_STATE_HOME="$work/state"
     capture="$work/remove-args"
-    # shellcheck disable=SC2329
+    # shellcheck disable=SC2329,SC2034 # read by menu_action_remove_modules
     tui_checklist() { TUI_SELECTION=("demo"); }
     # shellcheck disable=SC2329
     tui_confirm() { return 0; }
