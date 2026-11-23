@@ -50,5 +50,12 @@ else
     fail "copy_file verbose output: $out"
 fi
 
+out="$(VERBOSE=1 verbose_cmd install -m 0644 -- a b)"
+if [[ $out == *"[cmd]"* && $out == *"install -m 0644"* ]]; then
+    pass "verbose_cmd traces a system-style install"
+else
+    fail "verbose_cmd output: $out"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

@@ -104,6 +104,7 @@ fi
 
 # The real 0001 upgrades three columns, idempotently.
 printf 'link\t/home/x/.config/a\t/repo/a\n' >"$STATE_FILE"
+chmod 0640 "$STATE_FILE"
 export REAL_HOME="$work/home"
 mkdir -p "$REAL_HOME"
 env DOTFILES_DIR="$ROOT" REAL_HOME="$REAL_HOME" STATE_DIR="$STATE_DIR" \
@@ -118,6 +119,11 @@ before="$(sha256sum "$STATE_FILE" | cut -d' ' -f1)"
 env DOTFILES_DIR="$ROOT" REAL_HOME="$REAL_HOME" STATE_DIR="$STATE_DIR" \
     STATE_FILE="$STATE_FILE" BACKUP_DIR="$BACKUP_DIR" \
     bash "$ROOT/migrations/0001-managed-tsv-v2.sh"
+if [[ $(stat -c %a "$STATE_FILE") == 640 ]]; then
+    pass "0001 keeps the manifest mode"
+else
+    fail "0001 mode: $(stat -c %a "$STATE_FILE")"
+fi
 if [[ $(sha256sum "$STATE_FILE" | cut -d' ' -f1) == "$before" ]]; then
     pass "0001 is idempotent"
 else

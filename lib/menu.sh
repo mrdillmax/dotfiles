@@ -265,6 +265,7 @@ menu_join() {
 menu_run() {
     local -a args=("$@")
     (( DRY_RUN )) && args+=(--dry-run)
+    (( VERBOSE )) && args+=(--verbose)
     [[ -n ${MENU_HOST:-} ]] && args+=(--host "$MENU_HOST")
     [[ -n ${MENU_GPU:-} ]] && args+=(--gpu "$MENU_GPU")
     "$DOTFILES_DIR/install.sh" "${args[@]}"
@@ -278,6 +279,7 @@ menu_system_run() {
     local -a args=(--system)
     [[ -n $component ]] && args+=(--system-components "$component")
     (( DRY_RUN )) && args+=(--dry-run)
+    (( VERBOSE )) && args+=(--verbose)
     [[ -n ${MENU_HOST:-} ]] && args+=(--host "$MENU_HOST")
     [[ -n ${MENU_GPU:-} ]] && args+=(--gpu "$MENU_GPU")
 
@@ -392,6 +394,7 @@ menu_action() {
         dns-check)        menu_run --dns-check ;;
         restore-list)     menu_run --restore ;;
         restore-date)     menu_action_restore_date ;;
+        uninstall)        menu_run --uninstall ;;
         sync-status)      menu_run --sync status ;;
         sync-diff)        menu_run --sync diff ;;
         sync-pull)        menu_run --sync pull ;;

@@ -50,14 +50,27 @@ else
     fail "copy digest row: $row"
 fi
 
+# A new install run uses a new backup directory; the original must not move.
+BACKUP_DIR="$work/backup2"
+mkdir -p "$BACKUP_DIR"
+printf 'target\tbackup\n' >"$BACKUP_DIR/manifest.tsv"
 printf 'copy v2\n' >"$src"
 copy_file "$src" "$REAL_HOME/.config/copied.conf" 0644
 row="$(tail -n1 "$STATE_FILE")"
 IFS=$'\t' read -r kind path source digest original2 <<<"$row"
-if [[ $original2 == "$original" && -f $original2 ]]; then
-    pass "a repo update keeps the first original pointer"
+if [[ $original2 == "$original" && -f $original2 && $(cat "$original2") == "user copy" ]]; then
+    pass "a repo update keeps the first original pointer and its content"
 else
-    fail "original moved: $original -> $original2"
+    fail "original moved: $original -> $original2 ($(cat "$original2" 2>/dev/null))"
+fi
+
+copy_file "$src" "$REAL_HOME/.config/override.conf" 0644 "$ROOT/lib/common.sh"
+row="$(tail -n1 "$STATE_FILE")"
+IFS=$'\t' read -r kind path source digest original <<<"$row"
+if [[ $source == "$ROOT/lib/common.sh" ]]; then
+    pass "copy_file accepts a source override"
+else
+    fail "source override not recorded: $source"
 fi
 
 if [[ $(file_digest "$src") == "$(sha256sum "$src" | cut -d' ' -f1)" ]]; then

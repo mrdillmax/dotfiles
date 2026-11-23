@@ -203,8 +203,10 @@ render_monitors() {
         } >"$conf_tmp"
     fi
 
-    copy_file "$lua_tmp" "$REAL_HOME/.config/hypr/monitors.lua" 0644
-    copy_file "$conf_tmp" "$REAL_HOME/.config/hypr/monitors.conf.sh" 0644
+    copy_file "$lua_tmp" "$REAL_HOME/.config/hypr/monitors.lua" 0644 \
+        "$DOTFILES_DIR/hosts/$HOST_NAME/monitors.conf.sh"
+    copy_file "$conf_tmp" "$REAL_HOME/.config/hypr/monitors.conf.sh" 0644 \
+        "$DOTFILES_DIR/hosts/$HOST_NAME/monitors.conf.sh"
     rm -f -- "$lua_tmp" "$conf_tmp"
 
     if declare -F install_dock_conf >/dev/null 2>&1; then

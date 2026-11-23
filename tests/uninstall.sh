@@ -54,6 +54,7 @@ printf 'edited by user\n' >"$REAL_HOME/.config/edited.conf"
         "$DOTFILES_DIR/system/demo.conf"
 } >"$STATE_FILE"
 
+chmod 0640 "$STATE_FILE"
 ASSUME_YES=1 DRY_RUN=0 DO_SYSTEM=0 FORCE=0 uninstall_run "" >"$work/out" 2>&1
 if [[ ! -L $REAL_HOME/.config/repo.conf &&
     $(cat "$REAL_HOME/.config/repo.conf" 2>/dev/null) == "original link target" ]]; then
@@ -92,6 +93,16 @@ if grep -q "edited.conf" "$STATE_FILE" && grep -q "$work/system.conf" "$STATE_FI
 else
     fail "manifest rewrite: $(cat "$STATE_FILE")"
 fi
+if [[ $(stat -c %a "$STATE_FILE") == 640 ]]; then
+    pass "the manifest rewrite keeps its mode"
+else
+    fail "manifest mode: $(stat -c %a "$STATE_FILE")"
+fi
+if [[ $(cat "$work/out") == *"packages were not removed"* && $(cat "$work/out") == *chsh* ]]; then
+    pass "uninstall reports packages and the shell it left alone"
+else
+    fail "uninstall report: $(cat "$work/out")"
+fi
 
 # Dry-run on a fresh fixture changes nothing.
 printf 'link\t%s\t%s\t-\t-\n' "$REAL_HOME/.config/dry.conf" "$work/original-link" >"$STATE_FILE"
@@ -101,6 +112,45 @@ if [[ -L $REAL_HOME/.config/dry.conf ]]; then
     pass "dry-run leaves links in place"
 else
     fail "dry-run removed a link"
+fi
+
+# --force restores an edited copy instead of keeping it.
+printf 'edited by user\n' >"$REAL_HOME/.config/edited.conf"
+printf 'copy\t%s\t%s\t%s\t%s\n' "$REAL_HOME/.config/edited.conf" \
+    "$DOTFILES_DIR/modules/demo/home/.config/repo.conf" \
+    "$(sha256sum "$DOTFILES_DIR/modules/demo/home/.config/repo.conf" | cut -d' ' -f1)" \
+    "$work/original-edited" >"$STATE_FILE"
+ASSUME_YES=1 DRY_RUN=0 DO_SYSTEM=0 FORCE=1 uninstall_run "" >/dev/null 2>&1
+if [[ $(cat "$REAL_HOME/.config/edited.conf") == "original edited" ]]; then
+    pass "--force restores an edited copy's original"
+else
+    fail "--force edited copy: $(cat "$REAL_HOME/.config/edited.conf")"
+fi
+
+# Module filtering leaves the other module's files alone.
+ln -sfn "$DOTFILES_DIR/modules/demo/home/.config/repo.conf" "$REAL_HOME/.config/repo.conf"
+ln -sfn "$work/external-theme" "$REAL_HOME/.config/theme-link"
+{
+    printf 'link\t%s\t%s\t-\t-\n' "$REAL_HOME/.config/repo.conf" \
+        "$DOTFILES_DIR/modules/demo/home/.config/repo.conf"
+    printf 'link\t%s\t%s\t-\t-\n' "$REAL_HOME/.config/theme-link" "$work/external-theme"
+} >"$STATE_FILE"
+ASSUME_YES=1 DRY_RUN=0 DO_SYSTEM=0 FORCE=0 uninstall_run "other" >/dev/null 2>&1
+if [[ -L $REAL_HOME/.config/repo.conf && ! -e $REAL_HOME/.config/theme-link && \
+    ! -L $REAL_HOME/.config/theme-link ]]; then
+    pass "a module filter removes only that module"
+else
+    fail "module filter left the wrong state"
+fi
+
+# A three-column manifest from before v2 is readable.
+ln -sfn "$work/external-theme" "$REAL_HOME/.config/v1.conf"
+printf 'link\t%s\t%s\n' "$REAL_HOME/.config/v1.conf" "$work/external-theme" >"$STATE_FILE"
+ASSUME_YES=1 DRY_RUN=0 DO_SYSTEM=0 FORCE=0 uninstall_run "" >/dev/null 2>&1
+if [[ ! -e $REAL_HOME/.config/v1.conf && ! -L $REAL_HOME/.config/v1.conf ]]; then
+    pass "a three-column manifest is still uninstallable"
+else
+    fail "v1 manifest row survived"
 fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"

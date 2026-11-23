@@ -12,8 +12,9 @@ uninstall_run() {
     local modules_csv="${1:-}"
     local manifest="${STATE_FILE:-}"
     local path kind source digest original
+    local mod pkgs="" manifest_mode=""
     local -a modules=() plan_paths=() plan_actions=() plan_originals=()
-    declare -A row_for=() handled=()
+    declare -A row_for=() handled=() handled_mods=()
 
     if [[ ! -r $manifest ]]; then
         err "no managed state at $manifest; nothing to uninstall (use --restore for backups)"
@@ -115,6 +116,11 @@ uninstall_run() {
         else
             action=remove
         fi
+        module="$(restore_module_for_target "$path")"
+        case "$module" in
+            other|system) ;;
+            *) handled_mods["$module"]=1 ;;
+        esac
         plan_paths+=("$path")
         plan_actions+=("$action")
         plan_originals+=("$original")
@@ -180,6 +186,7 @@ uninstall_run() {
 
     if ((!DRY_RUN)); then
         local tmp rkind rpath rest
+        manifest_mode="$(stat -c %a "$manifest" 2>/dev/null || true)"
         tmp="$(mktemp "$manifest.XXXXXX")"
         while IFS=$'\t' read -r rkind rpath rest; do
             [[ -n ${rpath:-} ]] || continue
@@ -191,6 +198,7 @@ uninstall_run() {
             fi
         done <"$manifest" >"$tmp"
         mv -f -- "$tmp" "$manifest"
+        state_file_permissions "$manifest" "$manifest_mode"
 
         if ((daemon_reload)) && command -v systemctl >/dev/null 2>&1; then
             systemctl --user daemon-reload >/dev/null 2>&1 || true
@@ -198,5 +206,17 @@ uninstall_run() {
     fi
 
     info "uninstall: $removed removed, $restored restored, $kept kept, $skipped skipped"
+
+    for mod in "${!handled_mods[@]}"; do
+        [[ -r $DOTFILES_DIR/modules/$mod/module.conf ]] || continue
+        pkgs+="$( (
+            # shellcheck source=/dev/null
+            source "$DOTFILES_DIR/modules/$mod/module.conf"
+            printf '%s ' "${PACKAGES[@]:-}"
+        ) )"
+    done
+    info "packages were not removed${pkgs:+: ${pkgs% }}"
+    info "login shell was not changed; revert with: chsh -s /bin/bash \$USER"
+    info "fisher plugins were not removed; update fish_plugins, then: fish -c 'fisher update'"
     return 0
 }

@@ -560,6 +560,7 @@ install_system_configs() {
             log "${C_DIM}[dry-run]${C_RESET} install $src -> $dst (mode $mode)"
         elif [[ $dst == "$(dns_unbound_conf_path)" ]]; then
             # unbound refuses to start on a bad drop-in; validate and roll back.
+            verbose_cmd dns_write_unbound "$src" "$dst"
             dns_write_unbound "$src" "$dst" || continue
         else
             prev_tmp=""
@@ -568,6 +569,7 @@ install_system_configs() {
                 cp -a -- "$dst" "$prev_tmp"
             fi
             mkdir -p "$(dirname "$dst")"
+            verbose_cmd install -m "$mode" -- "$src" "$dst"
             install -m "$mode" -- "$src" "$dst"
             if ! system_conf_validate "$dst"; then
                 warn "validation failed for $dst; restoring the previous file"

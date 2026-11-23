@@ -41,6 +41,20 @@ trace_cmd() {
     printf '%s' "${out% }"
 }
 
+verbose_cmd() {
+    (( VERBOSE )) && log "${C_DIM}[cmd]${C_RESET} $(trace_cmd "$@")"
+    return 0
+}
+
+# Keep a rewritten state file writable by the desktop user after a sudo run.
+state_file_permissions() {
+    local file="$1" mode="${2:-}"
+    [[ -n $mode ]] && chmod "$mode" "$file" 2>/dev/null || true
+    if (( EUID == 0 )) && [[ -n ${SUDO_UID:-} && -n ${SUDO_GID:-} ]]; then
+        chown "$SUDO_UID:$SUDO_GID" "$file" 2>/dev/null || true
+    fi
+}
+
 # Run a mutating command, or print it in dry-run mode. Verbose mode prints
 # the exact argv before running it.
 run() {
@@ -91,15 +105,15 @@ file_digest() {
 # The latest row for a path owns its original pointer. Old rows without a
 # fifth column report "-", so a pre-v2 install stays readable.
 managed_original_for() {
-    local want="$1" row found="" kind path source digest original
+    local want="$1" kind path source digest original found=""
     [[ -r $STATE_FILE ]] || return 0
-    while IFS= read -r row; do
-        [[ ${row%%$'\t'*} == "$want" ]] || continue
-        found="$row"
+    while IFS=$'\t' read -r kind path source digest original; do
+        [[ -n ${path:-} ]] || continue
+        [[ $path == "$want" ]] || continue
+        found="${original:--}"
     done <"$STATE_FILE"
     [[ -n $found ]] || return 0
-    IFS=$'\t' read -r kind path source digest original <<<"$found"
-    printf '%s' "${original:--}"
+    printf '%s' "$found"
 }
 
 record_managed() {
@@ -142,9 +156,10 @@ link_path() {
     ok "linked $dst -> $src"
 }
 
-# Copy a file with an explicit mode (used for rendered configs).
+# Copy a file with an explicit mode (used for rendered configs). The optional
+# fourth argument records where the content came from when src is a temp file.
 copy_file() {
-    local src="$1" dst="$2" mode="${3:-0644}"
+    local src="$1" dst="$2" mode="${3:-0644}" recorded_source="${4:-$1}"
 
     if [[ -f $dst ]] && cmp -s -- "$src" "$dst"; then
         log "up to date: $dst"
@@ -167,6 +182,6 @@ copy_file() {
     (( VERBOSE )) && log "${C_DIM}[cmd]${C_RESET} $(trace_cmd install -m "$mode" -- "$src" "$dst")"
     mkdir -p "$(dirname "$dst")"
     install -m "$mode" -- "$src" "$dst"
-    record_managed "copy" "$dst" "$src" "$(file_digest "$src")" "$LAST_BACKUP"
+    record_managed "copy" "$dst" "$recorded_source" "$(file_digest "$src")" "$LAST_BACKUP"
     ok "wrote $dst"
 }

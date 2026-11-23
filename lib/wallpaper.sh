@@ -21,7 +21,7 @@ set_wallpaper() {
     info "wallpaper: $image"
     tmp="$(mktemp)"
     printf '%s\n' "$image" >"$tmp"
-    copy_file "$tmp" "$state" 0644
+    copy_file "$tmp" "$state" 0644 -
     rm -f -- "$tmp"
 
     if command -v awww >/dev/null 2>&1 && [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && [[ -t 0 ]]; then

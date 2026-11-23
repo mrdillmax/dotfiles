@@ -542,6 +542,9 @@ if [[ -r $STATE_FILE ]]; then
             copy)
                 if [[ ! -e $path ]]; then
                     bad_managed+=("missing copy: $path")
+                elif [[ $digest != - ]]; then
+                    [[ "$(file_digest "$path")" == "$digest" ]] \
+                        || bad_managed+=("copy differs from the recorded digest: $path")
                 elif ! cmp -s -- "$source" "$path"; then
                     bad_managed+=("copy differs from repo: $path")
                 fi

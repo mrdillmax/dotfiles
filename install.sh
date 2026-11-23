@@ -194,7 +194,7 @@ while (($#)); do
     case "$1" in
         --all)        ALL=1; HAS_ACTION=1 ;;
         --dry-run)    DRY_RUN=1 ;;
-        --verbose)    VERBOSE=1 ;;
+        --verbose)    VERBOSE=1; HAS_ACTION=1 ;;
         --yes|-y)     ASSUME_YES=1 ;;
         --no-packages) DO_PACKAGES=0; HAS_ACTION=1 ;;
         --only-packages) ONLY_PACKAGES=1; HAS_ACTION=1 ;;
@@ -780,7 +780,7 @@ render_template() {
 
     tmp="$(mktemp)"
     printf '%s\n' "$content" >"$tmp"
-    copy_file "$tmp" "$dst" 0644
+    copy_file "$tmp" "$dst" 0644 "$src"
     rm -f -- "$tmp"
 }
 
@@ -802,7 +802,7 @@ render_uwsm() {
         printf 'export XCURSOR_THEME="%s"\n' "$CURSOR_THEME"
         printf 'export XCURSOR_SIZE=%s\n' "$CURSOR_SIZE"
     } >"$tmp"
-    copy_file "$tmp" "$REAL_HOME/.config/uwsm/env" 0644
+    copy_file "$tmp" "$REAL_HOME/.config/uwsm/env" 0644 "$module/env.common"
 
     local host_hypr="$DOTFILES_DIR/hosts/$HOST_NAME/env-hyprland"
     {
@@ -817,7 +817,7 @@ render_uwsm() {
             cat -- "$REAL_HOME/.config/uwsm/env-hyprland.local"
         fi
     } >"$tmp"
-    copy_file "$tmp" "$REAL_HOME/.config/uwsm/env-hyprland" 0644
+    copy_file "$tmp" "$REAL_HOME/.config/uwsm/env-hyprland" 0644 "$module/env-hyprland.common"
     rm -f -- "$tmp"
 }
 

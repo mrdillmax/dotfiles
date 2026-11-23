@@ -13,6 +13,7 @@ if awk -F'\t' 'NF > 0 && NF < 5 { exit 1 }' "$state"; then
     exit 0
 fi
 
+mode="$(stat -c %a "$state" 2>/dev/null || true)"
 tmp="$(mktemp "$state.XXXXXX")"
 awk -F'\t' -v OFS='\t' '
     NF == 0 { next }
@@ -21,3 +22,4 @@ awk -F'\t' -v OFS='\t' '
 
 backup_path "$state"
 mv -f -- "$tmp" "$state"
+state_file_permissions "$state" "$mode"
