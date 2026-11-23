@@ -129,7 +129,7 @@ menu_items_for() {
                 'modules|2. Configuration files|link dotfiles and enable user services' \
                 'menu:system|3. System configuration|/etc files, sudo required' \
                 'menu:kernel|4. Kernel|CPU-level aware kernel selection' \
-                'menu:maintenance|Maintenance|doctor, DNS check, restore, sync, hooks'
+                'menu:maintenance|Maintenance|doctor, DNS check, restore, uninstall, sync, hooks'
             printf '%s|%s|%s\n' dryrun \
                 "Dry run: $([[ ${DRY_RUN:-0} == 1 ]] && printf 'on' || printf 'off')" \
                 'toggle for every action'

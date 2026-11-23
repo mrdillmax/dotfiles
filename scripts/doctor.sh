@@ -158,8 +158,29 @@ section "Module dependencies"
 
 # Detection is best-effort: managed.tsv when the installer has run, plus live
 # symlinks that point into the repository.
-STATE_FILE="${XDG_STATE_HOME:-$REAL_HOME/.local/state}/dotfiles/managed.tsv"
+STATE_DIR="${XDG_STATE_HOME:-$REAL_HOME/.local/state}/dotfiles"
+STATE_FILE="$STATE_DIR/managed.tsv"
 declare -A INSTALLED_MODULES=()
+
+stored_version=""
+[[ -r $STATE_DIR/version ]] && stored_version="$(tr -d '[:space:]' <"$STATE_DIR/version")"
+repo_version=""
+[[ -r $DOTFILES_DIR/VERSION ]] && repo_version="$(tr -d '[:space:]' <"$DOTFILES_DIR/VERSION")"
+if [[ -z $repo_version ]]; then
+    fail "VERSION file is missing or empty"
+elif [[ -n $stored_version ]]; then
+    if [[ $stored_version == "$repo_version" ]]; then
+        ok "config version: $stored_version"
+    elif ((stored_version < repo_version)); then
+        warn "config version: $stored_version, repository $repo_version (migrations pending)"
+    else
+        warn "config version: $stored_version, repository $repo_version (repository is behind)"
+    fi
+elif [[ -e $STATE_FILE ]]; then
+    warn "config version: not recorded (pre-framework install; the next install migrates)"
+else
+    skip "config version: not installed yet"
+fi
 
 if [[ -r $STATE_FILE ]]; then
     while IFS=$'\t' read -r kind path source _; do

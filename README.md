@@ -201,7 +201,8 @@ The main menu follows the order of a first install:
 2. **Profile** — host and GPU profile.
 3. **1. Packages**, **2. Configuration files**, **3. System configuration**,
    **4. Kernel** — the same stages for repeat runs.
-4. **Maintenance** — doctor, DNS check, restore, sync, package drift, hooks.
+4. **Maintenance** — doctor, DNS check, restore, uninstall, sync, package drift,
+   hooks.
 
 The wizard stops at the first failed stage and returns to the menu. `--setup`
 runs it non-interactively; it is not meant for scripts.
@@ -221,8 +222,8 @@ installer keeps the previous non-interactive behaviour.
 | Settings | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
 | System | `--repositories`, `--system`, `--system-components a,b` (includes `ram`), `--iface`, `--autologin-user` |
 | Kernel | `--kernel`, `--kernel-level v1..v4` |
-| Maintenance | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
-| General | `--dry-run`, `--yes`, `--list`, `--help` |
+| Maintenance | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--uninstall [--modules a,b]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
+| General | `--dry-run`, `--verbose`, `--force`, `--yes`, `--list`, `--help` |
 
 Every menu entry maps to one of these flags. `tests/menu.sh` and
 `tests/help-flags.sh` fail when the menu and `--help` drift apart.
@@ -811,10 +812,35 @@ the current state before writing. `/etc` files are restored only with
 pre-restore snapshot is offered.
 
 The installer records managed paths in
-`${XDG_STATE_HOME:-~/.local/state}/dotfiles/managed.tsv`. Nothing is deleted
-automatically. Other state files in the same directory: `theme.conf`,
-`gamemode.conf`, `idle.conf`, `autostart.tsv`, `lid.conf`,
-`monitor-profiles/` and `sync-backup/`.
+`${XDG_STATE_HOME:-~/.local/state}/dotfiles/managed.tsv` with five columns:
+kind, path, source, content digest and the original backup. Other state files
+in the same directory: `version`, `theme.conf`, `gamemode.conf`, `idle.conf`,
+`autostart.tsv`, `lid.conf`, `monitor-profiles/` and `sync-backup/`.
+
+## Upgrades and uninstall
+
+`VERSION` holds the repository config version; the applied version lives in
+`${XDG_STATE_HOME:-~/.local/state}/dotfiles/version`. Before writing any
+configuration, `./install.sh` runs the pending scripts from `migrations/` once,
+in numeric order, after a backup and one confirmation. `--dry-run` lists them
+and runs none. A stored version newer than the repository only warns; it is
+never downgraded.
+
+```bash
+./install.sh --verbose                # print every command before running it
+./install.sh --uninstall              # remove what the repository installed
+./install.sh --uninstall --modules hypr --dry-run
+./install.sh --uninstall --modules hypr --force
+```
+
+Uninstall reads `managed.tsv`, removes only files that still match what was
+installed (symlink target and content digest), and restores the original file
+that was backed up when the path was first taken over. Files edited after
+install are kept unless `--force` is given. The current state is backed up
+first, so `--restore` can undo the uninstall. `/etc` and `/usr/local` rows need
+`sudo ./install.sh --system --uninstall`. Packages are never removed; the
+module package list is printed instead. Repo-provided user units are disabled
+before their files are removed.
 
 ## Syncing live changes back
 

@@ -199,8 +199,8 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 2. **Profile** — профіль host і GPU.
 3. **1. Packages**, **2. Configuration files**, **3. System configuration**,
    **4. Kernel** — ті самі кроки для повторних запусків.
-4. **Обслуговування** — doctor, DNS-перевірка, restore, sync, дрейф пакетів,
-   hooks.
+4. **Обслуговування** — doctor, DNS-перевірка, restore, uninstall, sync, дрейф
+   пакетів, hooks.
 
 Майстер зупиняється на першому невдалому кроці й повертається в меню. `--setup`
 запускає його без меню; для скриптів він не призначений.
@@ -220,8 +220,8 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 | Налаштування | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
 | Система | `--repositories`, `--system`, `--system-components a,b` (включно з `ram`), `--iface`, `--autologin-user` |
 | Ядро | `--kernel`, `--kernel-level v1..v4` |
-| Обслуговування | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
-| Загальні | `--dry-run`, `--yes`, `--list`, `--help` |
+| Обслуговування | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--uninstall [--modules a,b]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
+| Загальні | `--dry-run`, `--verbose`, `--force`, `--yes`, `--list`, `--help` |
 
 Кожен пункт меню відповідає одному з цих прапорців. `tests/menu.sh` і
 `tests/help-flags.sh` падають, якщо меню й `--help` розійдуться.
@@ -814,10 +814,35 @@ cp -a ~/.dotfiles-backup/2026-11-16_120000/.config/hypr/hyprland.lua \
 відновленням.
 
 Інсталятор записує керовані шляхи в
-`${XDG_STATE_HOME:-~/.local/state}/dotfiles/managed.tsv`. Нічого не видаляється
-автоматично. Інші файли стану в тому ж каталозі: `theme.conf`,
-`gamemode.conf`, `idle.conf`, `autostart.tsv`, `lid.conf`,
-`monitor-profiles/` і `sync-backup/`.
+`${XDG_STATE_HOME:-~/.local/state}/dotfiles/managed.tsv` з п’ятьма колонками:
+тип, шлях, джерело, digest вмісту й бекап оригіналу. Інші файли стану в тому ж
+каталозі: `version`, `theme.conf`, `gamemode.conf`, `idle.conf`,
+`autostart.tsv`, `lid.conf`, `monitor-profiles/` і `sync-backup/`.
+
+## Оновлення й видалення
+
+`VERSION` містить версію конфігурації репозиторію; застосована версія лежить у
+`${XDG_STATE_HOME:-~/.local/state}/dotfiles/version`. Перед записом конфігів
+`./install.sh` один раз запускає пропущені скрипти з `migrations/` у
+числовому порядку, після бекапу й одного підтвердження. `--dry-run` лише
+показує їх і нічого не виконує. Якщо збережена версія новіша за репозиторій,
+інсталятор попереджає і не відкочує її.
+
+```bash
+./install.sh --verbose                # друкувати кожну команду перед запуском
+./install.sh --uninstall              # прибрати те, що поставив репозиторій
+./install.sh --uninstall --modules hypr --dry-run
+./install.sh --uninstall --modules hypr --force
+```
+
+Видалення читає `managed.tsv`, прибирає лише файли, які досі збігаються з
+встановленими (ціль симлінка й digest вмісту), і повертає оригінал, збережений
+у бекап при першому захопленні шляху. Файли, змінені після встановлення,
+лишаються, якщо не передати `--force`. Поточний стан спершу бекапиться, тож
+`--restore` може відкотити видалення. Рядки `/etc` і `/usr/local` потребують
+`sudo ./install.sh --system --uninstall`. Пакети не видаляються; натомість
+друкується список пакетів модуля. Користувацькі systemd-юніти з репозиторію
+вимикаються перед видаленням їхніх файлів.
 
 ## Синхронізація живих змін назад
 
