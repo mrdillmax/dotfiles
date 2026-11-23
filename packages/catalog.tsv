@@ -270,3 +270,6 @@ ffmpegthumbnailer	Media	pkg	yes	any	any	Lightweight video thumbnailer that can b
 imagemagick	Media	pkg	yes	any	any	An image viewing/manipulation program
 img2pdf	Media	pkg	yes	any	any	Losslessly convert raster images to PDF
 pi-hole-web	Network	pkg	yes	any	any	Pi-hole web interface
+hyprshutdown	Session	pkg	no	any	any	Graceful Hyprland logout
+hyprpwcenter	Audio	pkg	no	any	any	PipeWire control center
+hyprsysteminfo	System Monitor	pkg	no	any	any	System information window (AUR)

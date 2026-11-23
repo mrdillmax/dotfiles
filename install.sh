@@ -92,6 +92,8 @@ source "$DOTFILES_DIR/lib/dock.sh"
 source "$DOTFILES_DIR/lib/packages.sh"
 # shellcheck source=lib/system.sh
 source "$DOTFILES_DIR/lib/system.sh"
+# shellcheck source=lib/services.sh
+source "$DOTFILES_DIR/lib/services.sh"
 # shellcheck source=lib/cursor.sh
 source "$DOTFILES_DIR/lib/cursor.sh"
 # shellcheck source=lib/kernel.sh
@@ -874,56 +876,6 @@ install_selected_modules() {
             warn "fish/fisher not installed; Tide was not installed"
         fi
     fi
-}
-
-user_unit_exists() {
-    local unit="$1"
-    if systemctl --user list-unit-files --no-legend "$unit" 2>/dev/null | grep -q .; then
-        return 0
-    fi
-    [[ -f "/usr/lib/systemd/user/$unit" || -f "/etc/systemd/user/$unit" \
-        || -f "$REAL_HOME/.config/systemd/user/$unit" ]]
-}
-
-enable_services() {
-    local name service labels=()
-
-    if (( ASSUME_YES )) || [[ ! -t 0 ]]; then
-        info "skipping service selection (non-interactive)"
-        return 0
-    fi
-
-    for name in "${MODULES[@]}"; do
-        load_module_conf "$DOTFILES_DIR/modules/$name/module.conf"
-        for service in "${SERVICES[@]:-}"; do
-            [[ -n $service ]] || continue
-            if ! user_unit_exists "$service"; then
-                warn "service not installed, skipping: $service"
-                continue
-            fi
-            labels+=("$name: $service")
-        done
-    done
-
-    ((${#labels[@]})) || return 0
-
-    local picked=()
-    tui_checklist "User services to enable (not started)" "${labels[@]}"
-    local line
-    for line in "${TUI_SELECTION[@]}"; do
-        picked+=("${line#*: }")
-    done
-
-    ((${#picked[@]})) || { info "no services selected"; return 0; }
-
-    if ! tui_confirm "Enable ${#picked[@]} user service(s)?" no; then
-        warn "services not enabled"
-        return 0
-    fi
-
-    for service in "${picked[@]}"; do
-        run systemctl --user enable "$service"
-    done
 }
 
 setup_stage() {

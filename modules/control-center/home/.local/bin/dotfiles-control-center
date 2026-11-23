@@ -389,11 +389,14 @@ docs_links() {
 docs_page() {
     local choice
     while :; do
-        choice="$(pick_icon "Docs" \
-            $'|Keybinds' \
-            $'|Versions' \
-            $'|README' \
-            $'|Links')" || return 0
+        local -a specs=(
+            $'\uf11c|Keybinds'
+            $'\uf05a|Versions'
+            $'\uf02d|README'
+            $'\uf0c1|Links'
+        )
+        have hyprsysteminfo && specs+=($'\uf108|System info')
+        choice="$(pick_icon "Docs" "${specs[@]}")" || return 0
         case "$choice" in
             "Keybinds")
                 if have binds-cheatsheet.sh; then
@@ -405,6 +408,7 @@ docs_page() {
             "Versions") docs_versions ;;
             "README") open_readme; exit 0 ;;
             "Links") docs_links ;;
+            "System info") (hyprsysteminfo >/dev/null 2>&1 &) ;;
             "") return 0 ;;
         esac
     done
@@ -1057,7 +1061,9 @@ monitors_page() {
 }
 
 sound_page() {
-    if have pavucontrol; then
+    if have hyprpwcenter; then
+        (hyprpwcenter >/dev/null 2>&1 &)
+    elif have pavucontrol; then
         (pavucontrol >/dev/null 2>&1 &)
     elif have wpctl; then
         run_terminal --hold "wpctl status"

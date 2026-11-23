@@ -48,22 +48,29 @@ run_cmd() {
         elif [[ $1 == '--reboot' ]]; then
             systemctl reboot
         elif [[ $1 == '--logout' ]]; then
-                uwsm stop
+                if command -v hyprshutdown >/dev/null 2>&1; then
+                    hyprshutdown
+                else
+                    uwsm stop
+                fi
         fi
     else
         exit 0
     fi
 }
 
-chosen="$(run_rofi)"
-case ${chosen} in
-    "$shutdown")
-        run_cmd --shutdown
-        ;;
-    "$reboot")
-        run_cmd --reboot
-        ;;
-    "$logout")
-        run_cmd --logout
-        ;;
-esac
+# Sourced by tests for the action functions; only the script drives rofi.
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+    chosen="$(run_rofi)"
+    case ${chosen} in
+        "$shutdown")
+            run_cmd --shutdown
+            ;;
+        "$reboot")
+            run_cmd --reboot
+            ;;
+        "$logout")
+            run_cmd --logout
+            ;;
+    esac
+fi

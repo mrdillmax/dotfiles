@@ -133,5 +133,20 @@ else
     fail "rofimoji has no opt-in catalog row"
 fi
 
+hyprtools="$ROOT/modules/hyprtools"
+if [[ -r $hyprtools/module.conf ]] && grep -qx 'OPTIONAL=1' "$hyprtools/module.conf"; then
+    pass "hyprtools is optional"
+else
+    fail "hyprtools module missing or required"
+fi
+for package in hyprshutdown hyprpwcenter hyprsysteminfo; do
+    if awk -F'\t' -v name="$package" '$1 == name && $4 == "no" {found=1} END{exit !found}' \
+        "$ROOT/packages/catalog.tsv"; then
+        pass "$package is an opt-in catalog row"
+    else
+        fail "$package has no opt-in catalog row"
+    fi
+done
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
