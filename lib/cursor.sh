@@ -185,7 +185,7 @@ cursor_install_package() {
     fi
 
     if (( official )); then
-        run sudo pacman -S --needed --noconfirm "$package"
+        run sudo pacman -S --needed "$package" || warn "cursor package did not install; continuing"
     else
         local helper=""
         if command -v yay >/dev/null 2>&1; then
@@ -194,7 +194,7 @@ cursor_install_package() {
             helper="paru"
         fi
         [[ -n $helper ]] || die "no AUR helper found for $package"
-        run "$helper" -S --needed --noconfirm "$package"
+        run "$helper" -S --needed "$package" || warn "cursor package did not install; continuing"
     fi
 }
 

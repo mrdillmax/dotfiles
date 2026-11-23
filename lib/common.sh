@@ -66,9 +66,9 @@ run() {
     "$@"
 }
 
-# yay 13 accepts --pgpfetch but never reads it. With --noconfirm it imports the
-# keys declared in validpgpkeys from gpg's default keyserver, and some kernel
-# build keys are not served there. Point gpg at servers that have them; the
+# yay 13 accepts --pgpfetch but never reads it. During a package build it
+# imports the keys declared in validpgpkeys from gpg's default keyserver, and
+# some kernel build keys are not served there. Point gpg at servers that have them; the
 # import still happens once and later installs reuse the keyring.
 # shellcheck disable=SC2034 # read by kernel.sh and packages.sh
 AUR_GPG_FLAGS=(--gpgflags "--keyserver hkps://keyserver.ubuntu.com --keyserver hkps://pgp.surf.nl")

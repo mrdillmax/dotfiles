@@ -202,7 +202,7 @@ kernel_install_package() {
     local package="$1"
 
     if pacman -Si "$package" >/dev/null 2>&1; then
-        run sudo pacman -S --needed --noconfirm "$package"
+        run sudo pacman -S --needed "$package" || { warn "kernel package did not install"; return 1; }
         return 0
     fi
 
@@ -216,9 +216,9 @@ kernel_install_package() {
     if [[ $helper == yay ]]; then
         # Some PKGBUILDs list a key that the default keyserver does not serve.
         # Use a server that has it so the one-time import succeeds.
-        run "$helper" "${AUR_GPG_FLAGS[@]}" -S --needed --noconfirm "$package"
+        run "$helper" "${AUR_GPG_FLAGS[@]}" -S --needed "$package" || { warn "kernel package did not install"; return 1; }
     else
-        run "$helper" -S --needed --noconfirm "$package"
+        run "$helper" -S --needed "$package" || { warn "kernel package did not install"; return 1; }
     fi
 }
 

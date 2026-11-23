@@ -74,16 +74,14 @@ catalog_current_gpu() {
     printf '%s' "${GPU_PROFILE:-}"
 }
 
+# The host column is informational: every application stays visible on every
+# host (a laptop can use the desktop apps). Only GPU-specific packages are
+# filtered, so an NVIDIA driver is never offered on AMD.
 catalog_applicable() {
-    local row_host="$1" row_gpu="$2"
-    local host gpu
-    host="$(catalog_current_host)"
+    local row_gpu="$2" gpu
     gpu="$(catalog_current_gpu)"
 
-    [[ $row_host == any || -z $host || $row_host == "$host" ]] || return 1
-    if [[ $row_gpu == any || -z $gpu ]]; then
-        return 0
-    fi
+    [[ $row_gpu == any || -z $gpu ]] && return 0
     [[ ",$row_gpu," == *",$gpu,"* ]]
 }
 
@@ -183,7 +181,7 @@ app_label() {
 }
 
 select_categories() {
-    local -a categories=() labels=() default_categories=()
+    local -a categories=() labels=()
     local category
 
     SELECTED_CATEGORIES=()
@@ -216,17 +214,13 @@ select_categories() {
         return 0
     fi
 
-    mapfile -t default_categories < <(catalog_default_categories)
-
     local label
-    TUI_CHECKED_ITEMS=()
     for category in "${categories[@]}"; do
-        label="$(category_label "$category")"
-        labels+=("$label")
-        if printf '%s\n' "${default_categories[@]:-}" | grep -Fxq -- "$category"; then
-            TUI_CHECKED_ITEMS+=("$label")
-        fi
+        labels+=("$(category_label "$category")")
     done
+    # Every category starts selected; individual packages keep their default.
+    # shellcheck disable=SC2034 # read by tui_checklist
+    TUI_CHECKED_ITEMS=("${labels[@]}")
 
     tui_checklist "Package categories" "${labels[@]}"
     local line
@@ -372,7 +366,8 @@ install_packages() {
                 fi
             done
             if ((${#official[@]})); then
-                run sudo pacman -S --needed --noconfirm "${official[@]}"
+                run sudo pacman -S --needed "${official[@]}" \
+                    || warn "pacman did not finish (conflict or declined); continuing"
             fi
             if ((${#aur[@]})); then
                 local helper=""
@@ -383,9 +378,11 @@ install_packages() {
                 fi
                 if [[ -n $helper ]]; then
                     if [[ $helper == yay ]]; then
-                        run "$helper" "${AUR_GPG_FLAGS[@]}" -S --needed --noconfirm "${aur[@]}"
+                        run "$helper" "${AUR_GPG_FLAGS[@]}" -S --needed "${aur[@]}" \
+                            || warn "AUR helper did not finish; continuing"
                     else
-                        run "$helper" -S --needed --noconfirm "${aur[@]}"
+                        run "$helper" -S --needed "${aur[@]}" \
+                            || warn "AUR helper did not finish; continuing"
                     fi
                 else
                     warn "no AUR helper found (yay/paru); install manually:"
@@ -394,10 +391,12 @@ install_packages() {
             fi
             ;;
         apt)
-            run sudo apt-get install -y "${missing[@]}"
+            run sudo apt-get install -y "${missing[@]}" \
+                || warn "apt did not finish; continuing"
             ;;
         dnf)
-            run sudo dnf install -y "${missing[@]}"
+            run sudo dnf install -y "${missing[@]}" \
+                || warn "dnf did not finish; continuing"
             ;;
         *)
             warn "unknown package manager; install manually:"
@@ -415,8 +414,8 @@ install_packages() {
             [[ -n ${PACKAGE_INSTALLED[$pkg]:-} ]] || not_installed+=("$pkg")
         done
         if ((${#not_installed[@]})); then
-            warn "not installed: ${not_installed[*]}"
-            return 1
+            warn "not installed: ${not_installed[*]} (conflict or declined); continuing"
+            return 0
         fi
         ok "installed ${#manager_packages[@]} package(s)"
     fi

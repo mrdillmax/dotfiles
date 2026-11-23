@@ -2,7 +2,8 @@
 # package	category	role	default	host	gpu	description
 # role: main (config in repo), alt (package only), pkg (regular package)
 # default: yes is installed by --all, no is opt-in but still visible
-# host: any, desktop or laptop. gpu: any or a comma-separated profile list
+# host: informational only; every app is offered on every host.
+# gpu: any or a comma-separated profile list (GPU packages are filtered)
 7zip	System	pkg	yes	any	any	File archiver for extremely high compression
 ananicy-cpp	System	pkg	yes	any	any	Ananicy Cpp is a full rewrite of Ananicy in C++, featuring lower CPU and RAM usage.
 archlinux-xdg-menu	System	pkg	yes	any	any	Generate window-manager menus from XDG files
