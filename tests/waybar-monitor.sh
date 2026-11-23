@@ -107,6 +107,18 @@ else
     fail "the Bluetooth module is missing or not gated"
 fi
 
+STYLE="$ROOT/modules/waybar/home/.config/waybar/style.css"
+if ! grep -q 'Font Awesome 7 Free' "$STYLE" &&
+    grep -q '#custom-battery' "$STYLE" &&
+    grep -q '#custom-brightness' "$STYLE" &&
+    grep -q '#custom-network' "$STYLE" &&
+    grep -q '#bluetooth' "$STYLE" &&
+    grep -q '#power-profiles-daemon' "$STYLE"; then
+    pass "status modules share the pill style and the icon font is usable"
+else
+    fail "status modules are unstyled or the woff2 icon font is still named"
+fi
+
 # Old autostart entries must move to the explicit managed config path.
 AUTOSTART="$ROOT/modules/autostart/home/.local/bin/autostart.sh"
 mkdir -p "$work/home/.local/state/dotfiles" "$work/autostart-bin" "$work/run"

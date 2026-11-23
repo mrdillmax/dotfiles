@@ -657,6 +657,15 @@ else
     warn "the live Waybar config is missing; install the waybar module"
 fi
 
+if has fc-match; then
+    if fc-match -f '%{family}' "JetBrainsMono Nerd Font" 2>/dev/null |
+        grep -q 'JetBrainsMono Nerd Font'; then
+        ok "the Nerd Font icon family is available"
+    else
+        warn "JetBrainsMono Nerd Font is missing; Waybar icons render as boxes"
+    fi
+fi
+
 if compgen -G '/sys/class/power_supply/BAT*' >/dev/null; then
     note "battery hardware: $(compgen -G '/sys/class/power_supply/BAT*' | xargs -n1 basename | tr '\n' ' ')"
     if has powerprofilesctl && powerprofilesctl get >/dev/null 2>&1; then

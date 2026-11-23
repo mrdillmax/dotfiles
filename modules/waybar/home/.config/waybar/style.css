@@ -18,8 +18,11 @@
 
 
 * {
+  /* Inter carries the text; the Nerd Font supplies every icon glyph. Do not
+   * name an icon font that is only installed as woff2: Pango cannot load it
+   * and the glyphs turn into tofu boxes. */
   font-family:
-    "Inter", "JetBrainsMono Nerd Font", "Font Awesome 7 Free", Roboto, Helvetica, Arial, sans-serif;
+    "Inter", "JetBrainsMono Nerd Font", Roboto, Helvetica, Arial, sans-serif;
   font-size: 1.01em;
 }
 
@@ -154,7 +157,40 @@ window#waybar > box {
 
 
 
+/* Status pills. Each monitoring module is its own rounded block, with the
+ * same height and radius as the volume, hardware and tray widgets. */
+#custom-battery,
+#custom-brightness,
+#custom-network,
+#custom-units,
+#custom-update,
+#power-profiles-daemon,
+#bluetooth {
+  background-color: @background;
+  color: @foreground;
+  padding: 6px 10px;
+  border-radius: 10px;
+  margin-left: 5px;
+  font-weight: 700;
+}
+#custom-battery:hover,
+#custom-brightness:hover,
+#custom-network:hover,
+#custom-units:hover,
+#custom-update:hover,
+#power-profiles-daemon:hover,
+#bluetooth:hover {
+  background-color: @overlay;
+}
+/* The volume group already has a right margin; keep a single 5px gap. */
+#custom-brightness {
+  margin-left: 0;
+}
+
+
+
 #hardware {
+  margin-left: 5px;
   margin-right: 5px;
 }
 #cpu {
