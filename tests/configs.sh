@@ -86,7 +86,8 @@ for input in "$ROOT"/hosts/*/input.lua; do
     else
         fail "hosts/$name/input.lua does not compile"
     fi
-    if grep -q 'workspace_swipe_fingers = 3' "$input" &&
+    if grep -q 'hl.gesture({' "$input" &&
+        grep -q 'fingers = 3' "$input" &&
         grep -q 'workspace_swipe_distance = 300' "$input" &&
         grep -q 'workspace_swipe_cancel_ratio = 0.5' "$input"; then
         pass "hosts/$name/input.lua sets the three-finger workspace swipe"

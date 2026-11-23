@@ -44,6 +44,16 @@ uninstall_remove_packages() {
         ) )
     done
 
+    if ((${#remove[@]})); then
+        local -A unique=()
+        local -a deduped=()
+        for pkg in "${remove[@]}"; do
+            [[ -n ${unique[$pkg]:-} ]] && continue
+            unique["$pkg"]=1
+            deduped+=("$pkg")
+        done
+        remove=("${deduped[@]}")
+    fi
     ((${#remove[@]})) || { info "no module packages to remove"; return 0; }
     info "packages to remove: ${remove[*]}"
     if (( ${DRY_RUN:-0} )); then
@@ -183,7 +193,11 @@ uninstall_run() {
     done
 
     if ((${#plan_paths[@]} == 0)); then
-        info "nothing to uninstall"
+        if (( ${REMOVE_PACKAGES:-0} )); then
+            uninstall_remove_packages "$modules_csv" || true
+        else
+            info "nothing to uninstall"
+        fi
         return 0
     fi
 

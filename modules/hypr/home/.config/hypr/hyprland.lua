@@ -250,7 +250,7 @@ for _, m in ipairs(monitors) do
     max_ws = math.max(max_ws, tonumber(m.ws_count) or 10)
 end
 
--- switch-workspace.sh is installed by the optional workspaces-split module. Without
+-- switch-workspace.sh comes from workspaces-split (default on 2+ monitors). Without
 -- it, fall back to the native workspace dispatchers so a single-monitor setup
 -- still gets working SUPER+1..0 bindings.
 local switch_ws = HOME .. "/.local/bin/switch-workspace.sh"

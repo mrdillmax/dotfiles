@@ -38,7 +38,6 @@ fi
 
 stub="$(mktemp -d)"
 trap 'rm -rf "$stub"' EXIT
-BASE_PATH="$PATH"
 PATH="$stub:$PATH"
 
 printf '#!/bin/sh\necho ethernet\necho loopback\n' >"$stub/nmcli"
@@ -122,7 +121,7 @@ else
 fi
 
 (
-    PATH="$BASE_PATH"
+    PATH="/usr/bin:/bin"
     # shellcheck disable=SC2329
     pick_icon() {
         printf '%s\n' "$@" >"$stub/style-rows"
@@ -160,6 +159,18 @@ if [[ $(config_check_cmd Sound) == pavucontrol &&
     pass "Configuration knows how to install what each entry needs"
 else
     fail "Configuration dependency map is incomplete"
+fi
+
+mkdir -p "$stub/sysfs/wlan0/wireless" "$stub/sysfs-bt/hci0"
+if WIFI_SYSFS="$stub/sysfs" wifi_hardware_present; then
+    pass "Wi-Fi hardware is detected without nmcli"
+else
+    fail "Wi-Fi hardware was missed when nmcli is absent"
+fi
+if BLUETOOTH_SYSFS="$stub/sysfs-bt" bluetooth_hardware_present; then
+    pass "Bluetooth hardware is detected without bluetoothctl"
+else
+    fail "Bluetooth hardware was missed when bluetoothctl is absent"
 fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"

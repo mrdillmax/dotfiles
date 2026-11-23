@@ -64,7 +64,7 @@ fi
     }
     docs_page
 )
-if grep -q 'fastfetch' "$work/terminal.cmd" 2>/dev/null; then
+if grep -q -- '--hold fastfetch' "$work/terminal.cmd" 2>/dev/null; then
     pass "System info opens fastfetch in a terminal"
 else
     fail "System info did not run fastfetch: $(cat "$work/terminal.cmd" 2>/dev/null)"

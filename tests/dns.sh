@@ -271,6 +271,16 @@ if grep -Eq '/etc/unbound/unbound\.conf[[:space:]]|/etc/pihole/dnsmasq\.conf' <<
 else
     pass "map leaves the stock and generated files alone"
 fi
+services_map="$(DOTFILES_DIR="$ROOT" DRY_RUN=1 bash -c '
+    SYSTEM_COMPONENTS=(services)
+    source "$DOTFILES_DIR/lib/system.sh"
+    system_file_map
+' 2>&1)"
+if grep -q '/etc/resolv.conf' <<<"$services_map"; then
+    fail "a services-only run still replaces /etc/resolv.conf"
+else
+    pass "the resolver is installed only with the dns component"
+fi
 if grep -q 'unmapped system file' <<<"$map"; then
     fail "map has an unmapped system file"
 else

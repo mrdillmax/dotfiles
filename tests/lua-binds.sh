@@ -23,6 +23,14 @@ hl = {
     bind = function(key) binds[#binds + 1] = key end,
     exec_cmd = function(cmd) cmds[#cmds + 1] = cmd end,
     dsp = { exec_cmd = function(cmd) return cmd end },
+    config = function(t)
+        if t.gestures then
+            for k, v in pairs(t.gestures) do print("CONFIG\t" .. k .. "\t" .. tostring(v)) end
+        end
+    end,
+    gesture = function(t)
+        print("GESTURE\t" .. tostring(t.fingers) .. "\t" .. tostring(t.direction) .. "\t" .. tostring(t.action))
+    end,
 }
 local ok, err = pcall(dofile, file)
 if not ok then
@@ -53,6 +61,8 @@ check "recorder.lua" "$ROOT/modules/recorder/home/.config/hypr/recorder.lua" $'B
 check "osd.lua" "$ROOT/modules/osd/home/.config/hypr/osd.lua" $'BIND\tXF86AudioRaiseVolume'
 check "nightlight.lua" "$ROOT/modules/nightlight/home/.config/hypr/nightlight.lua" $'CMD\thyprsunset'
 check "nightlight.lua restore" "$ROOT/modules/nightlight/home/.config/hypr/nightlight.lua" $'CMD\tnightlight.sh restore'
+check "input.lua" "$ROOT/hosts/desktop/input.lua" $'GESTURE\t3\thorizontal\tworkspace'
+check "input.lua distance" "$ROOT/hosts/desktop/input.lua" $'CONFIG\tworkspace_swipe_distance\t300'
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

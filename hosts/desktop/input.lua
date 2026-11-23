@@ -11,10 +11,14 @@ hl.config({
 -- Three-finger horizontal swipe switches workspaces.
 hl.config({
     gestures = {
-        workspace_swipe = true,
-        workspace_swipe_fingers = 3,
         workspace_swipe_distance = 300,
         workspace_swipe_cancel_ratio = 0.5,
         workspace_swipe_min_speed_to_force = 5,
     },
+})
+
+hl.gesture({
+    fingers = 3,
+    direction = "horizontal",
+    action = "workspace",
 })

@@ -62,6 +62,7 @@ enable_services() {
     fi
 
     for service in "${picked[@]}"; do
-        run systemctl --user enable --now "$service"
+        run systemctl --user enable --now "$service" \
+            || warn "could not enable or start $service"
     done
 }

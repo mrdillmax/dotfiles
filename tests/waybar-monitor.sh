@@ -17,6 +17,7 @@ printf '#!/bin/sh\ncase "$*" in\n  *--user*--failed*) echo "user1.service loaded
 # shellcheck disable=SC2016 # the stub expands its own $1
 printf '#!/bin/sh\ncase "$1" in\n  --json) echo "{\\"status\\":\\"behind\\",\\"behind\\":2,\\"ahead\\":0,\\"local\\":\\"x\\",\\"remote\\":\\"y\\",\\"cached\\":false}" ;;\n  --refresh) echo "up to date" ;;\nesac\n' >"$work/bin/update-check"
 printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s/notify"\n' "$work" >"$work/bin/notify-send"
+printf '#!/bin/sh\necho "pkill $*" >>"%s/pkill.log"\n' "$work" >"$work/bin/pkill"
 printf '#!/bin/sh\necho "wifi:connected:HomeNet:wl0"\n' >"$work/bin/nmcli"
 printf '#!/bin/sh\necho "2: wl0    inet 10.0.0.5/24 brd 10.0.0.255 scope global wl0"\n' >"$work/bin/ip"
 chmod +x "$work/bin"/*

@@ -80,5 +80,15 @@ else
     fail "bulk install started services: $(cat "$work/systemctl.log")"
 fi
 
+printf '#!/bin/sh\ncase "$*" in *"enable --now"*) exit 1 ;; esac\nexit 0\n' >"$work/bin/systemctl"
+chmod +x "$work/bin/systemctl"
+# shellcheck disable=SC2034 # read by enable_services
+MODULES_ARG="demo"
+if ( set -e; enable_services ) >/dev/null 2>&1; then
+    pass "a service that fails to start does not abort the install"
+else
+    fail "a failed service aborted enable_services"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

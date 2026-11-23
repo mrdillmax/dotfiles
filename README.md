@@ -222,7 +222,7 @@ installer keeps the previous non-interactive behaviour.
 | Settings | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
 | System | `--repositories`, `--system`, `--system-components a,b` (includes `ram`), `--iface`, `--autologin-user` |
 | Kernel | `--kernel`, `--kernel-level v1..v4` |
-| Maintenance | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--uninstall [--modules a,b]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
+| Maintenance | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--uninstall [--modules a,b] [--remove-packages]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
 | General | `--dry-run`, `--verbose`, `--force`, `--yes`, `--list`, `--help` |
 
 Every menu entry maps to one of these flags. `tests/menu.sh` and
@@ -258,8 +258,8 @@ is generated from those files and lists every module, package and helper.
 
 ### Optional modules
 
-These are installed only with `--modules <name>` or from the interactive
-checklist; `--all` never selects them.
+These are preselected in the interactive checklist and can be picked with
+`--modules <name>`; `--all` does not select them.
 
 | Module | What it adds |
 |--------|--------------|
@@ -533,7 +533,8 @@ appear without a polling timer.
 On laptops the `battery` module warns once at 20% and 10% (thresholds in
 `~/.config/dotfiles/battery.conf`) and switches `power-profiles-daemon` to
 `power-saver`; plugging in restores `balanced`. A desktop without a battery
-skips the module.
+skips the module. If `powerprofilesctl` reports that the daemon is inactive,
+enable it once with `sudo systemctl enable --now power-profiles-daemon`.
 
 ## Mouse and touchpad tuner
 
@@ -876,8 +877,9 @@ installed (symlink target and content digest), and restores the original file
 that was backed up when the path was first taken over. Files edited after
 install are kept unless `--force` is given. The current state is backed up
 first, so `--restore` can undo the uninstall. `/etc` and `/usr/local` rows need
-`sudo ./install.sh --system --uninstall`. Packages are never removed; the
-module package list is printed instead. Repo-provided user units are disabled
+`sudo ./install.sh --system --uninstall`. Packages are kept unless
+`--remove-packages` is passed together with `--modules`; without it the module
+package list is printed instead. Repo-provided user units are disabled
 before their files are removed.
 
 ## Syncing live changes back

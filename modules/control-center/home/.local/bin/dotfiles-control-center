@@ -410,7 +410,7 @@ docs_page() {
             "Links") docs_links ;;
             "System info")
                 if ensure_config_dep "System info"; then
-                    run_terminal "fastfetch"
+                    run_terminal --hold "fastfetch"
                 fi
                 ;;
             "") return 0 ;;
@@ -954,11 +954,15 @@ style_page() {
 # nmcli and bluetoothctl exist whenever NetworkManager/bluez are installed, even
 # on a machine without the radio. Ask the hardware, not the package.
 wifi_hardware_present() {
+    local root="${WIFI_SYSFS:-/sys/class/net}"
+    compgen -G "$root/*/wireless" >/dev/null 2>&1 && return 0
     have nmcli || return 1
     nmcli -t -f TYPE device 2>/dev/null | grep -qx 'wifi'
 }
 
 bluetooth_hardware_present() {
+    local root="${BLUETOOTH_SYSFS:-/sys/class/bluetooth}"
+    compgen -G "$root/*" >/dev/null 2>&1 && return 0
     have bluetoothctl || return 1
     [[ -n $(bluetoothctl list 2>/dev/null) ]]
 }

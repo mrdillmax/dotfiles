@@ -48,6 +48,9 @@ else
     fail "the maintenance menu has no module removal entry"
 fi
 
+mkdir -p "$work/modules/hyprtools"
+printf 'DESCRIPTION="tools"\nPACKAGES=(tool-pkg)\nSERVICES=()\nREQUIRES=()\n' \
+    >"$work/modules/hyprtools/module.conf"
 mkdir -p "$work/state/dotfiles"
 printf 'link\t/home/x/.config/a\t%s/modules/demo/home/.config/a\t-\t-\n' "$work" \
     >"$work/state/dotfiles/managed.tsv"
@@ -55,7 +58,7 @@ printf 'link\t/home/x/.config/a\t%s/modules/demo/home/.config/a\t-\t-\n' "$work"
     export XDG_STATE_HOME="$work/state"
     capture="$work/remove-args"
     # shellcheck disable=SC2329,SC2034 # read by menu_action_remove_modules
-    tui_checklist() { TUI_SELECTION=("demo"); }
+    tui_checklist() { printf '%s\n' "$@" >"$work/choices"; TUI_SELECTION=("demo"); }
     # shellcheck disable=SC2329
     tui_confirm() { return 0; }
     # shellcheck disable=SC2329
@@ -66,6 +69,11 @@ if [[ $(cat "$work/remove-args" 2>/dev/null) == "--uninstall --modules demo --re
     pass "module removal passes the selection and the package flag"
 else
     fail "module removal command: $(cat "$work/remove-args" 2>/dev/null)"
+fi
+if grep -q 'hyprtools' "$work/choices" 2>/dev/null; then
+    pass "fileless modules are offered for removal"
+else
+    fail "fileless module missing from the removal list"
 fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"

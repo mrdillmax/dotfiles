@@ -372,6 +372,15 @@ menu_action_remove_modules() {
             modules+=("$mod")
         done <"$state"
     fi
+    # Fileless modules (hyprtools) never appear in managed.tsv; list every
+    # repository module so packages can still be removed.
+    for mod_dir in "$DOTFILES_DIR"/modules/*/; do
+        mod="$(basename "$mod_dir")"
+        [[ -r $mod_dir/module.conf ]] || continue
+        [[ " ${modules[*]} " == *" $mod "* ]] && continue
+        modules+=("$mod")
+    done
+    mapfile -t modules < <(printf '%s\n' "${modules[@]}" | sort)
 
     if ((${#modules[@]} == 0)); then
         warn "no installed modules were recorded"

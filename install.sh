@@ -999,7 +999,6 @@ else
     run_migrations
     maybe_create_snapshot
     install_selected_modules
-    refresh_desktop_database
 fi
 
 if (( DO_PACKAGES && !MODULE_PACKAGES_ONLY )); then
@@ -1011,6 +1010,10 @@ if (( DO_PACKAGES && !MODULE_PACKAGES_ONLY )); then
     add_module_packages
 
     install_packages
+fi
+
+if (( !ONLY_PACKAGES )); then
+    refresh_desktop_database
 fi
 
 if (( !DRY_RUN )); then

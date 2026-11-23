@@ -220,7 +220,7 @@ bash і не потребує `lib/`. Якщо `install.sh` не знаходи�
 | Налаштування | `--monitors`, `--dock-layout L`, `--mouse`, `--cursor`, `--cursor-archive`, `--cursor-theme`, `--cursor-size`, `--wallpaper`, `--theme`, `--theme-menu`, `--binds [plain\|rofi\|json]`, `--monitor-profiles ACTION`, `--autostart ACTION`, `--gamemode ACTION`, `--idle ACTION`, `--lid ACTION` |
 | Система | `--repositories`, `--system`, `--system-components a,b` (включно з `ram`), `--iface`, `--autologin-user` |
 | Ядро | `--kernel`, `--kernel-level v1..v4` |
-| Обслуговування | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--uninstall [--modules a,b]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
+| Обслуговування | `--doctor`, `--dns-check`, `--json`, `--restore [date]`, `--uninstall [--modules a,b] [--remove-packages]`, `--sync COMMAND`, `--pkg-sync ACTION`, `--hooks` |
 | Загальні | `--dry-run`, `--verbose`, `--force`, `--yes`, `--list`, `--help` |
 
 Кожен пункт меню відповідає одному з цих прапорців. `tests/menu.sh` і
@@ -256,8 +256,8 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 
 ### Опційні модулі
 
-Вони встановлюються лише через `--modules <назва>` або з інтерактивного
-чекліста; `--all` їх ніколи не вибирає.
+Вони попередньо вибрані в інтерактивному чеклісті; `--all` їх не вибирає.
+Можна вказати явно через `--modules <назва>`.
 
 | Модуль | Що додає |
 |--------|----------|
@@ -536,7 +536,9 @@ Waybar показує збійні systemd-юніти й статус оновл
 На ноутбуках модуль `battery` один раз попереджає на 20% і 10% (пороги в
 `~/.config/dotfiles/battery.conf`) і перемикає `power-profiles-daemon` у
 `power-saver`; після підключення живлення повертається `balanced`. На десктопі
-без батареї модуль не встановлюється.
+без батареї модуль не встановлюється. Якщо `powerprofilesctl` каже, що демон
+неактивний, увімкни його один раз:
+`sudo systemctl enable --now power-profiles-daemon`.
 
 ## Тюнер мишки й тачпада
 
@@ -877,8 +879,9 @@ cp -a ~/.dotfiles-backup/2026-11-16_120000/.config/hypr/hyprland.lua \
 у бекап при першому захопленні шляху. Файли, змінені після встановлення,
 лишаються, якщо не передати `--force`. Поточний стан спершу бекапиться, тож
 `--restore` може відкотити видалення. Рядки `/etc` і `/usr/local` потребують
-`sudo ./install.sh --system --uninstall`. Пакети не видаляються; натомість
-друкується список пакетів модуля. Користувацькі systemd-юніти з репозиторію
+`sudo ./install.sh --system --uninstall`. Пакети не видаляються, якщо не
+передати `--remove-packages` разом із `--modules`; без нього друкується список
+пакетів модуля. Користувацькі systemd-юніти з репозиторію
 вимикаються перед видаленням їхніх файлів.
 
 ## Синхронізація живих змін назад

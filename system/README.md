@@ -34,7 +34,7 @@ or the invoking login. It always requires a separate confirmation.
 | `resolv.conf` | `/etc/resolv.conf` | only with Pi-hole + Unbound |
 | `pihole/dotfiles-dnsmasq.conf` | `/etc/dnsmasq.d/dotfiles.conf` | extra dnsmasq settings; FTL reads it when `misc.etc_dnsmasq_d` is true |
 | `pihole/adlists.txt` | gravity database | URLs inserted by `install.sh`; `pihole -g` runs once when something was added |
-| `unbound/pi-hole.conf` | `/etc/unbound/unbound.conf.d/pi-hole.conf` | validated with `unbound-checkconf`; the stock config is untouched |
+| `unbound/pi-hole.conf` | `/etc/unbound/unbound.conf.d/pi-hole.conf` | validated with `unbound-checkconf`; the installer adds a validated conf.d include to the stock config |
 | `wait-iface/wait-iface.sh` | `/usr/local/bin/wait-iface.sh` | generic NIC detection |
 | `systemd/...` | `/etc/systemd/system/...` | |
 | `pacman/hooks/dotfiles-pkg-sync.hook` | `/etc/pacman.d/hooks/dotfiles-pkg-sync.hook` | marks package changes for a later review |

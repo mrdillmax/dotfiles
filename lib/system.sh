@@ -31,7 +31,7 @@ system_component_wanted() {
 
 system_rel_component() {
     case "$1" in
-        unbound/*|pihole/*|networkmanager/*|wait-iface/*) printf 'dns' ;;
+        unbound/*|pihole/*|networkmanager/*|wait-iface/*|resolv.conf) printf 'dns' ;;
         zram/*)                                           printf 'zram' ;;
         cpupower/*)                                       printf 'cpupower' ;;
         systemd/*|services/*|pkg-sync/*)                  printf 'services' ;;

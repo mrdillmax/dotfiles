@@ -23,10 +23,11 @@ PATH="$work/bin:$PATH"
 DOTFILES_DIR="$work/repo"
 REAL_HOME="$work/home"
 STATE_DIR="$work/state"
+STATE_FILE="$STATE_DIR/managed.tsv"
 BACKUP_DIR="$work/backup"
 mkdir -p "$REAL_HOME" "$STATE_DIR" "$BACKUP_DIR"
 SUDO_BIN="$work/bin/sudo"
-export PATH DOTFILES_DIR REAL_HOME STATE_DIR BACKUP_DIR SUDO_BIN
+export PATH DOTFILES_DIR REAL_HOME STATE_DIR STATE_FILE BACKUP_DIR SUDO_BIN
 
 # shellcheck source=/dev/null
 source "$ROOT/lib/common.sh"
@@ -58,6 +59,22 @@ if uninstall_remove_packages "" >/dev/null 2>&1; then
     fail "package removal without --modules was allowed"
 else
     pass "package removal requires an explicit module"
+fi
+
+mkdir -p "$work/repo/modules/hyprtools"
+printf 'DESCRIPTION="tools"\nPACKAGES=(solo-pkg)\nSERVICES=()\nREQUIRES=()\n' \
+    >"$work/repo/modules/hyprtools/module.conf"
+: >"$work/state/managed.tsv"
+printf 'solo-pkg\n' >>"$work/installed"
+: >"$work/pacman.log"
+if ( REMOVE_PACKAGES=1 ASSUME_YES=1 DRY_RUN=0 uninstall_run "hyprtools" ) >"$work/fileless.out" 2>&1; then
+    if grep -q -- '-Rns -- solo-pkg' "$work/pacman.log"; then
+        pass "a module without files can still remove its packages"
+    else
+        fail "fileless module did not remove packages: $(cat "$work/pacman.log")"
+    fi
+else
+    fail "fileless package removal failed: $(cat "$work/fileless.out")"
 fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"

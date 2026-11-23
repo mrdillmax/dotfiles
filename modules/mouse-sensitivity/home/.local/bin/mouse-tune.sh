@@ -461,8 +461,13 @@ toggle_bool() {
 }
 
 apply_gestures() {
-    hyprctl eval "hl.config({ gestures = { workspace_swipe = $GSWIPE, workspace_swipe_fingers = $GFINGERS, workspace_swipe_distance = $GDISTANCE, workspace_swipe_cancel_ratio = $GCANCEL, workspace_swipe_min_speed_to_force = $GMINSPEED } })" >/dev/null 2>&1 \
-        || warn "failed to apply gesture settings"
+    local lua
+    lua="hl.config({ gestures = { workspace_swipe_distance = $GDISTANCE, workspace_swipe_cancel_ratio = $GCANCEL, workspace_swipe_min_speed_to_force = $GMINSPEED } })"
+    lua+="; if _dotfiles_ws_gesture then _dotfiles_ws_gesture:set_enabled(false) end"
+    if [[ $GSWIPE == true ]]; then
+        lua+="; _dotfiles_ws_gesture = hl.gesture({ fingers = $GFINGERS, direction = \"horizontal\", action = \"workspace\" })"
+    fi
+    hyprctl eval "$lua" >/dev/null 2>&1 || warn "failed to apply gesture settings"
 }
 
 touchpad_menu() {
@@ -489,7 +494,7 @@ touchpad_menu() {
                 ok "workspace_swipe = $GSWIPE"
                 ;;
             swipe_fingers*)
-                case "$GFINGERS" in 2) GFINGERS=3 ;; 3) GFINGERS=4 ;; *) GFINGERS=2 ;; esac
+                case "$GFINGERS" in 3) GFINGERS=4 ;; *) GFINGERS=3 ;; esac
                 apply_gestures
                 ok "swipe_fingers = $GFINGERS"
                 ;;
