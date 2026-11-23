@@ -206,14 +206,14 @@ render_config() {
         printf 'general {\n'
         printf '    lock_cmd = pidof hyprlock || hyprlock\n'
         printf '    before_sleep_cmd = pidof hyprlock || hyprlock\n'
-        printf '    after_sleep_cmd = hyprctl dispatch dpms on\n'
+        printf '    after_sleep_cmd = hyprctl dispatch '\''hl.dsp.dpms("on")'\''\n'
         printf '}\n\n'
 
         if ((dim > 0)); then
             printf 'listener {\n'
             printf '    timeout = %s\n' "$dim"
-            printf '    on-timeout = hyprctl dispatch dpms off\n'
-            printf '    on-resume = hyprctl dispatch dpms on\n'
+            printf '    on-timeout = hyprctl dispatch '\''hl.dsp.dpms("off")'\''\n'
+            printf '    on-resume = hyprctl dispatch '\''hl.dsp.dpms("on")'\''\n'
             printf '}\n\n'
         fi
         if ((lock > 0)); then
@@ -225,7 +225,7 @@ render_config() {
         if ((off > 0)); then
             printf 'listener {\n'
             printf '    timeout = %s\n' "$off"
-            printf '    on-timeout = hyprctl dispatch dpms off\n'
+            printf '    on-timeout = hyprctl dispatch '\''hl.dsp.dpms("off")'\''\n'
             printf '}\n\n'
         fi
         if ((suspend > 0)); then
@@ -248,9 +248,21 @@ backup_config() {
     info "previous config backed up: $BACKUP_DIR/hypridle.conf.$stamp"
 }
 
+service_unit_exists() {
+    command -v systemctl >/dev/null 2>&1 || return 1
+    systemctl --user list-unit-files --no-legend hypridle.service 2>/dev/null \
+        | grep -q .
+}
+
 reload_hypridle() {
     if ((DRY_RUN)); then
-        info "[dry-run] pkill -USR1 -x hypridle"
+        info "[dry-run] restart hypridle"
+        return 0
+    fi
+    if service_unit_exists &&
+        systemctl --user is-active --quiet hypridle.service 2>/dev/null; then
+        systemctl --user restart hypridle.service >/dev/null 2>&1 \
+            || warn "could not restart hypridle.service"
         return 0
     fi
     if command -v pkill >/dev/null 2>&1; then
@@ -277,6 +289,9 @@ apply_config() {
     render_config "$profile" "$tmp"
     backup_config "$CONFIG"
     mkdir -p -- "$(dirname "$CONFIG")"
+    # Older installs linked the file into the repository; never write through
+    # that link, it would edit the checkout instead of the live config.
+    [[ -L $CONFIG ]] && rm -f -- "$CONFIG"
     install -m 0644 -- "$tmp" "$CONFIG"
     rm -f -- "$tmp"
 
@@ -363,6 +378,28 @@ set_enabled() {
     load_state
     ENABLED="$value"
     write_state
+
+    if service_unit_exists; then
+        if ((DRY_RUN)); then
+            if [[ $value == 1 ]]; then
+                info "[dry-run] systemctl --user enable --now hypridle.service"
+            else
+                info "[dry-run] systemctl --user disable --now hypridle.service"
+            fi
+        elif [[ $value == 1 ]]; then
+            if systemctl --user enable --now hypridle.service; then
+                ok "hypridle service enabled and started"
+            else
+                warn "could not enable or start hypridle.service"
+            fi
+        elif systemctl --user disable --now hypridle.service; then
+            ok "hypridle service disabled and stopped"
+        else
+            warn "could not disable or stop hypridle.service"
+        fi
+        return 0
+    fi
+
     if [[ $value == 1 ]]; then
         if is_running; then
             ok "hypridle is already running"
@@ -392,6 +429,21 @@ run_autostart() {
         info "idle is disabled; not starting hypridle"
         return 0
     fi
+
+    if service_unit_exists; then
+        # systemd owns the process. Enable on login when the unit is still
+        # disabled (upgrades from the autostart-only setup), otherwise just
+        # make sure it came up; never start a second copy next to the unit.
+        if systemctl --user is-enabled --quiet hypridle.service 2>/dev/null; then
+            systemctl --user start hypridle.service >/dev/null 2>&1 \
+                || warn "could not start hypridle.service"
+        else
+            systemctl --user enable --now hypridle.service >/dev/null 2>&1 \
+                || warn "could not enable or start hypridle.service"
+        fi
+        return 0
+    fi
+
     command -v hypridle >/dev/null 2>&1 || die "hypridle is not installed"
     exec hypridle
 }

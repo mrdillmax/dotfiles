@@ -447,8 +447,12 @@ uses the AC profile. The module is selected by default and idle starts enabled:
 ./install.sh --idle toggle                 # enable or disable idle
 ```
 
-`SUPER + SHIFT + I` toggles idle from the session. A disabled idle is remembered
-in `idle.conf`, so autostart does not start `hypridle` at the next login.
+`SUPER + SHIFT + I` toggles idle from the session. The installer enables the
+`hypridle.service` user unit, so systemd owns the daemon; the autostart entry
+only starts it when the session came up first and never forks a second copy. A
+disabled idle is remembered in `idle.conf`, so autostart does not start
+`hypridle` at the next login. Screen power-off uses the Hyprland 0.57 Lua
+dispatcher (`hl.dsp.dpms("off")`), not the removed string form.
 
 | Profile | Dim | Lock | Screen off | Suspend |
 |---------|-----|------|------------|---------|

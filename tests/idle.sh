@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# hypridle runs as a user service, and screen-off uses the Hyprland 0.57 Lua
+# dispatcher instead of the removed `dpms off` string form.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT="$ROOT/modules/idle/home/.local/bin/idle-tune.sh"
+STATIC="$ROOT/modules/idle/home/.config/hypr/hypridle.conf.in"
+PASS=0
+FAIL=0
+pass() { PASS=$((PASS + 1)); printf 'PASS %s\n' "$*"; }
+fail() { FAIL=$((FAIL + 1)); printf 'FAIL %s\n' "$*"; }
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+mkdir -p "$work/bin" "$work/home" "$work/config" "$work/state" "$work/run"
+printf '#!/bin/sh\nprintf "started\\n" >>"%s/direct-hypridle"\n' "$work" >"$work/bin/hypridle"
+chmod +x "$work/bin/hypridle"
+
+cat >"$work/bin/systemctl" <<'SYSTEMCTL'
+#!/bin/sh
+printf '%s\n' "$*" >>"$SYSTEMCTL_LOG"
+case "$*" in
+    *list-unit-files*)
+        [[ ${UNIT_EXISTS:-1} == 1 ]] || exit 1
+        printf 'hypridle.service enabled\n'
+        ;;
+    *is-enabled*) [[ ${SERVICE_ENABLED:-1} == 1 ]] ;;
+    *is-active*)  [[ ${SERVICE_ACTIVE:-1} == 1 ]] ;;
+    *) exit 0 ;;
+esac
+SYSTEMCTL
+chmod +x "$work/bin/systemctl"
+
+export PATH="$work/bin:$PATH"
+export HOME="$work/home"
+export XDG_CONFIG_HOME="$work/config"
+export XDG_STATE_HOME="$work/state"
+export XDG_RUNTIME_DIR="$work/run"
+export IDLE_POWER=battery
+export SYSTEMCTL_LOG="$work/systemctl.log"
+export UNIT_EXISTS=1
+export SERVICE_ENABLED=1
+export SERVICE_ACTIVE=1
+
+run_idle() { "$SCRIPT" "$@" >/dev/null 2>&1; }
+
+# --- rendered configuration -------------------------------------------------
+
+if grep -q 'hl.dsp.dpms("off")' "$STATIC" &&
+    grep -q 'hl.dsp.dpms("on")' "$STATIC" &&
+    ! grep -Eq 'hyprctl dispatch dpms (off|on)' "$STATIC"; then
+    pass "the shipped hypridle template uses the Lua dispatcher"
+else
+    fail "the shipped hypridle template still uses the removed dispatch form"
+fi
+
+run_idle apply --profile battery
+config="$XDG_CONFIG_HOME/hypr/hypridle.conf"
+if grep -q 'hl.dsp.dpms("off")' "$config" &&
+    grep -q 'hl.dsp.dpms("on")' "$config" &&
+    ! grep -Eq 'hyprctl dispatch dpms (off|on)' "$config"; then
+    pass "idle-tune renders the Lua dispatcher"
+else
+    fail "rendered config has the wrong DPMS command"
+fi
+
+# A checkout from before the .in rename linked this path into the repository.
+# Rendering must replace the link, not edit the tracked file through it.
+printf 'tracked\n' >"$work/repo-hypridle.conf"
+rm -f "$config"
+ln -s "$work/repo-hypridle.conf" "$config"
+run_idle apply --profile battery
+if [[ ! -L $config && $(<"$work/repo-hypridle.conf") == tracked ]]; then
+    pass "idle-tune replaces a legacy symlink instead of writing through it"
+else
+    fail "idle-tune wrote through the repository symlink"
+fi
+
+# --- service control -------------------------------------------------------
+
+if grep -qx 'SERVICES=(hypridle.service)' "$ROOT/modules/idle/module.conf"; then
+    pass "the idle module declares hypridle.service"
+else
+    fail "the idle module does not enable hypridle.service"
+fi
+
+: >"$SYSTEMCTL_LOG"
+SERVICE_ENABLED=0 run_idle enable
+if grep -q -- '--user enable --now hypridle.service' "$SYSTEMCTL_LOG" &&
+    grep -qx 'ENABLED=1' "$XDG_STATE_HOME/dotfiles/idle.conf"; then
+    pass "enable starts the user service"
+else
+    fail "enable did not start the service: $(cat "$SYSTEMCTL_LOG")"
+fi
+
+: >"$SYSTEMCTL_LOG"
+SERVICE_ENABLED=1 run_idle disable
+if grep -q -- '--user disable --now hypridle.service' "$SYSTEMCTL_LOG" &&
+    grep -qx 'ENABLED=0' "$XDG_STATE_HOME/dotfiles/idle.conf"; then
+    pass "disable stops the user service"
+else
+    fail "disable did not stop the service: $(cat "$SYSTEMCTL_LOG")"
+fi
+
+# Re-enable for the autostart checks below.
+SERVICE_ENABLED=0 run_idle enable
+
+: >"$SYSTEMCTL_LOG"
+rm -f "$work/direct-hypridle"
+SERVICE_ENABLED=1 SERVICE_ACTIVE=0 run_idle run
+if grep -q -- '--user start hypridle.service' "$SYSTEMCTL_LOG" &&
+    [[ ! -e $work/direct-hypridle ]]; then
+    pass "autostart starts the unit and not a second daemon"
+else
+    fail "autostart started a duplicate hypridle: $(cat "$SYSTEMCTL_LOG")"
+fi
+
+# A machine upgrading from the autostart-only setup has the unit disabled.
+: >"$SYSTEMCTL_LOG"
+SERVICE_ENABLED=0 run_idle run
+if grep -q -- '--user enable --now hypridle.service' "$SYSTEMCTL_LOG" &&
+    [[ ! -e $work/direct-hypridle ]]; then
+    pass "autostart enables a disabled unit instead of forking hypridle"
+else
+    fail "autostart did not migrate to the unit: $(cat "$SYSTEMCTL_LOG")"
+fi
+
+# Without the packaged unit the old direct start still works.
+: >"$SYSTEMCTL_LOG"
+rm -f "$work/direct-hypridle"
+UNIT_EXISTS=0 run_idle run
+if [[ -e $work/direct-hypridle ]] &&
+    ! grep -Eq -- '--user (enable|start|restart|disable)' "$SYSTEMCTL_LOG"; then
+    pass "autostart falls back to running hypridle directly"
+else
+    fail "direct fallback did not run: $(cat "$SYSTEMCTL_LOG")"
+fi
+
+# Applying a profile restarts an active unit so it reloads the new timers.
+: >"$SYSTEMCTL_LOG"
+UNIT_EXISTS=1 SERVICE_ACTIVE=1 run_idle apply --profile ac
+if grep -q -- '--user restart hypridle.service' "$SYSTEMCTL_LOG"; then
+    pass "applying a profile restarts the service"
+else
+    fail "apply did not restart the service: $(cat "$SYSTEMCTL_LOG")"
+fi
+
+printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
+((FAIL == 0))

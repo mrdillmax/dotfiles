@@ -18,7 +18,7 @@ CONFIGS=(
     modules/rofi/home/.config/rofi/config.rasi
     modules/rofi/home/.config/rofi/launcher.rasi
     modules/rofi/home/.config/rofi/powermenu.rasi
-    modules/idle/home/.config/hypr/hypridle.conf
+    modules/idle/home/.config/hypr/hypridle.conf.in
     modules/idle/home/.config/hypr/hyprlock.conf.in
     modules/fish/home/.config/fish/config.fish
     modules/matugen/home/.config/matugen/config.toml.in
