@@ -77,5 +77,23 @@ else
     fail "hyprsunset has no catalog row"
 fi
 
+udisks="$ROOT/modules/udisks"
+if [[ -r $udisks/module.conf ]] && grep -qx 'OPTIONAL=1' "$udisks/module.conf"; then
+    pass "udisks is optional"
+else
+    fail "udisks module missing or required"
+fi
+unit="$udisks/home/.config/systemd/user/udiskie.service"
+if grep -q 'ExecStart=/usr/bin/udiskie --automount --notify --tray' "$unit"; then
+    pass "udiskie unit automounts and shows the tray icon"
+else
+    fail "udiskie unit is missing its flags"
+fi
+if awk -F'\t' '$1 == "udiskie" && $4 == "no" {found=1} END{exit !found}' "$ROOT/packages/catalog.tsv"; then
+    pass "udiskie is an opt-in catalog row"
+else
+    fail "udiskie has no opt-in catalog row"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

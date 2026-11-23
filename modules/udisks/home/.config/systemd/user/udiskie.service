@@ -1,0 +1,10 @@
+# udiskie — removable disk automounter with a tray icon.
+[Unit]
+Description=Udiskie removable disk automounter
+
+[Service]
+ExecStart=/usr/bin/udiskie --automount --notify --tray
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
