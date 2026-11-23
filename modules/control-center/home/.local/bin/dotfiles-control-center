@@ -1362,11 +1362,15 @@ uninstall_page() {
 }
 
 update_page() {
-    local choice helper
+    local choice helper status
     while :; do
-        local -a specs=(
-            $'|Update repo + AUR'
-        )
+        local -a specs=()
+        if have dotfiles-update-check.sh; then
+            status="$(dotfiles-update-check.sh 2>/dev/null || true)"
+            [[ -n $status ]] || status="cannot check (offline)"
+            specs+=($'|dotfiles: '"$status")
+        fi
+        specs+=($'|Update repo + AUR')
         have reflector && specs+=($'|Mirrors')
         if [[ -n $ROOT ]]; then
             specs+=(
@@ -1379,6 +1383,12 @@ update_page() {
         [[ -n $(spicetify_bin) ]] && specs+=($'|Spicetify')
         choice="$(pick_icon "Update" "${specs[@]}")" || return 0
         case "$choice" in
+            "dotfiles: "*)
+                status="$(dotfiles-update-check.sh --refresh 2>/dev/null || true)"
+                [[ -n $status ]] || status="cannot check (offline)"
+                notify "dotfiles: $status"
+                continue
+                ;;
             "Update repo + AUR")
                 helper="$(aur_helper)"
                 if [[ -n $helper ]]; then

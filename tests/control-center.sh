@@ -78,5 +78,26 @@ else
     fail "Lock screen does not run hyprlock"
 fi
 
+# shellcheck disable=SC2016 # the stub expands $1 at its own runtime
+printf '#!/bin/sh\ncase "$1" in --refresh) echo "up to date" ;; *) echo "3 commits behind" ;; esac\n' >"$stub/dotfiles-update-check.sh"
+chmod +x "$stub/dotfiles-update-check.sh"
+(
+    # pick_icon runs in a command substitution, so the marker lives on disk.
+    # shellcheck disable=SC2329 # both functions are called by update_page
+    pick_icon() {
+        [[ -e $stub/picked ]] && return 1
+        : >"$stub/picked"
+        printf '%s\n' "dotfiles: 3 commits behind"
+    }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/notify"; }
+    update_page
+)
+if grep -q 'dotfiles: up to date' "$stub/notify" 2>/dev/null; then
+    pass "selecting the update row refreshes the status"
+else
+    fail "update row did not refresh the status"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
