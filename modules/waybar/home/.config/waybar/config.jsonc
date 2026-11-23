@@ -32,14 +32,10 @@
     "privacy",
     "hyprland/language",
     "group/zvuk",
-    "custom/brightness",
-    "custom/battery",
-    "power-profiles-daemon",
-    "custom/network",
-    "bluetooth",
+    "group/hardware",
+    "group/link",
     "custom/units",
     "custom/update",
-    "group/hardware",
     "tray"
   ],
 
@@ -49,7 +45,7 @@
   // "Terminal" so the bar stays readable.
   "hyprland/window": {
     "format": "{initialTitle}",
-    "max-length": 35,
+    "max-length": 24,
     "rewrite": {
       "": "Hyprland",
       "kitty": "Terminal"
@@ -152,7 +148,7 @@
     "interval": 1
   },
   "clock": {
-    "format": "{:L%a %d, %b %Y}",
+    "format": "{:L%a %d %b}",
     "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
     "format-alt": "{:%d-%m-%Y}"
   },
@@ -162,14 +158,14 @@
   // Screen sharing and recording indicators.
   "privacy": {
     "icon-size": 15,
-    "icon-spacing": 8
+    "icon-spacing": 5
   },
 
 
 
   // Keyboard layout. Clicking cycles every device to the next layout.
   "hyprland/language": {
-    "format": "    {}",
+    "format": " {}",
     "format-en": "EN",
     "format-uk": "UK",
     "on-click": "hyprctl switchxkblayout all next"
@@ -180,10 +176,10 @@
   // Volume. Clicking the sink or source icon mutes it; scrolling changes it.
   "group/zvuk": {
     "orientation": "horizontal",
-    "modules": ["pulseaudio#output", "pulseaudio#input"]
+    "modules": ["pulseaudio#output", "pulseaudio#input", "custom/brightness"]
   },
     "pulseaudio#output": {
-    "format": "{icon}     {volume}%",
+    "format": "{icon} {volume}%",
     "format-muted": " ",
     "format-icons": {
       "headphone": "",
@@ -193,7 +189,7 @@
   },
   "pulseaudio#input": {
     "format": "{format_source}",
-    "format-source": "   {volume}%",
+    "format-source": " {volume}%",
     "format-source-muted": " ",
     "tooltip-format": "{desc}",
     "on-click": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
@@ -207,28 +203,39 @@
   // 80 C, matching the idle and fan profile.
   "group/hardware": {
     "orientation": "horizontal",
-    "modules": ["cpu", "memory", "temperature"]
+    "modules": [
+      "custom/battery",
+      "power-profiles-daemon",
+      "cpu",
+      "memory",
+      "temperature"
+    ]
   },
     "cpu": {
-    "format": "    {usage}%",
+    "format": " {usage}%",
     "tooltip": false
   },
   "memory": {
-    "format": "    {percentage}%"
+    "format": " {percentage}%"
   },
   "temperature": {
     "hwmon-path-abs": "/sys/devices/platform/coretemp.0/hwmon",
     "input-filename": "temp1_input",
     "critical-threshold": 80,
-    "format": "     {temperatureC}°C",
-    "format-critical": "     {temperatureC}°C",
+    "format": " {temperatureC}°C",
+    "format-critical": " {temperatureC}°C",
     "tooltip": false
+  },
+  "group/link": {
+    "orientation": "horizontal",
+    "modules": ["custom/network", "bluetooth"]
   },
 
 
 
   // Status icons from other applications.
   "tray": {
-    "spacing": 10
+    "icon-size": 14,
+    "spacing": 6
   }
 }

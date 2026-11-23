@@ -83,6 +83,12 @@ if [[ $out != *HomeNet* && $out == *'"alt":"wifi"'* && $out == *10.0.0.5* ]]; th
 else
     fail "network output: $out"
 fi
+out="$(NMCLI_BIN=/bin/false "$BIN/waybar-network.sh" --once)"
+if [[ $out == *'"alt":"offline"'* && $out == *'"class":"offline"'* ]]; then
+    pass "offline still leaves a clickable link icon"
+else
+    fail "offline network output: $out"
+fi
 
 # The streaming modules read their own events; Waybar must not poll them.
 CONFIG="$ROOT/modules/waybar/home/.config/waybar/config.jsonc"
@@ -94,13 +100,20 @@ if jq -e '."custom/battery" | has("interval") | not' >/dev/null <<<"$config_json
 else
     fail "a streaming Waybar module still has an interval"
 fi
-if jq -e '."modules-right" | index("power-profiles-daemon")' >/dev/null <<<"$config_json" &&
-    jq -e '."power-profiles-daemon".tooltip' >/dev/null <<<"$config_json"; then
-    pass "the power profile module is in the right block"
+if jq -e '."modules-right" | index("group/zvuk")' >/dev/null <<<"$config_json" &&
+    jq -e '."modules-right" | index("group/hardware")' >/dev/null <<<"$config_json" &&
+    jq -e '."modules-right" | index("group/link")' >/dev/null <<<"$config_json" &&
+    jq -e '."group/zvuk".modules | index("custom/brightness")' >/dev/null <<<"$config_json" &&
+    jq -e '."group/hardware".modules | index("custom/battery")' >/dev/null <<<"$config_json" &&
+    jq -e '."group/hardware".modules | index("power-profiles-daemon")' >/dev/null <<<"$config_json" &&
+    jq -e '."group/hardware".modules | index("cpu")' >/dev/null <<<"$config_json" &&
+    jq -e '."group/link".modules | index("custom/network")' >/dev/null <<<"$config_json" &&
+    jq -e '."group/link".modules | index("bluetooth")' >/dev/null <<<"$config_json"; then
+    pass "sound, power and link modules are grouped into three compact pills"
 else
-    fail "the power profile module is missing"
+    fail "the related status modules are not grouped"
 fi
-if jq -e '."modules-right" | index("bluetooth")' >/dev/null <<<"$config_json" &&
+if jq -e '."group/link".modules | index("bluetooth")' >/dev/null <<<"$config_json" &&
     jq -e '."bluetooth"."format-no-controller" == ""' >/dev/null <<<"$config_json" &&
     jq -e '."bluetooth"."format-disabled" != ""' >/dev/null <<<"$config_json"; then
     pass "the Bluetooth module hides without an adapter and shows a blocked state"

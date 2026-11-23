@@ -49,7 +49,7 @@ window#waybar > box {
 }
 #workspaces button {
   border-radius: 10px;
-  padding: 0 8px;
+  padding: 0 6px;
   color: inherit;
   background-color: transparent;
   transition: 0.5s ease-out;
@@ -87,7 +87,7 @@ window#waybar > box {
   font-weight: 700;
   background-color: @background;
   color: @foreground;
-  padding: 5px 12px;
+  padding: 5px 9px;
   border-radius: 10px;
   margin-left: 5px;
 }
@@ -104,14 +104,14 @@ window#waybar > box {
   color: @foreground;
 }
 #clock.simple {
-  padding: 6px 10px;
+  padding: 6px 8px;
   background-color: @foreground-dark;
   color: @on_primary;
   border-radius: 0 10px 10px 0;
   font-weight: 700;
 }
 #clock {
-  padding: 6px 10px;
+  padding: 6px 8px;
   border-radius: 10px 0 0 10px;
 }
 
@@ -121,32 +121,56 @@ window#waybar > box {
   background-color: @background;
   color: @power;
   border: 1.5px solid @power;
-  padding: 6px 10px;
+  padding: 6px 7px;
   border-radius: 10px;
-  margin-right: 10px;
+  margin-right: 6px;
 }
 
 
 
 #language {
-  margin-right: 5px;
+  background-color: @background;
+  color: @foreground;
+  padding: 6px 8px;
+  border-radius: 10px;
+  margin-right: 0;
+  font-weight: 700;
 }
 
 
 
-#zvuk {
+/* One pill per related set: sound + brightness, battery + profile + hardware,
+ * network + bluetooth. Children stay flat; the group supplies the shape and
+ * the small gaps, so the bar stays narrow. */
+#zvuk,
+#hardware,
+#link {
   background-color: @background;
   color: @foreground;
   border-radius: 10px;
-  margin-right: 5px;
+  margin-left: 6px;
+  padding: 0 3px;
 }
-#pulseaudio:hover {
-  background-color: @overlay;
-}
-#pulseaudio {
+#pulseaudio,
+#custom-brightness,
+#custom-battery,
+#power-profiles-daemon,
+#cpu,
+#memory,
+#temperature,
+#custom-network,
+#bluetooth {
   font-weight: 700;
-  padding: 6px 11px;
-  border-radius: 10px;
+  padding: 6px 5px;
+  border-radius: 6px;
+}
+#pulseaudio:hover,
+#custom-brightness:hover,
+#custom-battery:hover,
+#power-profiles-daemon:hover,
+#custom-network:hover,
+#bluetooth:hover {
+  background-color: @overlay;
 }
 #pulseaudio.output.muted {
   color: @red;
@@ -154,53 +178,23 @@ window#waybar > box {
 #pulseaudio.input.source-muted {
   color: @red;
 }
+#custom-network.offline {
+  color: @orange;
+}
 
-
-
-/* Status pills. Each monitoring module is its own rounded block, with the
- * same height and radius as the volume, hardware and tray widgets. */
-#custom-battery,
-#custom-brightness,
-#custom-network,
+/* Standalone status modules keep their own pill. */
 #custom-units,
-#custom-update,
-#power-profiles-daemon,
-#bluetooth {
+#custom-update {
   background-color: @background;
   color: @foreground;
-  padding: 6px 10px;
+  padding: 6px 8px;
   border-radius: 10px;
-  margin-left: 5px;
+  margin-left: 6px;
   font-weight: 700;
 }
-#custom-battery:hover,
-#custom-brightness:hover,
-#custom-network:hover,
 #custom-units:hover,
-#custom-update:hover,
-#power-profiles-daemon:hover,
-#bluetooth:hover {
+#custom-update:hover {
   background-color: @overlay;
-}
-/* The volume group already has a right margin; keep a single 5px gap. */
-#custom-brightness {
-  margin-left: 0;
-}
-
-
-
-#hardware {
-  margin-left: 5px;
-  margin-right: 5px;
-}
-#cpu {
-  padding: 0 5px;
-}
-#memory {
-  padding: 0 5px;
-}
-#temperature {
-  padding: 0 5px;
 }
 
 #temperature.critical {
@@ -210,6 +204,11 @@ window#waybar > box {
 
 
 #tray {
+  background-color: @background;
+  color: @foreground;
+  border-radius: 10px;
+  padding: 6px 6px;
+  margin-left: 6px;
   margin-right: 5px;
 }
 
@@ -224,14 +223,11 @@ window#waybar > box {
 
 
 
-#hardware,
-#window,
-#tray,
-#language {
+#window {
   font-weight: 700;
   background-color: @background;
   color: @foreground;
-  padding: 6px 10px;
+  padding: 6px 8px;
   border-radius: 10px;
 }
 

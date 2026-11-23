@@ -560,8 +560,11 @@ Brightness appears in Waybar when the machine exposes a backlight
 keys and the scroll wheel. Users need write access to the backlight device
 (the `video` group) or the packaged udev rule.
 
-The bar also shows the active `power-profiles-daemon` profile (laptops) and a
-Bluetooth indicator that stays hidden without an adapter. Waybar is started
+The right side is three compact groups: sound with brightness, battery with the
+`power-profiles-daemon` profile and hardware, and network with Bluetooth. They
+use one pill each with tight internal spacing, so the bar keeps room for the
+tray and the privacy indicators. The Bluetooth indicator stays hidden without
+an adapter. Waybar is started
 with `-c ~/.config/waybar/config.jsonc -s ~/.config/waybar/style.css`, so an
 old `config` file cannot shadow the managed layout; the installer backs up and
 removes those legacy names. It reloads a running Waybar with `SIGUSR2`, and

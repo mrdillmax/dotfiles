@@ -30,7 +30,7 @@ print_status() {
     done < <("$NMCLI" -t -f TYPE,STATE,CONNECTION,DEVICE device status 2>/dev/null)
 
     if [[ -z $label ]]; then
-        printf '{"text": "", "alt": "offline", "tooltip": "Network: offline"}\n'
+        printf '{"text":"\uf05e","alt":"offline","tooltip":"Network: offline (click to connect)","class":"offline"}\n'
         return 0
     fi
     if [[ -n $device ]]; then
