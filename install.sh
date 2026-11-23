@@ -94,6 +94,8 @@ source "$DOTFILES_DIR/lib/packages.sh"
 source "$DOTFILES_DIR/lib/system.sh"
 # shellcheck source=lib/services.sh
 source "$DOTFILES_DIR/lib/services.sh"
+# shellcheck source=lib/desktop.sh
+source "$DOTFILES_DIR/lib/desktop.sh"
 # shellcheck source=lib/cursor.sh
 source "$DOTFILES_DIR/lib/cursor.sh"
 # shellcheck source=lib/kernel.sh
@@ -989,6 +991,7 @@ else
     run_migrations
     maybe_create_snapshot
     install_selected_modules
+    refresh_desktop_database
 fi
 
 if (( DO_PACKAGES && !MODULE_PACKAGES_ONLY )); then
