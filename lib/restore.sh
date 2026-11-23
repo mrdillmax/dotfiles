@@ -42,8 +42,10 @@ restore_module_for_target() {
     done
 
     case "$rel" in
-        .config/hypr/monitors.lua) printf 'hypr' ;;
-        .config/hypr/input.lua)    printf 'mouse-sensitivity' ;;
+        .config/hypr/monitors.lua|.config/hypr/monitors.conf.sh|.config/hypr/control-center.lua)
+            printf 'hypr' ;;
+        .config/hypr/monitor-profiles.conf) printf 'monitor-profiles' ;;
+        .config/hypr/input.lua)             printf 'mouse-sensitivity' ;;
         .config/uwsm/env|.config/uwsm/env-hyprland) printf 'uwsm' ;;
         *) printf 'other' ;;
     esac

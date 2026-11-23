@@ -50,6 +50,8 @@ DO_JSON=0
 DO_DNS_CHECK=0
 DO_RESTORE=0
 RESTORE_DATE=""
+DO_UNINSTALL=0
+FORCE=0
 DO_SYNC=0
 SYNC_COMMAND=""
 SYNC_TARGET=""
@@ -98,6 +100,8 @@ source "$DOTFILES_DIR/lib/kernel.sh"
 source "$DOTFILES_DIR/lib/wallpaper.sh"
 # shellcheck source=lib/restore.sh
 source "$DOTFILES_DIR/lib/restore.sh"
+# shellcheck source=lib/uninstall.sh
+source "$DOTFILES_DIR/lib/uninstall.sh"
 # shellcheck source=lib/theme.sh
 source "$DOTFILES_DIR/lib/theme.sh"
 # shellcheck source=lib/menu.sh
@@ -167,6 +171,8 @@ Maintenance:
   --dns-check           read-only DNS chain check and exit
   --restore [date]      list backups and restore one from ~/.dotfiles-backup
                         (combine with --modules a,b; /etc needs --system)
+  --uninstall           remove installed files and restore their originals
+                        (combine with --modules a,b; --system for /etc)
   --sync COMMAND [target]
                         status|diff|pull to copy live changes back, or
                         packages to compare package lists
@@ -176,6 +182,7 @@ Maintenance:
 Other:
   --dry-run             show what would happen, change nothing
   --verbose             print each command before running it
+  --force               uninstall files edited since install
   --yes, -y             answer "yes" to confirmations
   --list                list modules, GPU profiles and package categories
   -h, --help            this help
@@ -243,6 +250,8 @@ while (($#)); do
                 shift
             fi
             ;;
+        --uninstall)  DO_UNINSTALL=1; HAS_ACTION=1 ;;
+        --force)      FORCE=1 ;;
         --sync)
             DO_SYNC=1
             HAS_ACTION=1
@@ -315,6 +324,9 @@ if (( DRY_RUN )); then
     LOG_FILE="$(mktemp)"
 else
     mkdir -p "$STATE_DIR"
+    if (( EUID == 0 )) && [[ -n ${SUDO_UID:-} && -n ${SUDO_GID:-} ]]; then
+        chown "$SUDO_UID:$SUDO_GID" "$STATE_DIR" 2>/dev/null || true
+    fi
     LOG_FILE="$STATE_DIR/install-$TIMESTAMP.log"
     mkdir -p "$BACKUP_DIR"
     printf 'target\tbackup\n' >"$BACKUP_DIR/manifest.tsv"
@@ -507,6 +519,11 @@ fi
 if (( DO_RESTORE )); then
     restore_run "$RESTORE_DATE" "$MODULES_ARG"
     exit $?
+fi
+
+if (( DO_UNINSTALL )); then
+    uninstall_run "$MODULES_ARG" || exit 1
+    exit 0
 fi
 
 if (( DO_SYNC )); then

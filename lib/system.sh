@@ -504,6 +504,7 @@ install_system_configs() {
     # place and any remaining failure is reported as a warning.
     for row in "${rows[@]}"; do
         IFS=$'\t' read -r src dst mode <<<"$row"
+        repo_src="$src"
         tmp_src=""
 
         if [[ $dst == /etc/NetworkManager/conf.d/* ]]; then
@@ -550,6 +551,7 @@ install_system_configs() {
             continue
         fi
 
+        LAST_BACKUP=""
         if [[ -e $dst ]]; then
             backup_path "$dst"
         fi
@@ -580,6 +582,9 @@ install_system_configs() {
             fi
             [[ -n $prev_tmp ]] && rm -f -- "$prev_tmp"
             ok "installed $dst"
+        fi
+        if (( !DRY_RUN )); then
+            record_managed system "$dst" "$repo_src" "$(file_digest "$src")" "$LAST_BACKUP"
         fi
         [[ -n $tmp_src ]] && rm -f -- "$tmp_src"
         case "$dst" in

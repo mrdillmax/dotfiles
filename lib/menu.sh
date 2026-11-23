@@ -52,6 +52,7 @@ declare -gA MENU_FLAG=(
     [dns-check]="--dns-check"
     [restore-list]="--restore"
     [restore-date]="--restore"
+    [uninstall]="--uninstall"
     [sync-status]="--sync"
     [sync-diff]="--sync"
     [sync-pull]="--sync"
@@ -167,6 +168,7 @@ menu_items_for() {
                 'doctor|Doctor|read-only health check' \
                 'dns-check|DNS check|resolv.conf -> Pi-hole -> unbound' \
                 'menu:restore|Restore|list backups and restore one' \
+                'uninstall|Uninstall|remove installed files and restore originals' \
                 'menu:sync|Sync|status, diff, pull or packages' \
                 'menu:pkg-sync|Package drift|compare installed packages with the lists' \
                 'hooks|Git hooks|install the repository pre-commit hook'
