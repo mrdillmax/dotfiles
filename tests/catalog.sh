@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Package catalog defaults. Docker is not supported anymore; fonts are trimmed
-# in a later task and checked there.
+# Package catalog defaults: Docker is gone, optional fonts stay opt-in, and
+# every row keeps all of its columns.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,6 +23,27 @@ if [[ $row == 'openssh|no' ]]; then
 else
     fail "openssh row is missing or defaulted on: ${row:-none}"
 fi
+
+optional_fonts=(gnu-free-fonts ttf-croscore adwaita-fonts woff2-font-awesome)
+for font in "${optional_fonts[@]}"; do
+    row="$(awk -F'\t' -v name="$font" '$1 == name {print $4}' "$CATALOG")"
+    if [[ $row == no ]]; then
+        pass "$font is opt-in"
+    else
+        fail "$font defaults on (${row:-missing})"
+    fi
+done
+
+required_fonts=(inter-font ttf-jetbrains-mono-nerd noto-fonts-emoji noto-fonts-cjk
+    ttf-ms-fonts ttf-liberation ttf-dejavu ttf-roboto terminus-font hunspell-uk hyphen-uk)
+for font in "${required_fonts[@]}"; do
+    row="$(awk -F'\t' -v name="$font" '$1 == name {print $4}' "$CATALOG")"
+    if [[ $row == yes ]]; then
+        pass "$font stays default"
+    else
+        fail "$font should stay default (${row:-missing})"
+    fi
+done
 
 if awk -F'\t' 'BEGIN{ok=1} /^#/ || NF==0 {next} $1=="" || $2=="" || $3=="" || $4=="" {ok=0} END{exit !ok}' "$CATALOG"; then
     pass "every catalog row has all required columns"

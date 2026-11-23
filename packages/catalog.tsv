@@ -184,21 +184,21 @@ virtio-win	Virtualization	pkg	no	any	any	VirtIO drivers for Windows guests
 virtualbox	Virtualization	pkg	no	any	any	Powerful x86 virtualization for enterprise as well as home use
 virtualbox-guest-iso	Virtualization	pkg	no	any	any	The official VirtualBox Guest Additions ISO image
 waydroid	Virtualization	pkg	no	any	any	A container-based approach to boot a full Android system on a regular Linux system
-adwaita-fonts	Fonts	pkg	yes	any	any	Adwaita Sans and Mono fonts
-gnu-free-fonts	Fonts	pkg	yes	any	any	A free family of scalable outline fonts
+adwaita-fonts	Fonts	pkg	no	any	any	Adwaita Sans and Mono fonts
+gnu-free-fonts	Fonts	pkg	no	any	any	A free family of scalable outline fonts
 hunspell-uk	Fonts	pkg	yes	any	any	Ukrainian spelling dictionary
 hyphen-uk	Fonts	pkg	yes	any	any	Ukrainian hyphenation rules
 inter-font	Fonts	pkg	yes	any	any	A typeface for user interfaces; installed by the theming module
 noto-fonts-cjk	Fonts	pkg	yes	any	any	Google Noto CJK fonts
 noto-fonts-emoji	Fonts	pkg	yes	any	any	Google Noto Color Emoji font
 terminus-font	Fonts	pkg	yes	any	any	Monospace bitmap font (for X11 and console)
-ttf-croscore	Fonts	pkg	yes	any	any	Chrome OS core fonts
+ttf-croscore	Fonts	pkg	no	any	any	Chrome OS core fonts
 ttf-dejavu	Fonts	pkg	yes	any	any	Font family based on the Bitstream Vera Fonts with a wider range of characters
 ttf-jetbrains-mono-nerd	Fonts	pkg	yes	any	any	Patched font JetBrains Mono from nerd fonts library
 ttf-liberation	Fonts	pkg	yes	any	any	Font family which aims at metric compatibility with Arial, Times New Roman, and Courier New
 ttf-ms-fonts	Fonts	pkg	yes	any	any	Core TTF Fonts from Microsoft
 ttf-roboto	Fonts	pkg	yes	any	any	Google's signature family of fonts
-woff2-font-awesome	Fonts	pkg	yes	any	any	Iconic font designed for Bootstrap - woff2 format
+woff2-font-awesome	Fonts	pkg	no	any	any	Iconic font designed for Bootstrap - woff2 format
 intel-media-driver	Drivers	pkg	no	any	any	Intel media driver for Gen9+
 lact	Drivers	pkg	yes	any	nvidia,hybrid	Linux GPU Configuration Tool
 lib32-mesa	Drivers	pkg	no	any	any	32-bit Mesa drivers for Steam
