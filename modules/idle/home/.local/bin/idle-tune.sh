@@ -206,14 +206,14 @@ render_config() {
         printf 'general {\n'
         printf '    lock_cmd = pidof hyprlock || hyprlock\n'
         printf '    before_sleep_cmd = pidof hyprlock || hyprlock\n'
-        printf '    after_sleep_cmd = hyprctl dispatch '\''hl.dsp.dpms("on")'\''\n'
+        printf '    after_sleep_cmd = idle-dim.sh restore; hyprctl dispatch '\''hl.dsp.dpms("on")'\''\n'
         printf '}\n\n'
 
         if ((dim > 0)); then
             printf 'listener {\n'
             printf '    timeout = %s\n' "$dim"
-            printf '    on-timeout = hyprctl dispatch '\''hl.dsp.dpms("off")'\''\n'
-            printf '    on-resume = hyprctl dispatch '\''hl.dsp.dpms("on")'\''\n'
+            printf '    on-timeout = idle-dim.sh dim\n'
+            printf '    on-resume = idle-dim.sh restore\n'
             printf '}\n\n'
         fi
         if ((lock > 0)); then
@@ -226,6 +226,7 @@ render_config() {
             printf 'listener {\n'
             printf '    timeout = %s\n' "$off"
             printf '    on-timeout = hyprctl dispatch '\''hl.dsp.dpms("off")'\''\n'
+            printf '    on-resume = idle-dim.sh restore; hyprctl dispatch '\''hl.dsp.dpms("on")'\''\n'
             printf '}\n\n'
         fi
         if ((suspend > 0)); then
@@ -287,6 +288,10 @@ apply_config() {
 
     tmp="$(mktemp)"
     render_config "$profile" "$tmp"
+    if [[ -r $CONFIG && ! -L $CONFIG ]] && cmp -s -- "$tmp" "$CONFIG"; then
+        rm -f -- "$tmp"
+        return 0
+    fi
     backup_config "$CONFIG"
     mkdir -p -- "$(dirname "$CONFIG")"
     # Older installs linked the file into the repository; never write through
@@ -429,6 +434,10 @@ run_autostart() {
         info "idle is disabled; not starting hypridle"
         return 0
     fi
+
+    # Login may follow a power-source change while the session was off; render
+    # the matching battery/AC profile before the daemon starts.
+    apply_config auto
 
     if service_unit_exists; then
         # systemd owns the process. Enable on login when the unit is still

@@ -54,6 +54,13 @@ if grep -q 'hl.dsp.dpms("off")' "$STATIC" &&
 else
     fail "the shipped hypridle template still uses the removed dispatch form"
 fi
+static_dim="$(sed -n '/timeout = 150/,/^}/p' "$STATIC")"
+if [[ $static_dim == *'idle-dim.sh dim'* && $static_dim == *'idle-dim.sh restore'* &&
+    $static_dim != *'dpms("off")'* ]]; then
+    pass "the dim stage lowers brightness instead of powering the panel off"
+else
+    fail "the dim stage still uses DPMS: $static_dim"
+fi
 
 run_idle apply --profile battery
 config="$XDG_CONFIG_HOME/hypr/hypridle.conf"
@@ -63,6 +70,15 @@ if grep -q 'hl.dsp.dpms("off")' "$config" &&
     pass "idle-tune renders the Lua dispatcher"
 else
     fail "rendered config has the wrong DPMS command"
+fi
+rendered_dim="$(sed -n '/timeout = 150/,/^}/p' "$config")"
+if [[ $rendered_dim == *'idle-dim.sh dim'* &&
+    $rendered_dim == *'idle-dim.sh restore'* &&
+    $rendered_dim != *'dpms("off")'* &&
+    $(grep 'after_sleep_cmd' "$config") == *'idle-dim.sh restore'* ]]; then
+    pass "idle-tune renders a brightness dim and restores it after sleep"
+else
+    fail "rendered dim stage: $rendered_dim"
 fi
 
 # A checkout from before the .in rename linked this path into the repository.
@@ -144,6 +160,51 @@ if grep -q -- '--user restart hypridle.service' "$SYSTEMCTL_LOG"; then
     pass "applying a profile restarts the service"
 else
     fail "apply did not restart the service: $(cat "$SYSTEMCTL_LOG")"
+fi
+
+# --- brightness dim ---------------------------------------------------------
+
+DIM="$ROOT/modules/idle/home/.local/bin/idle-dim.sh"
+mkdir -p "$work/dim-bin" "$work/dim-state" "$work/empty-bin"
+ln -s "$(command -v bash)" "$work/empty-bin/bash"
+cat >"$work/dim-bin/brightnessctl" <<'DIMSTUB'
+#!/bin/sh
+printf '%s\n' "$*" >>"$DIM_CALLS"
+case "$1" in
+    -m) printf 'intel_backlight,backlight,0,%s%%,1000\n' "${BRIGHT_CURRENT:-50}" ;;
+esac
+DIMSTUB
+export DIM_CALLS="$work/dim-calls"
+chmod +x "$work/dim-bin/brightnessctl"
+BRIGHT_CURRENT=50 XDG_STATE_HOME="$work/dim-state" PATH="$work/dim-bin:$PATH" "$DIM" dim
+if grep -q -- '-s set 15%' "$work/dim-calls" &&
+    [[ -e $work/dim-state/dotfiles/idle-dim ]]; then
+    pass "dim saves and lowers the backlight"
+else
+    fail "dim calls: $(cat "$work/dim-calls" 2>/dev/null)"
+fi
+XDG_STATE_HOME="$work/dim-state" PATH="$work/dim-bin:$PATH" "$DIM" restore
+if grep -q -- '-r' "$work/dim-calls" &&
+    [[ ! -e $work/dim-state/dotfiles/idle-dim ]]; then
+    pass "restore returns to the saved backlight"
+else
+    fail "restore calls: $(cat "$work/dim-calls" 2>/dev/null)"
+fi
+rm -f "$work/dim-calls"
+XDG_STATE_HOME="$work/dim-state" PATH="$work/empty-bin" "$DIM" dim
+if [[ ! -e $work/dim-calls && ! -e $work/dim-state/dotfiles/idle-dim ]]; then
+    pass "dim is a no-op without brightnessctl"
+else
+    fail "dim ran without brightnessctl"
+fi
+
+rm -f "$work/dim-calls" "$work/dim-state/dotfiles/idle-dim"
+BRIGHT_CURRENT=10 XDG_STATE_HOME="$work/dim-state" PATH="$work/dim-bin:$PATH" "$DIM" dim
+if ! grep -q -- '-s set' "$work/dim-calls" &&
+    [[ ! -e $work/dim-state/dotfiles/idle-dim ]]; then
+    pass "dim does not brighten a panel that is already darker"
+else
+    fail "dim raised a 10% panel: $(cat "$work/dim-calls" 2>/dev/null)"
 fi
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"

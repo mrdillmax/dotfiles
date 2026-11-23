@@ -78,6 +78,65 @@ else
     fail "Lock screen does not run hyprlock"
 fi
 
+BT_CALLS="$stub/bt-calls" BT_ON="$stub/bt-on"
+export BT_CALLS BT_ON
+cat >"$stub/bluetoothctl" <<'BT'
+#!/bin/sh
+printf '%s\n' "$*" >>"$BT_CALLS"
+case "$*" in
+    show) [[ -e $BT_ON ]] && printf 'Powered: yes\n' || printf 'Powered: no\n' ;;
+    'power on')  : >"$BT_ON" ;;
+    'power off') rm -f "$BT_ON" ;;
+    list) printf 'Controller 00:11:22:33:44:55 host\n' ;;
+esac
+BT
+chmod +x "$stub/bluetoothctl"
+(
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/bt-notes"; }
+    bluetooth_label >"$stub/bt-before"
+    bluetooth_toggle
+    bluetooth_label >"$stub/bt-after"
+)
+if [[ $(cat "$stub/bt-before") == "Bluetooth: off" &&
+    $(cat "$stub/bt-after") == "Bluetooth: on" ]] &&
+    grep -q 'power on' "$stub/bt-calls"; then
+    pass "Bluetooth has one stateful on/off action"
+else
+    fail "Bluetooth toggle: $(cat "$stub/bt-before" "$stub/bt-after" 2>/dev/null)"
+fi
+(
+    # shellcheck disable=SC2329
+    pick_icon() { printf '%s\n' "$@" >"$stub/bt-page"; return 1; }
+    bluetooth_page
+)
+if grep -q 'Bluetooth: on' "$stub/bt-page" &&
+    ! grep -q 'Power on' "$stub/bt-page"; then
+    pass "the Bluetooth page shows one toggle row, not two power buttons"
+else
+    fail "Bluetooth page rows: $(cat "$stub/bt-page" 2>/dev/null)"
+fi
+
+printf '#!/bin/sh\ncase "$*" in\n  *"connection show --active"*) echo Home ;;\n  *"connection down"*) printf "%%s\\n" "$*" >>"%s/nm-down" ;;\nesac\n' \
+    "$stub" >"$stub/nmcli"
+chmod +x "$stub/nmcli"
+(
+    # shellcheck disable=SC2329
+    pick_icon() { printf '%s\n' "Disconnect"; }
+    # shellcheck disable=SC2329
+    run_terminal() { printf '%s\n' "$*" >"$stub/wifi-terminal"; }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/wifi-notes"; }
+    wifi_page
+)
+if [[ ! -e $stub/wifi-terminal ]] &&
+    grep -q 'Wi-Fi disconnected' "$stub/wifi-notes" &&
+    grep -q 'connection down Home' "$stub/nm-down"; then
+    pass "Wi-Fi disconnect acts in place without opening a terminal"
+else
+    fail "Wi-Fi disconnect still used a terminal or failed"
+fi
+
 # shellcheck disable=SC2016 # the stub expands $1 at its own runtime
 printf '#!/bin/sh\ncase "$1" in --refresh) echo "up to date" ;; *) echo "3 commits behind" ;; esac\n' >"$stub/dotfiles-update-check.sh"
 chmod +x "$stub/dotfiles-update-check.sh"
@@ -201,6 +260,28 @@ if grep -q 'Disable idle' "$stub/menu-specs" &&
     pass "idle configuration is in Configuration and the toggle stays in Menu"
 else
     fail "idle pages are split incorrectly"
+fi
+
+mkdir -p "$stub/wp-home/.local/share/wallpapers"
+: >"$stub/wp-home/.local/share/wallpapers/plain.png"
+(
+    # shellcheck disable=SC2034 # read by wallpaper_page
+    REAL_HOME="$stub/wp-home"
+    # shellcheck disable=SC2034
+    STATE_DIR="$stub/wp-state"
+    # shellcheck disable=SC2034
+    CACHE_DIR="$stub/wp-cache"
+    # shellcheck disable=SC2329
+    have() { [[ $1 == magick ]] && return 1; command -v "$1" >/dev/null 2>&1; }
+    # shellcheck disable=SC2329
+    rofi_pick() { cat >"$stub/wp-rows"; return 1; }
+    wallpaper_page
+)
+if grep -qx 'plain.png' "$stub/wp-rows" &&
+    ! grep -q 'icon' "$stub/wp-rows"; then
+    pass "the wallpaper picker falls back to plain rows without ImageMagick"
+else
+    fail "wallpaper fallback: $(cat "$stub/wp-rows" 2>/dev/null)"
 fi
 
 wifi_dispatch="$(

@@ -451,7 +451,8 @@ uses the AC profile. The module is selected by default and idle starts enabled:
 Status and configuration live in **Control Center → Configuration → Idle**;
 the enable/disable toggle stays in **Menu**.
 
-`SUPER + SHIFT + I` toggles idle from the session. The installer enables the
+`SUPER + L` locks the session now; `SUPER + SHIFT + I` toggles idle from the
+session. The installer enables the
 `hypridle.service` user unit, so systemd owns the daemon; the autostart entry
 only starts it when the session came up first and never forks a second copy. A
 disabled idle is remembered in `idle.conf`, so autostart does not start
@@ -560,8 +561,9 @@ present. Battery has no click action.
 
 Brightness appears in Waybar when the machine exposes a backlight
 (`/sys/class/backlight`); the `osd` module installs `brightnessctl` for the
-keys and the scroll wheel. Users need write access to the backlight device
-(the `video` group) or the packaged udev rule.
+keys and the scroll wheel. Both stop at 5% and 100%, so the panel cannot be
+made unreadable. Users need write access to the backlight device (the `video`
+group) or the packaged udev rule.
 
 The right side is three compact groups: sound with brightness, battery with the
 `power-profiles-daemon` profile and hardware, and network with Bluetooth. They
@@ -607,7 +609,9 @@ What it can change live:
 - laptop touchpad: `natural_scroll`, `tap_to_click`,
   `disable_while_typing`;
 - three-finger workspace swipe: on/off, fingers (2–4), distance (200–500),
-  cancel ratio and minimum speed. The defaults are written to
+  cancel ratio and minimum speed;
+- four-finger horizontal swipe moves the active window to the previous or next
+  workspace without following it. The defaults are written to
   `hosts/<host>/input.lua`.
 
 Keys in the live slider: `←`/`→` or `-`/`+` change the value, `f` toggles the

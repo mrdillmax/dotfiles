@@ -24,6 +24,14 @@ else
     pass "luac not installed; skipping the compile check"
 fi
 
+LOCK="$ROOT/modules/hypr/home/.local/bin/lock-screen.sh"
+if grep -q 'mainMod .. " + L"' "$HYPR" &&
+    [[ -x $LOCK ]] && grep -q 'exec hyprlock' "$LOCK"; then
+    pass "SUPER+L locks the session and prefers hyprlock"
+else
+    fail "the lock bind or helper is missing"
+fi
+
 # --- every window rule carries a reason ------------------------------------
 missing=()
 while IFS=: read -r line _; do

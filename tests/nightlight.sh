@@ -73,5 +73,20 @@ else
     fail "status output: $out"
 fi
 
+# A daemon that was just started needs a moment before hyprctl can reach it.
+mkdir -p "$work/race-bin" "$work/race-state"
+printf '#!/bin/sh\n[[ -e %s/daemon ]] && exit 0\nexit 1\n' "$work" >"$work/race-bin/pgrep"
+printf '#!/bin/sh\n: >%s/daemon\n' "$work" >"$work/race-bin/hyprsunset"
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s/race-calls"\n[[ -e %s/hypr-ready ]] || { : >%s/hypr-ready; exit 1; }\n' \
+    "$work" "$work" "$work" >"$work/race-bin/hyprctl"
+chmod +x "$work/race-bin"/*
+STATE_DIR="$work/race-state" PATH="$work/race-bin:$PATH" "$HELPER" on
+if [[ $(sed -n 's/^enabled=//p' "$STATE_DIR/nightlight.conf") == 1 ]] &&
+    grep -q 'hyprsunset temperature 4000' "$work/race-calls"; then
+    pass "a freshly started hyprsunset is retried until it answers"
+else
+    fail "startup race: $(cat "$work/race-calls" 2>/dev/null)"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

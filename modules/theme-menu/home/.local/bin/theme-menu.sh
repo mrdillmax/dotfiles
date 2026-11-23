@@ -394,7 +394,7 @@ pick_source_index() {
         return 1
     fi
     mapfile -t colors < <(matugen image "$WALLPAPER" --show-source-colors 2>/dev/null |
-        grep -E '^#[0-9A-Fa-f]{6}$')
+        grep -E '^#[0-9A-Fa-f]{6}$' | head -n5)
     ((${#colors[@]})) || { warn "matugen found no source colours in this wallpaper"; return 1; }
 
     for i in "${!colors[@]}"; do

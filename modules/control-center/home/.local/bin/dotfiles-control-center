@@ -64,9 +64,14 @@ rofi_pick() {
         width=640
     fi
 
-    args+=(-theme-str "window { width: ${width}px; } prompt { enabled: false; } listview { lines: 14; } entry { placeholder: \"$prompt\"; }")
-    if ((show_icons == 0 && rows > 14)); then
-        args+=(-theme-str 'listview { fixed-height: true; lines: 14; }')
+    if ((show_icons)); then
+        # Let the caller choose the card size, width and line count.
+        args+=(-theme-str "prompt { enabled: false; } entry { placeholder: \"$prompt\"; }")
+    else
+        args+=(-theme-str "window { width: ${width}px; } prompt { enabled: false; } listview { lines: 14; } entry { placeholder: \"$prompt\"; }")
+        if ((rows > 14)); then
+            args+=(-theme-str 'listview { fixed-height: true; lines: 14; }')
+        fi
     fi
     if [[ -r $THEME ]]; then
         args+=(-theme "$THEME")
@@ -80,6 +85,30 @@ rofi_pick() {
 # Like rofi_pick, but the rows are Pango markup and the index is returned.
 # Used by the main menu so the icons can come from the Nerd Font while the
 # labels stay in Inter.
+# A one-row placeholder menu that appears while a hardware scan runs, so the
+# click has visible feedback instead of looking dead for several seconds.
+ROFI_LOADING_PID=""
+ROFI_LOADING_INPUT=""
+rofi_loading_start() {
+    local prompt="$1"
+    local -a args=(-dmenu -i -p "" -no-custom -no-fixed-num-lines)
+    [[ -r $THEME ]] && args+=(-theme "$THEME")
+    args+=(-theme-str "window { width: 460px; } prompt { enabled: false; } listview { lines: 3; } entry { placeholder: \"$prompt\"; }")
+    ROFI_LOADING_INPUT="$(mktemp)" || return 0
+    printf '\n' >"$ROFI_LOADING_INPUT"
+    rofi "${args[@]}" <"$ROFI_LOADING_INPUT" >/dev/null 2>&1 &
+    ROFI_LOADING_PID=$!
+}
+
+rofi_loading_stop() {
+    [[ -n ${ROFI_LOADING_PID:-} ]] || return 0
+    kill "$ROFI_LOADING_PID" 2>/dev/null || true
+    wait "$ROFI_LOADING_PID" 2>/dev/null || true
+    rm -f -- "$ROFI_LOADING_INPUT"
+    ROFI_LOADING_PID=""
+    ROFI_LOADING_INPUT=""
+}
+
 rofi_index() {
     local prompt="$1"
     shift
@@ -411,11 +440,13 @@ docs_page() {
             "System info")
                 if have hyprsysteminfo; then
                     # Prefer the Hypr toolkit window when the optional hyprtools
-                    # module is installed; fastfetch stays the fallback.
+                    # module is installed; fastfetch stays the fallback. Close
+                    # the Control Center so its rofi window does not stay behind.
                     (hyprsysteminfo >/dev/null 2>&1 &)
                 elif ensure_config_dep "System info"; then
                     run_terminal --hold "fastfetch"
                 fi
+                exit 0
                 ;;
             "") return 0 ;;
         esac
@@ -621,7 +652,8 @@ make_wallpaper_card() {
     font="$(fc-match -f '%{file}' Inter 2>/dev/null)"
     [[ -n $font ]] && font_args=(-font "$font")
 
-    magick "$image" -auto-orient -thumbnail '320x180^' -gravity center -extent 320x180 \
+    timeout 5 magick "$image" -auto-orient -thumbnail '320x180^' \
+        -gravity center -extent 320x180 \
         \( -background "$CARD_BG" -fill "$CARD_FG" "${font_args[@]}" -pointsize 13 \
            -size 320x40 -gravity center caption:"$label" \) \
         -append -depth 8 -strip "$out" >/dev/null 2>&1
@@ -637,7 +669,7 @@ wallpaper_page() {
     local dir current image label thumb selected path
     local -a images=() labels=()
     local -A paths=()
-    local index=0 card_mode=0
+    local index=0 card_mode=0 icons=0
 
     for dir in "${dirs[@]}"; do
         [[ -d $dir ]] || continue
@@ -656,6 +688,7 @@ wallpaper_page() {
     current="$(wallpaper_current_image)"
 
     if have magick; then
+        icons=1
         CARD_BG="$(rofi_color surface || true)"
         CARD_FG="$(rofi_color on-surface || true)"
         [[ -n $CARD_BG && -n $CARD_FG ]] && card_mode=1
@@ -673,28 +706,40 @@ wallpaper_page() {
         labels+=("$label")
     done
 
-    # Rofi row options: NUL, key, unit separator, value. The icon is a card
-    # with the name underneath when ImageMagick and a palette are available.
+    # Building cards can take a while with a large collection; show the same
+    # placeholder menu as the hardware scanners instead of a silent pause.
+    ((icons)) && rofi_loading_start "Loading wallpapers…"
+
+    # Rofi row options: NUL, key, unit separator, value. Rows without a usable
+    # icon are plain text, never a multi-megabyte original image.
     local row
     for row in "${labels[@]}"; do
         image="${paths[$row]}"
-        thumb="$CACHE_DIR/$(wallpaper_card_key "$row" "$image" | sha1sum | cut -c1-12).png"
-        if ((card_mode)); then
-            thumb="${thumb%.png}-card.png"
-            if [[ ! -r $thumb || $image -nt $thumb ]]; then
-                make_wallpaper_card "$image" "$row" "$thumb" || thumb="$image"
+        thumb=""
+        if ((icons)); then
+            thumb="$CACHE_DIR/$(wallpaper_card_key "$row" "$image" | sha1sum | cut -c1-12).png"
+            if ((card_mode)); then
+                thumb="${thumb%.png}-card.png"
+                if [[ ! -r $thumb || $image -nt $thumb ]]; then
+                    make_wallpaper_card "$image" "$row" "$thumb" || thumb=""
+                fi
+            elif [[ ! -r $thumb || $image -nt $thumb ]]; then
+                timeout 5 magick "$image" -auto-orient -thumbnail '320x180^' \
+                    -gravity center -extent 320x180 "$thumb" >/dev/null 2>&1 || thumb=""
             fi
-        elif [[ ! -r $thumb || $image -nt $thumb ]]; then
-            magick "$image" -auto-orient -thumbnail '320x180^' \
-                -gravity center -extent 320x180 "$thumb" >/dev/null 2>&1 || thumb="$image"
         fi
-        printf '%s\0icon\x1f%s\n' "$row" "$thumb"
+        if [[ -n $thumb && -r $thumb ]]; then
+            printf '%s\0icon\x1f%s\n' "$row" "$thumb"
+        else
+            printf '%s\n' "$row"
+        fi
     done >"$CACHE_DIR/rows"
 
-    local -a args=(-show-icons)
-    if ((card_mode)); then
-        # One card per row: two 320px cards do not fit the panel width.
-        args+=(-theme-str 'window { width: 400px; } listview { lines: 3; } element-icon { size: 330px; } element-text { enabled: false; }')
+    ((icons)) && rofi_loading_stop
+
+    local -a args=()
+    if ((icons)); then
+        args=(-show-icons -theme-str 'window { width: 400px; } listview { lines: 3; } element-icon { size: 330px; }')
     fi
     selected="$(rofi_pick "Wallpaper" "${args[@]}" <"$CACHE_DIR/rows")" || return 0
     [[ -n ${paths[$selected]:-} ]] || return 0
@@ -856,7 +901,7 @@ theme_accent_page() {
     fi
 
     mapfile -t colors < <(matugen image "$wallpaper" --show-source-colors 2>/dev/null |
-        grep -E '^#[0-9A-Fa-f]{6}$')
+        grep -E '^#[0-9A-Fa-f]{6}$' | head -n5)
     if ((${#colors[@]} == 0)); then
         message "matugen found no source colours in this wallpaper."
         return 0
@@ -870,11 +915,13 @@ theme_accent_page() {
     index="$(printf '%s\n' "${rows[@]}" | rofi_index "Accent color")" || return 0
     [[ $index =~ ^[0-9]+$ ]] || return 0
     if ((index == 0)); then
-        run_and_notify "Accent: automatic" theme-menu.sh --source-index auto --apply
+        run_and_notify "Accent: automatic" \
+            theme-menu.sh --wallpaper "$wallpaper" --source-index auto --apply
     else
         number=$((index - 1))
         ((number < ${#colors[@]})) || return 0
-        run_and_notify "Accent: ${colors[$number]}" theme-menu.sh --source-index "$number" --apply
+        run_and_notify "Accent: ${colors[$number]}" \
+            theme-menu.sh --wallpaper "$wallpaper" --source-index "$number" --apply
     fi
     exit 0
 }
@@ -997,8 +1044,10 @@ wifi_connect() {
         notify "NetworkManager (nmcli) is not installed"
         return 0
     fi
+    rofi_loading_start "Scanning for Wi-Fi networks…"
     mapfile -t networks < <(nmcli -t -f SSID device wifi list --rescan yes 2>/dev/null |
         awk 'NF && !seen[$0]++' | head -50)
+    rofi_loading_stop
     ((${#networks[@]})) || { notify "No Wi-Fi networks found"; return 0; }
     ssid="$(printf '%s\n' "${networks[@]}" | rofi_pick "Wi-Fi network")" || return 1
     [[ -n $ssid ]] || return 1
@@ -1016,10 +1065,12 @@ wifi_page() {
             "Connect") wifi_connect || continue; exit 0 ;;
             "Disconnect")
                 connection="$(nmcli -t -f NAME connection show --active 2>/dev/null | head -1)"
-                if [[ -n $connection ]]; then
-                    run_terminal --hold "nmcli connection down $(printf '%q' "$connection")"
-                else
+                if [[ -z $connection ]]; then
                     notify "No active connection"
+                elif nmcli connection down "$connection" >/dev/null 2>&1; then
+                    notify "Wi-Fi disconnected"
+                else
+                    notify "Wi-Fi could not be disconnected"
                 fi
                 exit 0
                 ;;
@@ -1037,7 +1088,9 @@ bluetooth_connect() {
         notify "bluez (bluetoothctl) is not installed"
         return 0
     fi
+    rofi_loading_start "Scanning for Bluetooth devices…"
     bluetoothctl --timeout 6 scan on >/dev/null 2>&1 || true
+    rofi_loading_stop
     mapfile -t devices < <(bluetoothctl devices 2>/dev/null | sed 's/^Device //')
     ((${#devices[@]})) || { notify "No Bluetooth devices found"; return 0; }
     choice="$(printf '%s\n' "${devices[@]}" | rofi_pick "Bluetooth device")" || return 1
@@ -1046,17 +1099,48 @@ bluetooth_connect() {
     run_terminal --hold "bluetoothctl connect $(printf '%q' "$mac")"
 }
 
+bluetooth_powered() {
+    have bluetoothctl || return 1
+    bluetoothctl show 2>/dev/null | grep -q '^[[:space:]]*Powered: yes'
+}
+
+bluetooth_label() {
+    if bluetooth_powered; then
+        printf 'Bluetooth: on'
+    else
+        printf 'Bluetooth: off'
+    fi
+}
+
+bluetooth_toggle() {
+    if ! have bluetoothctl; then
+        notify "bluez (bluetoothctl) is not installed"
+        return 0
+    fi
+    if bluetooth_powered; then
+        if bluetoothctl power off >/dev/null 2>&1; then
+            notify "Bluetooth off"
+        else
+            notify "Bluetooth could not be turned off"
+        fi
+    else
+        if bluetoothctl power on >/dev/null 2>&1; then
+            notify "Bluetooth on"
+        else
+            notify "Bluetooth could not be turned on"
+        fi
+    fi
+}
+
 bluetooth_page() {
     local choice
     while :; do
         choice="$(pick_icon "Bluetooth" \
-            $'|Power on' \
-            $'|Power off' \
-            $'|Connect device' \
-            $'|Status')" || return 0
+            $'\uf293|'"$(bluetooth_label)" \
+            $'\uf0c1|Connect device' \
+            $'\uf05a|Status')" || return 0
         case "$choice" in
-            "Power on") run_terminal --hold "bluetoothctl power on"; exit 0 ;;
-            "Power off") run_terminal --hold "bluetoothctl power off"; exit 0 ;;
+            "Bluetooth: on"|"Bluetooth: off") bluetooth_toggle; exit 0 ;;
             "Connect device") bluetooth_connect || continue; exit 0 ;;
             "Status") run_terminal --hold "bluetoothctl show"; exit 0 ;;
             "") return 0 ;;

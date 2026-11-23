@@ -75,9 +75,9 @@
     "return-type": "json",
     "hide-empty-text": true,
     "tooltip": true,
-    "on-click": "brightnessctl set 5%+",
-    "on-scroll-up": "brightnessctl set 5%+",
-    "on-scroll-down": "brightnessctl set 5%-"
+    "on-click": "~/.local/bin/brightness-adjust.sh up",
+    "on-scroll-up": "~/.local/bin/brightness-adjust.sh up",
+    "on-scroll-down": "~/.local/bin/brightness-adjust.sh down"
   },
   "custom/battery": {
     "exec": "~/.local/bin/waybar-battery.sh",

@@ -48,13 +48,25 @@ ensure_daemon() {
     daemon_running && return 0
     have hyprsunset || die "hyprsunset is not installed"
     (setsid hyprsunset >/dev/null 2>&1 &)
+    # The protocol socket appears a moment after the process; a command sent
+    # too early fails and made the Control Center report a broken night light.
+    for _ in {1..30}; do
+        daemon_running && return 0
+        sleep 0.05
+    done
+    die "hyprsunset did not start"
 }
 
 apply() {
     ensure_daemon
     have hyprctl || die "hyprctl is not available"
-    hyprctl hyprsunset temperature "$temperature" >/dev/null \
-        || die "hyprctl could not set the temperature"
+    for _ in {1..20}; do
+        if hyprctl hyprsunset temperature "$temperature" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.1
+    done
+    die "hyprctl could not set the temperature"
 }
 
 disable() {

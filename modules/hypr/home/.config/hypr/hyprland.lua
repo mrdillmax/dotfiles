@@ -218,6 +218,7 @@ hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("lid-handler.sh open"))
 
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("clipboard-menu.sh"))
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd(powermenu))
+hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("lock-screen.sh"))
 hl.bind(mainMod .. " + H", hl.dsp.exec_cmd(history))
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd(picker))
 

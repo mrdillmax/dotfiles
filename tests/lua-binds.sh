@@ -29,7 +29,9 @@ hl = {
         end
     end,
     gesture = function(t)
-        print("GESTURE\t" .. tostring(t.fingers) .. "\t" .. tostring(t.direction) .. "\t" .. tostring(t.action))
+        local action = t.action
+        if type(action) == "table" then action = "table" end
+        print("GESTURE\t" .. tostring(t.fingers) .. "\t" .. tostring(t.direction) .. "\t" .. tostring(action))
     end,
 }
 local ok, err = pcall(dofile, file)
@@ -62,6 +64,7 @@ check "osd.lua" "$ROOT/modules/osd/home/.config/hypr/osd.lua" $'BIND\tXF86AudioR
 check "nightlight.lua" "$ROOT/modules/nightlight/home/.config/hypr/nightlight.lua" $'CMD\thyprsunset'
 check "nightlight.lua restore" "$ROOT/modules/nightlight/home/.config/hypr/nightlight.lua" $'CMD\tnightlight.sh restore'
 check "input.lua" "$ROOT/hosts/desktop/input.lua" $'GESTURE\t3\thorizontal\tworkspace'
+check "input.lua window move" "$ROOT/hosts/laptop/input.lua" $'GESTURE\t4\thorizontal\ttable'
 check "input.lua distance" "$ROOT/hosts/desktop/input.lua" $'CONFIG\tworkspace_swipe_distance\t300'
 
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
