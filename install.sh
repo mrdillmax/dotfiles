@@ -102,6 +102,8 @@ source "$DOTFILES_DIR/lib/restore.sh"
 source "$DOTFILES_DIR/lib/theme.sh"
 # shellcheck source=lib/menu.sh
 source "$DOTFILES_DIR/lib/menu.sh"
+# shellcheck source=lib/migrate.sh
+source "$DOTFILES_DIR/lib/migrate.sh"
 
 usage() {
     cat <<'EOF'
@@ -1014,6 +1016,8 @@ else
         install_packages
     fi
 
+    # Live state is upgraded before any configuration file is written.
+    run_migrations
     maybe_create_snapshot
     install_selected_modules
 fi
