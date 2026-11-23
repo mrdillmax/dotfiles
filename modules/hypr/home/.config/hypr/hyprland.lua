@@ -1,6 +1,10 @@
-------------------
----- MONITORS ----
-------------------
+-- Hyprland — compositor, binds and window rules.
+--
+-- The palette comes from colors.lua (matugen). Host-specific monitors come
+-- from monitors.lua. Optional modules are probed at startup, so a missing
+-- helper never breaks the session.
+
+-- --- MONITORS --------------------------------------------------------------
 
 local HOME = os.getenv("HOME")
 
@@ -23,9 +27,7 @@ if not monitors_ok or type(monitors) ~= "table" or #monitors == 0 then
 end
 
 
--------------
----- VAR ----
--------------
+-- --- VAR -------------------------------------------------------------------
 
 
 local colors_ok, colors = pcall(require, "colors")
@@ -56,9 +58,7 @@ pcall(dofile, HOME .. "/.config/hypr/control-center.lua")
 
 
 
--------------------
----- AUTOSTART ----
--------------------
+-- --- AUTOSTART -------------------------------------------------------------
 
 
 hl.on("hyprland.start", function()
@@ -68,9 +68,7 @@ hl.on("hyprland.start", function()
 end)
 
 
------------------------
----- LOOK AND FEEL ----
------------------------
+-- --- LOOK AND FEEL ---------------------------------------------------------
 
 
 hl.config({
@@ -149,9 +147,7 @@ hl.config({
 })
 
 
-----------------
----- MISC ----
-----------------
+-- --- MISC ------------------------------------------------------------------
 
 
 hl.config({
@@ -163,9 +159,7 @@ hl.config({
 })
 
 
----------------
----- INPUT ----
----------------
+-- --- INPUT -----------------------------------------------------------------
 
 
 hl.config({
@@ -186,9 +180,7 @@ hl.config({
 pcall(dofile, HOME .. "/.config/hypr/input.lua")
 
 
----------------------
----- KEYBINDINGS ----
----------------------
+-- --- KEYBINDINGS -----------------------------------------------------------
 
 
 hl.bind(mainMod .. " + C", hl.dsp.exec_cmd(calc))
@@ -246,9 +238,7 @@ hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
 
--- - - - - - - - - - --
--- Switch workspaces --
--- - - - - - - - - - --
+-- --- SWITCH WORKSPACES -----------------------------------------------------
 -- Workspace ranges are defined in ~/.config/hypr/monitors.lua (generated).
 local max_ws = 10
 for _, m in ipairs(monitors) do
@@ -281,9 +271,7 @@ for i = 1, max_ws do
 end
 
 
---------------------------------
----- WINDOWS AND WORKSPACES ----
---------------------------------
+-- --- WINDOWS AND WORKSPACES ------------------------------------------------
 
 -- Optional per-host workspace targets (see hosts/<host>/monitors.conf.sh)
 local app_ws = monitors.app_workspaces or {}
@@ -297,6 +285,7 @@ local function app_workspace(key, fallback)
 end
 
 
+-- Hyprland emits maximize events that make some games flicker; drop them.
 local suppressMaximizeRule = hl.window_rule({
     name  = "suppress-maximize-events",
     match = { class = ".*" },
@@ -304,6 +293,7 @@ local suppressMaximizeRule = hl.window_rule({
     suppress_event = "maximize",
 })
 
+-- Xwayland drag proxies have no class or title; keep them out of focus.
 hl.window_rule({
     name  = "fix-xwayland-drags",
     match = {
@@ -318,31 +308,37 @@ hl.window_rule({
     no_focus = true,
 })
 
+-- imv is a quick image viewer; float it instead of claiming a workspace.
 hl.window_rule({
     match = { class = "imv" },
     float = true,
 })
 
+-- mpv floats so a video does not rearrange the workspace layout.
 hl.window_rule({
     match = { class = "mpv" },
     float = true,
 })
 
+-- Obsidian reopens on its own workspace so notes are always in the same place.
 hl.window_rule({
     match = { class = ".*[Oo]bsidian.*" },
     workspace = tostring(app_workspace("obsidian", 5)) .. " silent",
 })
 
+-- Vesktop belongs on workspace 6, next to the other chat windows.
 hl.window_rule({
     match = { class = ".*[Vv]esktop.*" },
     workspace = tostring(app_workspace("vesktop", 6)) .. " silent",
 })
 
+-- iriun turns a phone into a webcam; keep the preview on a special workspace.
 hl.window_rule({
     match = { class = "^iriunwebcam$" },
     workspace = "special:cam silent",
 })
 
+-- Steam dialogs float; the main Steam window still tiles normally.
 hl.window_rule({
     match = {
         class = "steam",
@@ -351,6 +347,7 @@ hl.window_rule({
     float = true,
 })
 
+-- Qalculate is a small calculator and works best as a floating window.
 hl.window_rule({
     match = {
         class = "qalculate-gtk",
@@ -359,6 +356,7 @@ hl.window_rule({
     float = true,
 })
 
+-- OnlyOffice settings is a modal dialog; float it at its natural size.
 hl.window_rule({
     match = {
         title = "OFLL Settings",
@@ -366,6 +364,7 @@ hl.window_rule({
     float = true,
 })
 
+-- GTK file dialogs from portals must float above the application.
 hl.window_rule({
     match = {
         class = "xdg-desktop-portal-gtk",
@@ -373,6 +372,7 @@ hl.window_rule({
     float = true,
 })
 
+-- Protontricks is a one-shot dialog and should not tile.
 hl.window_rule({
     match = {
         class = "zenity",
@@ -381,6 +381,7 @@ hl.window_rule({
     float = true,
 })
 
+-- qBittorrent dialogs float; the main window keeps tiling.
 hl.window_rule({
     match = {
         class = "org.qbittorrent.qBittorrent",
@@ -389,6 +390,7 @@ hl.window_rule({
     float = true,
 })
 
+-- ProtonUp-qt is a small utility window.
 hl.window_rule({
     match = {
         class = "net.davidotek.pupgui2",
@@ -397,6 +399,7 @@ hl.window_rule({
     size = {800, 600},
 })
 
+-- The remove-tools confirmation is tiny; give it the exact size it expects.
 hl.window_rule({
     match = {
         class = "net.davidotek.pupgui2",
@@ -407,6 +410,7 @@ hl.window_rule({
 
 })
 
+-- Zoom's annotation toolbar belongs on the camera workspace.
 hl.window_rule({
     match = {
         class = "zoom",
@@ -425,6 +429,7 @@ hl.window_rule({
     size = { 860, 560 },
 })
 
+-- Volume control floats above the focused window.
 hl.window_rule({
     name = "pavucontrol-float",
     match = { class = "^(pavucontrol|org.pulseaudio.pavucontrol)$" },
@@ -433,6 +438,7 @@ hl.window_rule({
     size = { 900, 600 },
 })
 
+-- nwg-look is a settings window and stays floating.
 hl.window_rule({
     name = "nwg-look-float",
     match = { class = "^nwg-look$" },

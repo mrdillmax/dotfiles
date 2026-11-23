@@ -1,1 +1,3 @@
+/* rofi — main configuration; the visual theme lives in launcher.rasi. */
+
 @theme "./launcher.rasi"

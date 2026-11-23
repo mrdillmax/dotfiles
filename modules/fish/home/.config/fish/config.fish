@@ -1,4 +1,4 @@
-# Interactive fish configuration.
+# fish — interactive shell configuration, aliases and autologin.
 #
 # Sourced after ~/.config/fish/conf.d/*.fish. Sections are grouped: aliases
 # that replace core utils, small helpers, then tool initialisation. Machine
@@ -14,21 +14,21 @@ if status is-interactive
     alias cd='z'
     alias find='fd'
     alias grep='rg'
-    
+
     # === Other ===
     alias cp='cp -i'
-    
+
     alias ..='cd ..'
     alias ...='cd ../..'
     alias ....='cd ../../..'
     alias .....='cd ../../../..'
-    
+
     alias c='clear'
 
     alias hyprconf='micro ~/.config/hypr/hyprland.lua'
     alias fishconf='micro ~/.config/fish/config.fish'
 
-    
+
     # === Extract ===
 	function ex
         if test -f $argv[1]
@@ -66,12 +66,12 @@ if status is-interactive
     alias yss='yay -Ss'
     alias yqs='yay -Qs'
     alias yr='yay -Rns'
-    
+
     alias pas='sudo pacman -S'
     alias pqs='pacman -Qs'
     alias pss='pacman -Ss'
     alias pr='sudo pacman -Rns'
-    
+
     function fc
         sudo rm -rf /var/cache/pacman/pkg/download-*
         yay -Yc

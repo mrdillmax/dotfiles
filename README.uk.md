@@ -249,30 +249,10 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 
 ### Модулі
 
-| Модуль | Що встановлює |
-|--------|----------------|
-| `hypr` | Lua-конфіг Hyprland, бінди, autostart hook, правила вікон, згенеровані монітори |
-| `autostart` | менеджер стану застосунків автозапуску (`autostart.sh`, вибір на `SUPER+SHIFT+A`) |
-| `binds-cheatsheet` | шпаргалка біндових клавіш Hyprland (plain, markdown, JSON, rofi) |
-| `gamemode` | вимкнення анімацій, blur, тіней і округлення для ігор |
-| `idle` | профілі hypridle/hyprlock; AC на десктопі, батарея/AC на ноутбуці |
-| `lid` | обробник кришки (лише ноутбук; потребує idle для екрана блокування) |
-| `monitor-profiles` | профілі гарячого підключення док-станції/зовнішнього дисплея |
-| `theme-menu` | rofi-меню для шпалер, режиму matugen і схеми кольорів |
-| `uwsm` | `~/.config/uwsm/env` (common + GPU-профіль) і `env-hyprland` |
-| `waybar` | конфіг статус-бару, стиль і скрипти |
-| `rofi` | лаунчер, меню живлення й скрипти історії dunst |
-| `kitty` | конфіг термінала |
-| `fish` | конфіг fish, аліаси й список плагінів tide |
-| `dunst` | демон сповіщень (кольори генерує matugen) |
-| `matugen` | шаблони й `config.toml` (без згенерованих кольорів) |
-| `theming` | єдиний вигляд GTK/Qt/KDE, шрифти, іконки й portal |
-| `cursor` | тема/розмір курсора в uwsm, GTK3/4, Qt, xsettingsd і Hyprland |
-| `apps` | btop, micro, spicetify, vesktop, Firefox chrome, dolphinrc |
-| `control-center` | rofi-хаб щоденних налаштувань (`SUPER + Space`) |
-| `ram-cache` | опційний прогрів page cache і tmpfs для профілю браузера |
-| `workspaces-split` | слоти воркспейсів на монітор; лише коли є 2+ монітори |
-| `mouse-sensitivity` | інтерактивний тюнер вказівника й overlay вводу |
+Кожен модуль — це `module.conf` і дерево `home/`. `module.conf` містить опис,
+пакети й залежності; [`docs/modules.md`](docs/modules.md) генерується з цих
+файлів і перелічує всі модулі, пакети та хелпери.
+
 
 Spicetify CLI — вибраний Music-пункт, а не pacman-пакет. Інсталятор качає
 офіційний release-архів у `~/.spicetify`, а не запускає upstream shell-скрипт,

@@ -1,4 +1,4 @@
-// Waybar layout for the Hyprland session.
+// Waybar — status bar layout for the Hyprland session.
 //
 // Left:   workspaces, focused window, notification state.
 // Centre: date and the 24-hour clock.
@@ -14,19 +14,19 @@
   "height": 44,
 
 
-  
+
   // Left: workspaces, focused window, notification state.
   "modules-left": [
     "hyprland/workspaces",
     "hyprland/window",
     "custom/dunst"
   ],
-  
+
   // Centre: date and the 24-hour clock.
   "modules-center": [
     "group/time"
   ],
-  
+
   // Right: privacy indicators, keyboard layout, volume, hardware, tray.
   "modules-right": [
     "privacy",
@@ -37,7 +37,7 @@
   ],
 
 
-  
+
   // Focused window. Empty titles fall back to "Hyprland"; kitty shows as
   // "Terminal" so the bar stays readable.
   "hyprland/window": {
@@ -90,7 +90,7 @@
   },
 
 
-  
+
   // Keyboard layout. Clicking cycles every device to the next layout.
   "hyprland/language": {
     "format": "    {}",

@@ -230,17 +230,17 @@ foot	Terminal	alt	no	any	any	Fast, lightweight, and minimalistic Wayland termina
 ghostty	Terminal	alt	no	any	any	Fast, native, feature-rich terminal emulator pushing modern features
 kitty	Terminal	main	yes	any	any	A modern, hackable, featureful, OpenGL-based terminal emulator
 wezterm	Terminal	alt	no	any	any	A GPU-accelerated cross-platform terminal emulator and multiplexer
-anyrun	Launcher	alt	no	any	any	
+anyrun	Launcher	alt	no	any	any
 fuzzel	Launcher	alt	no	any	any	Application launcher for wlroots based Wayland compositors
 rofi	Launcher	main	yes	any	any	A window switcher, application launcher and dmenu replacement
 wofi	Launcher	alt	no	any	any	launcher for wlroots-based wayland compositors
-ags	Bar	alt	no	any	any	
-hyprpanel	Bar	alt	no	any	any	
+ags	Bar	alt	no	any	any
+hyprpanel	Bar	alt	no	any	any
 waybar	Bar	main	yes	any	any	Highly customizable Wayland bar for Sway and Wlroots based compositors
 dunst	Notifications	main	yes	any	any	Customizable and lightweight notification-daemon
 mako	Notifications	alt	no	any	any	Lightweight notification daemon for Wayland
 swaync	Notifications	alt	no	any	any	A simple GTK based notification daemon for Sway
-brave-bin	Browser	alt	no	any	any	
+brave-bin	Browser	alt	no	any	any
 chromium	Browser	alt	no	any	any	A web browser built for speed, simplicity, and security
 firefox	Browser	main	yes	any	any	Fast, Private & Safe Web Browser
 librewolf	Browser	alt	no	any	any	Community-maintained fork of Firefox, focused on privacy, security and freedom

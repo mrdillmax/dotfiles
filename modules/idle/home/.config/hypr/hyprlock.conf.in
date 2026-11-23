@@ -1,4 +1,4 @@
-# Lock screen.
+# hyprlock — lock screen fallback before the first matugen run.
 #
 # Fallback used before the first matugen run; after that matugen regenerates
 # this file from the palette. Template: ~/.config/matugen/templates/hyprlock.conf.

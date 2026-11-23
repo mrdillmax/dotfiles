@@ -1,3 +1,5 @@
+# matugen — template registry for the generated palette.
+
 [config]
 
 [templates.hyprland]

@@ -1,5 +1,5 @@
 /*
- * Launcher and dmenu theme.
+ * Launcher — launcher and dmenu theme.
  *
  * Colours come from colors.rasi (matugen). Rows stay transparent; only the
  * selected row gets a fill. The font must resolve Nerd Font glyphs for icons.

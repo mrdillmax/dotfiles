@@ -1,5 +1,5 @@
 /*
- * Power menu: shutdown, reboot and logout.
+ * Power menu — shutdown, reboot and logout.
  *
  * Three large glyph buttons, then a two-button confirmation. Colours come
  * from colors.rasi.
