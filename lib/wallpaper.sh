@@ -72,14 +72,22 @@ default_wallpaper_source() {
 
 # Install the repository wallpaper on a first run. An existing choice wins.
 install_default_wallpaper() {
-    local src dest state
+    local src dest state recorded
 
     src="$(default_wallpaper_source)"
     [[ -f $src ]] || return 1
+    dest="$REAL_HOME/.local/share/wallpapers/dotfiles/example.jpg"
+
+    # The asset is always available in the picker, even when the user already
+    # chose a different wallpaper. Only the state file is conditional.
+    if (( DRY_RUN )); then
+        log "${C_DIM}[dry-run]${C_RESET} install $src -> $dest"
+    else
+        copy_file "$src" "$dest" 0644
+    fi
 
     state="$(wallpaper_state_file)"
     if [[ -r $state ]]; then
-        local recorded
         recorded="$(<"$state")"
         [[ -n $recorded && -f $recorded ]] && return 0
     fi
@@ -88,13 +96,8 @@ install_default_wallpaper() {
         && theme_wallpaper_path >/dev/null 2>&1; then
         return 0
     fi
+    (( DRY_RUN )) && return 0
 
-    dest="$REAL_HOME/.local/share/wallpapers/dotfiles/example.jpg"
-    if (( DRY_RUN )); then
-        log "${C_DIM}[dry-run]${C_RESET} install $src -> $dest"
-        return 0
-    fi
-    copy_file "$src" "$dest" 0644
     mkdir -p -- "$(dirname -- "$state")"
     printf '%s\n' "$dest" >"$state"
     ok "default wallpaper: $dest"

@@ -91,13 +91,14 @@ else
     fail "dangling record was trusted: $(cat "$state" 2>/dev/null)"
 fi
 
-printf '%s\n' "$dest" >"$state"
-before="$(sha256sum "$dest" | cut -d' ' -f1)"
+printf 'other wallpaper\n' >"$home/other.jpg"
+printf '%s\n' "$home/other.jpg" >"$state"
+rm -f "$dest"
 install_default_wallpaper >/dev/null 2>&1
-if [[ $(sha256sum "$dest" | cut -d' ' -f1) == "$before" ]]; then
-    pass "an existing wallpaper is left alone"
+if [[ -f $dest && $(<"$state") == "$home/other.jpg" ]]; then
+    pass "the example is copied but an existing choice is kept"
 else
-    fail "an existing wallpaper was rewritten"
+    fail "example/state: $([[ -f $dest ]] && echo present || echo missing) / $(cat "$state" 2>/dev/null)"
 fi
 rm -rf "$home"
 REAL_HOME="$saved_home"

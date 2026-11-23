@@ -167,6 +167,31 @@ render_monitors() {
         fi
     fi
 
+    local generated=0
+    if ((MON_COUNT == 0)); then
+        local -a detected=()
+        local idx dname dmode dpos dscale _width first=1
+        mapfile -t detected < <(detect_monitors)
+        for idx in "${!detected[@]}"; do
+            IFS=$'\t' read -r dname dmode dpos dscale _width <<<"${detected[$idx]}"
+            [[ -n $dname ]] || continue
+            MON_NAME+=("$dname")
+            MON_MODE+=("${dmode:-preferred}")
+            MON_POSITION+=("${dpos:-auto}")
+            MON_SCALE+=("${dscale:-1}")
+            MON_WS_FIRST+=("$first")
+            MON_WS_COUNT+=(10)
+            first=$((first + 10))
+        done
+        MON_COUNT=${#MON_NAME[@]}
+        if ((MON_COUNT > 0)); then
+            generated=1
+            ((APP_WS_VESKTOP)) || APP_WS_VESKTOP=6
+            ((APP_WS_OBSIDIAN)) || APP_WS_OBSIDIAN=5
+            info "no monitor preset: generated 10 workspace slots per detected monitor"
+        fi
+    fi
+
     lua_tmp="$(mktemp)"
     conf_tmp="$(mktemp)"
 
@@ -191,7 +216,20 @@ render_monitors() {
         printf 'return M\n'
     } >"$lua_tmp"
 
-    if [[ -r $conf ]]; then
+    if ((generated)); then
+        {
+            printf '# Installed copy. Generated from detected monitors (no host preset).\n'
+            printf 'MON_COUNT=%d\n' "$MON_COUNT"
+            printf 'MON_NAME=(%s)\n' "$(join_quoted "${MON_NAME[@]}")"
+            printf 'MON_MODE=(%s)\n' "$(join_quoted "${MON_MODE[@]}")"
+            printf 'MON_POSITION=(%s)\n' "$(join_quoted "${MON_POSITION[@]}")"
+            printf 'MON_SCALE=(%s)\n' "$(join_quoted "${MON_SCALE[@]}")"
+            printf 'MON_WS_FIRST=(%s)\n' "${MON_WS_FIRST[*]}"
+            printf 'MON_WS_COUNT=(%s)\n' "${MON_WS_COUNT[*]}"
+            printf 'APP_WS_VESKTOP=%s\n' "$APP_WS_VESKTOP"
+            printf 'APP_WS_OBSIDIAN=%s\n' "$APP_WS_OBSIDIAN"
+        } >"$conf_tmp"
+    elif [[ -r $conf ]]; then
         {
             printf '# Installed copy. Source of truth: hosts/%s/monitors.conf.sh\n' "$HOST_NAME"
             cat -- "$conf"
