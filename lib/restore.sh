@@ -239,6 +239,11 @@ restore_run() {
         fi
 
         run mkdir -p "$(dirname "$target")"
+        # cp -a writes through a symlink; remove it so the backup replaces
+        # the link itself instead of the file it points at.
+        if [[ -L $target ]]; then
+            run rm -f -- "$target"
+        fi
         run cp -a -- "$backup" "$target"
         ok "restored $target"
         restored=$((restored + 1))
