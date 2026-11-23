@@ -265,13 +265,14 @@ type, а GPU-профіль — за `lspci`/`systemd-detect-virt`. Обидва
 | `nightlight` | синій фільтр hyprsunset і перемикач на сторінці Style |
 | `recorder` | запис області wf-recorder на `SUPER+ALT+R` |
 | `emoji` | вибір емодзі rofimoji на `SUPER+.` |
-| `hyprtools` | hyprshutdown для logout, а hyprpwcenter і hyprsysteminfo — для ручного запуску |
+| `hyprtools` | hyprshutdown, hyprpwcenter і hyprsysteminfo для ручного запуску; меню й Control Center використовують uwsm, pavucontrol і fastfetch |
 
 `udisks` (автомонтування udiskie з іконкою в треї) ставиться за замовчуванням.
 Для керування яскравістю потрібен запис у пристрій підсвічування (група
 `video`). `hyprsysteminfo` — з AUR; решта пакетів є в офіційних репозиторіях.
 Звук відкривається через `pavucontrol`, а System info — через `fastfetch`:
-застосунки Hypr toolkit можуть падати на GPU без робочого EGL.
+застосунки Hypr toolkit можуть падати на GPU без робочого EGL. Logout завжди
+йде через `uwsm stop`.
 
 
 Spicetify CLI — вибраний Music-пункт, а не pacman-пакет. Інсталятор качає

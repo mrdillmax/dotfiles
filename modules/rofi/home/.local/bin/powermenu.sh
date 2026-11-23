@@ -48,11 +48,7 @@ run_cmd() {
         elif [[ $1 == '--reboot' ]]; then
             systemctl reboot
         elif [[ $1 == '--logout' ]]; then
-                if command -v hyprshutdown >/dev/null 2>&1; then
-                    hyprshutdown
-                else
-                    uwsm stop
-                fi
+                uwsm stop
         fi
     else
         exit 0

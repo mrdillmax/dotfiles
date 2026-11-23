@@ -267,14 +267,14 @@ checklist; `--all` never selects them.
 | `nightlight` | hyprsunset blue-light filter and a toggle on the Style page |
 | `recorder` | wf-recorder region recording on `SUPER+ALT+R` |
 | `emoji` | rofimoji picker on `SUPER+.` |
-| `hyprtools` | hyprshutdown logout, plus hyprpwcenter and hyprsysteminfo for manual use |
+| `hyprtools` | hyprshutdown, hyprpwcenter and hyprsysteminfo for manual use; the menu and Control Center use uwsm, pavucontrol and fastfetch |
 
 `udisks` (udiskie automounting with a tray icon) is installed by default.
 Brightness control needs write access to the backlight device (the `video`
 group). `hyprsysteminfo` comes from the AUR; the other packages are in the
 official repositories. Sound uses `pavucontrol` and System info uses
 `fastfetch`, because the Hypr toolkit apps can crash on GPUs without working
-EGL.
+EGL; logout always uses `uwsm stop`.
 
 
 Spicetify CLI is a selected Music entry, not a pacman package. The installer

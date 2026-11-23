@@ -30,10 +30,10 @@ PATH="$work/bin:$PATH"
     confirm_exit() { printf '%s\n' "$yes"; }
     run_cmd --logout
 )
-if [[ -e $work/hyprshutdown.ran && ! -e $work/uwsm.ran ]]; then
-    pass "logout prefers hyprshutdown and never reaches uwsm stop"
+if [[ -e $work/uwsm.ran && ! -e $work/hyprshutdown.ran ]]; then
+    pass "logout uses uwsm even when hyprshutdown is installed"
 else
-    fail "logout used the wrong path (uwsm stub: $(ls "$work/uwsm.ran" 2>/dev/null))"
+    fail "logout used the wrong path (hyprshutdown: $(ls "$work/hyprshutdown.ran" 2>/dev/null))"
 fi
 
 (

@@ -48,6 +48,8 @@ enable_services() {
             picked+=("${line#*: }")
         done
     else
+        # shellcheck disable=SC2034 # read by tui_checklist
+        TUI_CHECKED_ITEMS=("${labels[@]}")
         tui_checklist "User services to enable and start" "${labels[@]}"
         for line in "${TUI_SELECTION[@]}"; do
             picked+=("${line#*: }")
