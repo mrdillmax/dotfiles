@@ -4,6 +4,14 @@ This repository contains configuration files adapted from upstream projects.
 Those files keep their original licenses. The rest of the repository is
 MIT-licensed; see [LICENSE](LICENSE).
 
+## Bundled artwork
+
+`assets/cursors/win11-concept-cursors`: Xcursor conversion of "Windows 11
+Cursors Concept" by jepriCreations
+(https://jepricreations.com/products/w11-cursor-concept-free/). Original
+artwork © jepriCreations. Converted for Linux by mrdillmax. Will be removed on
+request of the original author.
+
 ## MIT
 
 | Path | Source | Copyright |

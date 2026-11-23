@@ -6,20 +6,20 @@
 [[ -n ${_DOTFILES_CURSOR:-} ]] && return 0
 _DOTFILES_CURSOR=1
 
-CURSOR_THEME="${CURSOR_THEME:-win11_concept_cursos}"
+CURSOR_THEME="${CURSOR_THEME:-win11-concept-cursors}"
 CURSOR_SIZE="${CURSOR_SIZE:-24}"
 CURSOR_INSTALLED_THEME=""
 
 load_cursor_conf() {
     local conf="$DOTFILES_DIR/hosts/${HOST_NAME:-desktop}/cursor.conf"
 
-    CURSOR_THEME="win11_concept_cursos"
+    CURSOR_THEME="win11-concept-cursors"
     CURSOR_SIZE=24
     if [[ -r $conf ]]; then
         # shellcheck source=/dev/null
         source "$conf"
     fi
-    CURSOR_THEME="${CURSOR_THEME:-win11_concept_cursos}"
+    CURSOR_THEME="${CURSOR_THEME:-win11-concept-cursors}"
     CURSOR_SIZE="${CURSOR_SIZE:-24}"
 }
 
@@ -49,7 +49,7 @@ cursor_theme_exists() {
 
 # The theme is committed under assets/cursors so a fresh clone needs no archive.
 cursor_repo_theme_dir() {
-    local dir="$DOTFILES_DIR/assets/cursors/${CURSOR_THEME:-win11_concept_cursos}"
+    local dir="$DOTFILES_DIR/assets/cursors/${CURSOR_THEME:-win11-concept-cursors}"
     [[ -d $dir ]] || return 1
     printf '%s\n' "$dir"
 }

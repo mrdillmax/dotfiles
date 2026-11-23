@@ -81,7 +81,7 @@
 ### Task 3: Assets — cursor theme and default wallpaper
 
 **Files:**
-- Create: `assets/cursors/win11_concept_cursos/` (copy of `/usr/share/icons/win11_concept_cursos`)
+- Create: `assets/cursors/win11-concept-cursors/` (copy of `/usr/share/icons/win11-concept-cursors`)
 - Create: `assets/wallpapers/example.jpg` (the approved wallpaper, renamed)
 - Modify: `lib/cursor.sh` (repo theme preferred)
 - Modify: `install.sh` (install default wallpaper when the hypr/wallpaper module is selected)

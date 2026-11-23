@@ -32,7 +32,7 @@ and moves daily actions to the Control Center.
   The Music page is removed.
 - Control Center pages lose `Back`; the main menu loses `Close`; Esc closes.
 - Autostart gains "Add a program" with name and command prompts.
-- Cursor theme `win11_concept_cursos` and wallpaper `example.jpg` live in the
+- Cursor theme `win11-concept-cursors` and wallpaper `example.jpg` live in the
   repository under `assets/`; the wallpaper is installed as
   `~/.local/share/wallpapers/dotfiles/example.jpg` and seeds matugen.
 - Kitty is written into `kdeglobals` as `TerminalApplication`/`TerminalService`
