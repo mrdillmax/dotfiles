@@ -4,6 +4,59 @@
 [[ -n ${_DOTFILES_UNINSTALL:-} ]] && return 0
 _DOTFILES_UNINSTALL=1
 
+# Remove the packages listed by the selected modules. Only packages that are
+# installed and not used by another module are touched; pacman keeps its own
+# confirmation prompts.
+uninstall_remove_packages() {
+    local modules_csv="${1:-}"
+    local -a selected=() remove=()
+    local mod conf pkg
+    local sudo_bin="${SUDO_BIN:-sudo}"
+    declare -A keep=()
+
+    [[ -n $modules_csv ]] || { warn "package removal requires --modules"; return 1; }
+    IFS=, read -r -a selected <<<"$modules_csv"
+
+    for conf in "$DOTFILES_DIR"/modules/*/module.conf; do
+        mod="$(basename "$(dirname "$conf")")"
+        [[ " ${selected[*]} " == *" $mod "* ]] && continue
+        while IFS= read -r pkg; do
+            [[ -n $pkg ]] && keep["$pkg"]=1
+        done < <( (
+            # shellcheck source=/dev/null
+            source "$conf"
+            printf '%s\n' "${PACKAGES[@]:-}"
+        ) )
+    done
+
+    for mod in "${selected[@]}"; do
+        conf="$DOTFILES_DIR/modules/$mod/module.conf"
+        [[ -r $conf ]] || { warn "unknown module: $mod"; continue; }
+        while IFS= read -r pkg; do
+            [[ -n $pkg && -z ${keep[$pkg]:-} ]] || continue
+            command -v pacman >/dev/null 2>&1 || continue
+            pacman -Qq "$pkg" >/dev/null 2>&1 || continue
+            remove+=("$pkg")
+        done < <( (
+            # shellcheck source=/dev/null
+            source "$conf"
+            printf '%s\n' "${PACKAGES[@]:-}"
+        ) )
+    done
+
+    ((${#remove[@]})) || { info "no module packages to remove"; return 0; }
+    info "packages to remove: ${remove[*]}"
+    if (( ${DRY_RUN:-0} )); then
+        log "${C_DIM}[dry-run]${C_RESET} $sudo_bin pacman -Rns -- ${remove[*]}"
+        return 0
+    fi
+    if (( !ASSUME_YES )); then
+        tui_confirm "Remove ${#remove[@]} package(s)?" no \
+            || { info "packages kept"; return 0; }
+    fi
+    run "$sudo_bin" pacman -Rns -- "${remove[@]}"
+}
+
 # uninstall_run [modules_csv]
 #
 # Empty module list means every recorded path. Uses DRY_RUN, ASSUME_YES,
@@ -220,5 +273,9 @@ uninstall_run() {
     info "packages were not removed${pkgs:+: ${pkgs% }}"
     info "login shell was not changed; revert with: chsh -s /bin/bash \$USER"
     info "fisher plugins were not removed; update fish_plugins, then: fish -c 'fisher update'"
+
+    if (( ${REMOVE_PACKAGES:-0} )); then
+        uninstall_remove_packages "$modules_csv" || true
+    fi
     return 0
 }

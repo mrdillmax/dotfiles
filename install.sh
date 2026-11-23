@@ -52,6 +52,7 @@ DO_RESTORE=0
 RESTORE_DATE=""
 DO_UNINSTALL=0
 FORCE=0
+REMOVE_PACKAGES=0
 DO_SYNC=0
 SYNC_COMMAND=""
 SYNC_TARGET=""
@@ -177,6 +178,7 @@ Maintenance:
                         (combine with --modules a,b; /etc needs --system)
   --uninstall           remove installed files and restore their originals
                         (combine with --modules a,b; --system for /etc)
+  --remove-packages     with --uninstall --modules: remove that module's packages
   --sync COMMAND [target]
                         status|diff|pull to copy live changes back, or
                         packages to compare package lists
@@ -254,8 +256,9 @@ while (($#)); do
                 shift
             fi
             ;;
-        --uninstall)  DO_UNINSTALL=1; HAS_ACTION=1 ;;
-        --force)      FORCE=1 ;;
+        --uninstall)       DO_UNINSTALL=1; HAS_ACTION=1 ;;
+        --remove-packages) REMOVE_PACKAGES=1 ;;
+        --force)           FORCE=1 ;;
         --sync)
             DO_SYNC=1
             HAS_ACTION=1
@@ -525,6 +528,9 @@ if (( DO_RESTORE )); then
     exit $?
 fi
 
+if (( REMOVE_PACKAGES && !DO_UNINSTALL )); then
+    die "--remove-packages requires --uninstall"
+fi
 if (( DO_UNINSTALL )); then
     uninstall_run "$MODULES_ARG" || exit 1
     exit 0
