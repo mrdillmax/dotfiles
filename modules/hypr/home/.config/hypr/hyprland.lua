@@ -55,8 +55,9 @@ local mainMod     = "SUPER"
 
 -- Optional: the control-center module renders this bind and its launcher.
 pcall(dofile, HOME .. "/.config/hypr/control-center.lua")
--- Optional: osd, recorder and emoji add their binds only when installed.
+-- Optional: these modules add their binds only when installed.
 pcall(dofile, HOME .. "/.config/hypr/osd.lua")
+pcall(dofile, HOME .. "/.config/hypr/nightlight.lua")
 
 
 

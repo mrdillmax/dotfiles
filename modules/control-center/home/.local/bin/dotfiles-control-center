@@ -910,18 +910,25 @@ appearance_page() {
 style_page() {
     local choice
     while :; do
-        choice="$(pick_icon "Style" \
-            $'|Wallpaper' \
-            $'|Theme mode' \
-            $'|Color scheme' \
-            $'|Accent color' \
-            $'|Fonts and icons')" || return 0
+        local -a specs=(
+            $'\uf03e|Wallpaper'
+            $'\uf186|Theme mode'
+            $'\uf1fc|Color scheme'
+            $'\uf0eb|Accent color'
+            $'\uf031|Fonts and icons'
+        )
+        have nightlight.sh && specs+=($'\uf185|Night light')
+        choice="$(pick_icon "Style" "${specs[@]}")" || return 0
         case "$choice" in
             "Wallpaper") wallpaper_page ;;
             "Theme mode") theme_mode_page ;;
             "Color scheme") theme_scheme_page ;;
             "Accent color") theme_accent_page ;;
             "Fonts and icons") appearance_page ;;
+            "Night light")
+                nightlight.sh toggle >/dev/null 2>&1
+                notify "Night light toggled"
+                ;;
             "") return 0 ;;
         esac
     done

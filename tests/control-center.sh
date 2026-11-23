@@ -99,5 +99,24 @@ else
     fail "update row did not refresh the status"
 fi
 
+printf '#!/bin/sh\necho "$*" >"%s/nightlight.calls"\n' "$stub" >"$stub/nightlight.sh"
+chmod +x "$stub/nightlight.sh"
+(
+    # shellcheck disable=SC2329 # called by style_page
+    pick_icon() {
+        [[ -e $stub/picked-style ]] && return 1
+        : >"$stub/picked-style"
+        printf '%s\n' "Night light"
+    }
+    # shellcheck disable=SC2329
+    notify() { :; }
+    style_page
+)
+if grep -q toggle "$stub/nightlight.calls" 2>/dev/null; then
+    pass "the Style page toggles the night light"
+else
+    fail "the Style page did not call nightlight.sh"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))

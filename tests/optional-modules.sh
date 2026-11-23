@@ -59,5 +59,23 @@ else
     fail "swayosd has no catalog row"
 fi
 
+nightlight="$ROOT/modules/nightlight"
+if [[ -x $nightlight/home/.local/bin/nightlight.sh ]] &&
+    grep -qx 'OPTIONAL=1' "$nightlight/module.conf"; then
+    pass "nightlight helper and optional marker are present"
+else
+    fail "nightlight module is incomplete"
+fi
+if luac -p "$nightlight/home/.config/hypr/nightlight.lua" 2>/dev/null; then
+    pass "nightlight.lua compiles"
+else
+    fail "nightlight.lua does not compile"
+fi
+if awk -F'\t' '$1 == "hyprsunset" {found=1} END{exit !found}' "$ROOT/packages/catalog.tsv"; then
+    pass "hyprsunset is in the catalog"
+else
+    fail "hyprsunset has no catalog row"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
