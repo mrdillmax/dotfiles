@@ -60,6 +60,8 @@ pcall(dofile, HOME .. "/.config/hypr/osd.lua")
 pcall(dofile, HOME .. "/.config/hypr/nightlight.lua")
 pcall(dofile, HOME .. "/.config/hypr/recorder.lua")
 pcall(dofile, HOME .. "/.config/hypr/emoji.lua")
+-- Optional: greeter.lua locks the session at startup when enabled.
+pcall(dofile, HOME .. "/.config/hypr/greeter.lua")
 
 
 

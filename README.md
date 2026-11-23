@@ -460,6 +460,23 @@ Settings live in `~/.local/state/dotfiles/idle.conf`. The previous
 `hypridle.conf` is backed up before it is replaced. The `lid` module is laptop
 only and depends on `idle` for the shared lock screen.
 
+### Lock at boot (hyprlock greeter)
+
+```bash
+./install.sh --greeter on
+./install.sh --greeter status
+./install.sh --greeter off
+```
+
+With the getty autologin the session starts at boot; the greeter then shows
+`hyprlock` before autostart, Waybar or any application. Unlocking uses the
+normal account password through PAM.
+
+This is a convenience gate, not a display manager: the autologin session is
+already running behind the lock, and a crash of `hyprlock` would leave it
+accessible. Use greetd/SDDM when authentication must happen before the
+compositor starts.
+
 ### Lid switch
 
 ```bash

@@ -464,6 +464,22 @@ DOCK_LAYOUT=right      # right|left|mirror|ask
 Попередній `hypridle.conf` бекапиться перед заміною. Модуль `lid` лишається
 лише для ноутбука й залежить від `idle` для спільного екрана блокування.
 
+### Вхід через hyprlock
+
+```bash
+./install.sh --greeter on
+./install.sh --greeter status
+./install.sh --greeter off
+```
+
+З getty-автологіном сесія стартує при завантаженні; далі greeter показує
+`hyprlock` **до** autostart, Waybar і програм. Розблокування — звичайним
+паролем облікового запису через PAM.
+
+Це зручний бар'єр, а не display manager: автологін-сесія вже працює за
+замком, і падіння `hyprlock` лишить її доступною. Для автентифікації **до**
+композитора використовуй greetd/SDDM.
+
 ### Кришка ноутбука
 
 ```bash
