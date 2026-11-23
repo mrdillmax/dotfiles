@@ -556,6 +556,8 @@ install_system_configs() {
         if [[ $dst == "$(dns_unbound_conf_path)" ]]; then
             dns_root_hints_install "https://www.internic.net/domain/named.root" \
                 || warn "could not refresh root hints before validating $dst"
+            dns_unbound_ensure_include \
+                || warn "the stock unbound.conf does not include conf.d; $dst may be ignored"
         fi
 
         LAST_BACKUP=""

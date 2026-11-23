@@ -119,6 +119,50 @@ dns_pihole_restart() {
     dns_cmd "$pihole" reloaddns
 }
 
+# Arch ships unbound.conf without an active conf.d include. Add it once so the
+# drop-in is actually read; validate the real file and restore it on failure.
+dns_unbound_ensure_include() {
+    local main="${UNBOUND_MAIN_CONF:-/etc/unbound/unbound.conf}"
+    local bin="${UNBOUND_CHECKCONF:-unbound-checkconf}"
+    local line='include: "/etc/unbound/unbound.conf.d/*.conf"'
+    local prev tmp mode
+
+    [[ -r $main ]] || { warn "unbound main config not found: $main"; return 1; }
+    if grep -Eq '^[[:space:]]*include:[[:space:]]*"/etc/unbound/unbound.conf.d/\*\.conf"' "$main"; then
+        return 0
+    fi
+    if (( ${DRY_RUN:-0} )); then
+        log "${C_DIM}[dry-run]${C_RESET} add $line to $main"
+        return 0
+    fi
+
+    prev="$(mktemp)"
+    cp -a -- "$main" "$prev"
+    mode="$(stat -c %a "$main" 2>/dev/null || printf '0644')"
+    if declare -F backup_path >/dev/null 2>&1; then
+        backup_path "$main" || true
+    fi
+
+    tmp="$(mktemp)"
+    {
+        printf '# Added by dotfiles: load the Pi-hole drop-ins.\n'
+        printf '%s\n' "$line"
+        cat -- "$main"
+    } >"$tmp"
+    install -m "$mode" -- "$tmp" "$main"
+    rm -f -- "$tmp"
+
+    if ! "$bin" "$main" >/dev/null 2>&1; then
+        warn "unbound-checkconf rejected $main; restoring the previous file"
+        cp -a -- "$prev" "$main"
+        rm -f -- "$prev"
+        return 1
+    fi
+
+    rm -f -- "$prev"
+    ok "enabled /etc/unbound/unbound.conf.d in $main"
+}
+
 # Write the unbound drop-in, check it, and put the old file back on failure.
 dns_write_unbound() {
     local src="$1" dst="$2" prev="" bin

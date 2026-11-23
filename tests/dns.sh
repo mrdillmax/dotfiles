@@ -137,6 +137,38 @@ else
     fail "pihole-FTL was not restarted: $(cat "$work/systemctl.log")"
 fi
 
+# 2d. The stock config must include unbound.conf.d, once, or the drop-in is
+# ignored and unbound never listens on 5335.
+printf 'server:\n    verbosity: 1\n' >"$work/unbound-main.conf"
+printf '#!/bin/sh\nexit 0\n' >"$work/checkconf-main"
+chmod +x "$work/checkconf-main"
+MAIN_CONF="$work/unbound-main.conf"
+UNBOUND_MAIN_CONF="$MAIN_CONF"
+UNBOUND_CHECKCONF="$work/checkconf-main"
+export UNBOUND_MAIN_CONF UNBOUND_CHECKCONF
+dns_unbound_ensure_include
+dns_unbound_ensure_include
+count="$(grep -c 'unbound.conf.d/\*.conf' "$MAIN_CONF")"
+if [[ $count == 1 && $(grep -c '^server:' "$MAIN_CONF") == 1 ]]; then
+    pass "the main unbound config includes conf.d exactly once"
+else
+    fail "include count: $count"
+fi
+
+printf 'server:\n    verbosity: 1\n' >"$work/unbound-main.conf"
+printf '#!/bin/sh\nexit 1\n' >"$work/checkconf-main"
+chmod +x "$work/checkconf-main"
+if dns_unbound_ensure_include >/dev/null 2>&1; then
+    fail "a rejected main config was accepted"
+else
+    pass "a rejected main config is not kept"
+fi
+if ! grep -q 'unbound.conf.d' "$MAIN_CONF"; then
+    pass "the previous main config is restored"
+else
+    fail "the include survived a failed validation"
+fi
+
 # 3. Unbound drop-in: a failing check restores the previous file.
 printf 'server:\n    port: 5335\n' >"$work/pi-hole.conf"
 printf 'server:\n    port: 53\n' >"$work/unbound.conf"
