@@ -457,17 +457,22 @@ session. The installer enables the
 `hypridle.service` user unit, so systemd owns the daemon; the autostart entry
 only starts it when the session came up first and never forks a second copy. A
 disabled idle is remembered in `idle.conf`, so autostart does not start
-`hypridle` at the next login. Screen power-off uses the Hyprland 0.57 Lua
-dispatcher (`hl.dsp.dpms("off")`), not the removed string form.
+`hypridle` at the next login. Screen-off and suspend run through
+`lock-screen.sh`, which uses the Hyprland 0.57 Lua dispatcher with an explicit
+action (`hl.dsp.dpms({ action = "off" })`). The dispatcher treats a bare string
+as *toggle*, so the old `hl.dsp.dpms("on")` restore turned the panel off after
+unlocking; that was the black screen after a lid resume.
 
 Locking before sleep goes through `loginctl lock-session`, so the session is
 marked locked before the machine suspends; `hyprlock` is started by hypridle's
 `lock_cmd`. `inhibit_sleep = 3` makes the suspend wait for that lock. On
 resume, `lock-screen.sh resume` turns DPMS back on, restores the dimmed
 backlight and records the wake-up time. The screen-off and suspend listeners
-are skipped for 30 seconds after that record, which prevents the panel from
-flashing the lock screen and going black. `key_press_enables_dpms` and
-`mouse_move_enables_dpms` wake the panel on the first key or mouse move.
+are skipped for 30 seconds after that record, and
+`lock-screen.sh screen-off|suspend` enforces the same guard, so an older
+hypridle that ignores `condition_cmd` still cannot black the panel right after
+a resume. `key_press_enables_dpms` and `mouse_move_enables_dpms` wake the panel
+on the first key or mouse move; both live under `misc` in Hyprland 0.57.
 
 | Profile | Dim | Lock | Screen off | Suspend |
 |---------|-----|------|------------|---------|
@@ -476,7 +481,9 @@ flashing the lock screen and going black. `key_press_enables_dpms` and
 
 `0` disables a stage; enabled stages must satisfy `dim < lock <= off < suspend`.
 Settings live in `~/.local/state/dotfiles/idle.conf`. The previous
-`hypridle.conf` is backed up before it is replaced. The `lid` module is laptop
+`hypridle.conf` is backed up before it is replaced, and an install that
+includes the idle module re-applies the saved profile and restarts the service
+so the daemon never keeps running the old listeners. The `lid` module is laptop
 only and depends on `idle` for the shared lock screen.
 
 ### Night light
@@ -504,7 +511,12 @@ nightlight.sh location 50.45,30.52
 
 `nightlight.lua` starts a single-instance watcher. It checks once a minute and
 acts only when the schedule crosses an on/off boundary, so a manual toggle
-stays in effect until the next boundary.
+stays in effect until the next boundary. `nightlight.sh` owns the
+`hyprsunset` daemon and starts it only while the filter is on, so the login
+restore cannot race a second daemon onto the same IPC socket. A failed start
+or a rejected temperature is shown in the notification and logged to
+`~/.local/state/dotfiles/hyprsunset.log` (the watcher appends schedule
+failures to `nightlight.log`).
 
 ### Lock at boot (hyprlock greeter)
 

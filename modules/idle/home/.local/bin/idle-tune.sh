@@ -206,7 +206,6 @@ render_config() {
         printf 'general {\n'
         printf '    lock_cmd = lock-screen.sh lock --from-idle\n'
         printf '    unlock_cmd = lock-screen.sh unlocked\n'
-        printf '    on_unlock_cmd = lock-screen.sh unlocked\n'
         printf '    before_sleep_cmd = loginctl lock-session\n'
         printf '    after_sleep_cmd = lock-screen.sh resume\n'
         printf '    inhibit_sleep = 3\n'
@@ -228,7 +227,7 @@ render_config() {
         if ((off > 0)); then
             printf 'listener {\n'
             printf '    timeout = %s\n' "$off"
-            printf '    on-timeout = hyprctl dispatch '\''hl.dsp.dpms("off")'\''\n'
+            printf '    on-timeout = lock-screen.sh screen-off\n'
             printf '    on-resume = lock-screen.sh unlocked\n'
             printf '    condition_cmd = lock-screen.sh can-dpms-off\n'
             printf '}\n\n'
@@ -236,7 +235,7 @@ render_config() {
         if ((suspend > 0)); then
             printf 'listener {\n'
             printf '    timeout = %s\n' "$suspend"
-            printf '    on-timeout = systemctl suspend\n'
+            printf '    on-timeout = lock-screen.sh suspend\n'
             printf '    condition_cmd = lock-screen.sh can-suspend\n'
             printf '}\n'
         fi

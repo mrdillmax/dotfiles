@@ -58,11 +58,28 @@ check() {
     fi
 }
 
+reject() {
+    local name="$1" file="$2" unwanted="$3"
+    local out
+    if ! out="$(harness "$file" 2>&1)"; then
+        fail "$name does not execute: $out"
+        return
+    fi
+    if [[ $out == *"$unwanted"* ]]; then
+        fail "$name still registers: $unwanted"
+    else
+        pass "$name leaves the daemon to the helper"
+    fi
+}
+
 check "emoji.lua" "$ROOT/modules/emoji/home/.config/hypr/emoji.lua" $'BIND\tSUPER + period'
 check "recorder.lua" "$ROOT/modules/recorder/home/.config/hypr/recorder.lua" $'BIND\tSUPER + ALT + R'
 check "osd.lua" "$ROOT/modules/osd/home/.config/hypr/osd.lua" $'BIND\tXF86AudioRaiseVolume'
-check "nightlight.lua" "$ROOT/modules/nightlight/home/.config/hypr/nightlight.lua" $'CMD\thyprsunset'
+# Starting hyprsunset here raced nightlight.sh restore and could leave two
+# daemons on the same IPC socket; the helper owns the daemon lifecycle.
+reject "nightlight.lua daemon" "$ROOT/modules/nightlight/home/.config/hypr/nightlight.lua" $'CMD\thyprsunset'
 check "nightlight.lua restore" "$ROOT/modules/nightlight/home/.config/hypr/nightlight.lua" $'CMD\tnightlight.sh restore'
+check "nightlight.lua watch" "$ROOT/modules/nightlight/home/.config/hypr/nightlight.lua" $'CMD\tnightlight.sh watch'
 check "input.lua" "$ROOT/hosts/desktop/input.lua" $'GESTURE\t3\thorizontal\tworkspace'
 check "input.lua window move" "$ROOT/hosts/laptop/input.lua" $'GESTURE\t4\thorizontal\ttable'
 check "input.lua distance" "$ROOT/hosts/desktop/input.lua" $'CONFIG\tworkspace_swipe_distance\t300'

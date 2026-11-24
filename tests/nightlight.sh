@@ -88,6 +88,37 @@ else
     fail "startup race: $(cat "$work/race-calls" 2>/dev/null)"
 fi
 
+# An absent daemon must name the package and the command that installs it.
+mkdir -p "$work/iso-bin" "$work/missing-state"
+ln -s "$(command -v bash)" "$work/iso-bin/bash"
+printf '#!/bin/sh\nexit 1\n' >"$work/iso-bin/pgrep"
+printf '#!/bin/sh\nexit 0\n' >"$work/iso-bin/hyprctl"
+chmod +x "$work/iso-bin/pgrep" "$work/iso-bin/hyprctl"
+if out="$(STATE_DIR="$work/missing-state" PATH="$work/iso-bin" "$HELPER" on 2>&1)"; then
+    fail "on succeeded without hyprsunset"
+elif [[ $out == *'hyprsunset is not installed'* && $out == *'--modules nightlight'* ]]; then
+    pass "a missing hyprsunset is reported with the install command"
+else
+    fail "missing daemon message: $out"
+fi
+
+# A daemon that dies on startup must report its own log, not just "failed".
+mkdir -p "$work/fail-bin" "$work/fail-state"
+for tool in bash mkdir setsid sleep tail tr; do
+    ln -s "$(command -v "$tool")" "$work/fail-bin/$tool"
+done
+printf '#!/bin/sh\nexit 1\n' >"$work/fail-bin/pgrep"
+printf '#!/bin/sh\nexit 0\n' >"$work/fail-bin/hyprctl"
+printf '#!/bin/sh\necho "no CTM support" >&2\nexit 1\n' >"$work/fail-bin/hyprsunset"
+chmod +x "$work/fail-bin/pgrep" "$work/fail-bin/hyprctl" "$work/fail-bin/hyprsunset"
+if out="$(STATE_DIR="$work/fail-state" PATH="$work/fail-bin" "$HELPER" on 2>&1)"; then
+    fail "on succeeded although hyprsunset exited"
+elif [[ $out == *'no CTM support'* ]]; then
+    pass "a daemon that dies on startup reports its log"
+else
+    fail "startup failure message: $out"
+fi
+
 # --- schedule --------------------------------------------------------------
 
 if [[ $(run get schedule) == off ]]; then

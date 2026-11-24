@@ -14,6 +14,7 @@ set -uo pipefail
 STATE_DIR="${STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles}"
 STATE_FILE="$STATE_DIR/nightlight.conf"
 PID_FILE="$STATE_DIR/nightlight.watch.pid"
+LOG_FILE="$STATE_DIR/nightlight.log"
 enabled=0
 temperature="${NIGHT_TEMP:-4000}"
 schedule=off
@@ -110,27 +111,38 @@ daemon_running() { pgrep -x hyprsunset >/dev/null 2>&1; }
 
 ensure_daemon() {
     daemon_running && return 0
-    have hyprsunset || die "hyprsunset is not installed"
-    (setsid hyprsunset >/dev/null 2>&1 &)
+    have hyprsunset ||
+        die "hyprsunset is not installed; install it with: ./install.sh --modules nightlight"
+    mkdir -p "$STATE_DIR" 2>/dev/null || true
+    local log="$STATE_DIR/hyprsunset.log" detail=""
+    # setsid detaches the daemon from the menu that launched it; nohup is the
+    # fallback on systems without util-linux.
+    if have setsid; then
+        (setsid hyprsunset >"$log" 2>&1 &)
+    else
+        (nohup hyprsunset >"$log" 2>&1 &)
+    fi
     # The protocol socket appears a moment after the process; a command sent
     # too early fails and made the Control Center report a broken night light.
     for _ in {1..30}; do
         daemon_running && return 0
         sleep 0.05
     done
-    die "hyprsunset did not start"
+    [[ -r $log ]] && detail="$(tail -n 3 "$log" 2>/dev/null | tr '\n' ' ')"
+    die "hyprsunset did not start${detail:+: $detail}"
 }
 
 apply() {
+    have hyprctl || die "hyprctl is not available (is Hyprland running?)"
     ensure_daemon
-    have hyprctl || die "hyprctl is not available"
+    local out=""
     for _ in {1..20}; do
-        if hyprctl hyprsunset temperature "$temperature" >/dev/null 2>&1; then
+        if out="$(hyprctl hyprsunset temperature "$temperature" 2>&1)"; then
             return 0
         fi
         sleep 0.1
     done
-    die "hyprctl could not set the temperature"
+    die "hyprctl could not set the temperature${out:+: $out}"
 }
 
 disable() {
@@ -232,9 +244,14 @@ watch_loop() {
     fi
     printf '%s\n' "$$" >"$PID_FILE"
     trap 'rm -f "$PID_FILE"' EXIT
+    local out
     while :; do
-        # A failed apply must not stop the watcher; retry on the next tick.
-        (schedule_tick) >/dev/null 2>&1 || true
+        # A failed apply must not stop the watcher; retry on the next tick and
+        # keep the reason where the user can find it.
+        if ! out="$(schedule_tick 2>&1)"; then
+            [[ -f $LOG_FILE ]] && (($(wc -c <"$LOG_FILE") > 65536)) && : >"$LOG_FILE"
+            printf '%s %s\n' "$(date '+%F %T')" "${out:-schedule tick failed}" >>"$LOG_FILE" 2>/dev/null || true
+        fi
         sleep "${NIGHTLIGHT_WATCH_INTERVAL:-60}"
     done
 }

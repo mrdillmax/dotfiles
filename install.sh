@@ -980,6 +980,14 @@ install_selected_modules() {
             warn "fish/fisher not installed; Tide was not installed"
         fi
     fi
+
+    # install_module_files wrote the default hypridle template. Re-apply the
+    # saved profile so a custom one survives, and restart hypridle so the
+    # running daemon picks up the new listeners instead of the old file.
+    if [[ " ${MODULES[*]} " == *" idle "* ]]; then
+        run bash "$DOTFILES_DIR/modules/idle/home/.local/bin/idle-tune.sh" apply ||
+            warn "could not apply the idle profile; run idle-tune.sh apply later"
+    fi
 }
 
 setup_stage() {

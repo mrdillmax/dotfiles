@@ -1,12 +1,12 @@
 # Default hypridle profile — idle, lock and suspend. idle-tune.sh renders the
 # active profile over this file on login and when the power source changes.
 #
-# Hyprland 0.57 removed the old string form of the screen-power dispatcher;
-# dispatch now evaluates Lua, so the quotes are part of the command.
+# Hyprland 0.57 removed the old string form of the screen-power dispatcher.
+# Screen-off and suspend go through lock-screen.sh, which enforces the
+# post-resume guard even if this hypridle build ignores condition_cmd.
 general {
     lock_cmd = lock-screen.sh lock --from-idle
     unlock_cmd = lock-screen.sh unlocked
-    on_unlock_cmd = lock-screen.sh unlocked
     before_sleep_cmd = loginctl lock-session
     after_sleep_cmd = lock-screen.sh resume
     inhibit_sleep = 3
@@ -28,13 +28,13 @@ listener {
 
 listener {
     timeout = 330
-    on-timeout = hyprctl dispatch 'hl.dsp.dpms("off")'
+    on-timeout = lock-screen.sh screen-off
     on-resume = lock-screen.sh unlocked
     condition_cmd = lock-screen.sh can-dpms-off
 }
 
 listener {
     timeout = 900
-    on-timeout = systemctl suspend
+    on-timeout = lock-screen.sh suspend
     condition_cmd = lock-screen.sh can-suspend
 }

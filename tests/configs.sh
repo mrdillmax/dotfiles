@@ -33,6 +33,18 @@ else
     fail "the lock bind or helper is missing"
 fi
 
+# Hyprland 0.57 moved the DPMS wake options under misc. Leaving them in
+# general makes the compositor reject the whole key on startup.
+misc_block="$(sed -n '/^    misc = {/,/^    },/p' "$HYPR")"
+general_block="$(sed -n '/^    general = {/,/^    },/p' "$HYPR")"
+if [[ $misc_block == *key_press_enables_dpms* &&
+    $misc_block == *mouse_move_enables_dpms* &&
+    $general_block != *enables_dpms* ]]; then
+    pass "the DPMS wake options live under misc"
+else
+    fail "the DPMS wake options are missing from misc or still in general"
+fi
+
 # --- every window rule carries a reason ------------------------------------
 missing=()
 while IFS=: read -r line _; do

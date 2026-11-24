@@ -181,6 +181,19 @@ else
 fi
 
 (
+    # shellcheck disable=SC2329 # called by nightlight_toggle
+    notify() { printf '%s\n' "$*" >"$stub/nightlight-error"; }
+    # shellcheck disable=SC2329 # overrides the stub for this subshell
+    nightlight.sh() { printf 'hyprsunset is not installed\n' >&2; return 1; }
+    nightlight_toggle
+)
+if grep -q 'hyprsunset is not installed' "$stub/nightlight-error" 2>/dev/null; then
+    pass "a failed night light toggle reports the helper's reason"
+else
+    fail "the toggle failure reason was hidden"
+fi
+
+(
     # shellcheck disable=SC2329 # called by menu_page
     pick_icon() {
         printf '%s\n' "$@" >"$stub/menu-rows"

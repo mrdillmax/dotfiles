@@ -5,17 +5,19 @@
 # wrapper matters because hyprlock does not turn the panel back on when it
 # exits: a DPMS-off listener can leave the screen black after unlocking.
 #
-# Usage: lock-screen.sh [lock|resume|unlocked] [--from-idle]
+# Usage: lock-screen.sh [lock|resume|unlocked|screen-off|suspend] [--from-idle]
 #   lock       start the locker and restore DPMS/brightness when it exits
 #   resume     post-suspend fix-up: DPMS on, restore brightness, reset idle
 #   unlocked   post-unlock fix-up only
+#   screen-off power the panel off unless a resume just happened
+#   suspend    suspend unless a resume just happened
 set -uo pipefail
 
 ACTION="lock"
 FROM_IDLE=0
 for arg in "$@"; do
     case "$arg" in
-        lock|resume|unlocked|can-dpms-off|can-suspend) ACTION="$arg" ;;
+        lock|resume|unlocked|screen-off|suspend|can-dpms-off|can-suspend) ACTION="$arg" ;;
         --from-idle) FROM_IDLE=1 ;;
     esac
 done
@@ -25,9 +27,17 @@ RESUME_STAMP="$STATE_DIR/resumed-at"
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# Hyprland's Lua dispatcher reads the action from a table; a bare string is
+# treated as "toggle". Passing "on" as a string used to turn the panel *off*
+# right after unlocking, which is the black screen this helper must prevent.
 dpms_on() {
     have hyprctl || return 0
-    hyprctl dispatch 'hl.dsp.dpms("on")' >/dev/null 2>&1 || true
+    hyprctl dispatch 'hl.dsp.dpms({ action = "on" })' >/dev/null 2>&1 || true
+}
+
+dpms_off() {
+    have hyprctl || return 0
+    hyprctl dispatch 'hl.dsp.dpms({ action = "off" })' >/dev/null 2>&1 || true
 }
 
 restore_dim() {
@@ -103,6 +113,16 @@ case "$ACTION" in
         ;;
     can-suspend)
         can_suspend
+        ;;
+    screen-off)
+        # The guard also lives here so a hypridle build that ignores
+        # condition_cmd cannot power the panel off right after a resume.
+        can_dpms_off || exit 0
+        dpms_off
+        ;;
+    suspend)
+        can_suspend || exit 0
+        have systemctl && systemctl suspend >/dev/null 2>&1 || true
         ;;
     unlocked)
         restore_session

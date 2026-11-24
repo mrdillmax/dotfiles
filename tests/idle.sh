@@ -47,16 +47,17 @@ run_idle() { "$SCRIPT" "$@" >/dev/null 2>&1; }
 
 # --- rendered configuration -------------------------------------------------
 
-if grep -q 'hl.dsp.dpms("off")' "$STATIC" &&
-    grep -q 'lock-screen.sh unlocked' "$STATIC" &&
-    ! grep -Eq 'hyprctl dispatch dpms (off|on)' "$STATIC"; then
-    pass "the shipped hypridle template uses the Lua dispatcher"
+if grep -q 'on-timeout = lock-screen.sh screen-off' "$STATIC" &&
+    grep -q 'on-resume = lock-screen.sh unlocked' "$STATIC" &&
+    grep -q 'on-timeout = lock-screen.sh suspend' "$STATIC" &&
+    ! grep -Eq 'dpms\("|hyprctl dispatch dpms' "$STATIC"; then
+    pass "screen-off and suspend go through the guarded helper"
 else
-    fail "the shipped hypridle template still uses the removed dispatch form"
+    fail "the shipped template bypasses the resume guard"
 fi
 static_dim="$(sed -n '/timeout = 150/,/^}/p' "$STATIC")"
 if [[ $static_dim == *'idle-dim.sh dim'* && $static_dim == *'idle-dim.sh restore'* &&
-    $static_dim != *'dpms("off")'* ]]; then
+    $static_dim != *'screen-off'* ]]; then
     pass "the dim stage lowers brightness instead of powering the panel off"
 else
     fail "the dim stage still uses DPMS: $static_dim"
@@ -65,6 +66,7 @@ fi
 if grep -q 'before_sleep_cmd = loginctl lock-session' "$STATIC" &&
     grep -q 'after_sleep_cmd = lock-screen.sh resume' "$STATIC" &&
     grep -q 'unlock_cmd = lock-screen.sh unlocked' "$STATIC" &&
+    ! grep -q 'on_unlock_cmd' "$STATIC" &&
     grep -q 'inhibit_sleep = 3' "$STATIC" &&
     grep -q 'on-timeout = loginctl lock-session' "$STATIC" &&
     grep -q 'condition_cmd = lock-screen.sh can-dpms-off' "$STATIC" &&
@@ -76,17 +78,18 @@ fi
 
 run_idle apply --profile battery
 config="$XDG_CONFIG_HOME/hypr/hypridle.conf"
-if grep -q 'hl.dsp.dpms("off")' "$config" &&
+if grep -q 'on-timeout = lock-screen.sh screen-off' "$config" &&
+    grep -q 'on-timeout = lock-screen.sh suspend' "$config" &&
     grep -q 'lock-screen.sh unlocked' "$config" &&
-    ! grep -Eq 'hyprctl dispatch dpms (off|on)' "$config"; then
-    pass "idle-tune renders the Lua dispatcher"
+    ! grep -Eq 'dpms\("|hyprctl dispatch dpms|on_unlock_cmd' "$config"; then
+    pass "idle-tune renders the guarded screen-off and suspend commands"
 else
-    fail "rendered config has the wrong DPMS command"
+    fail "rendered config bypasses the guarded helper"
 fi
 rendered_dim="$(sed -n '/timeout = 150/,/^}/p' "$config")"
 if [[ $rendered_dim == *'idle-dim.sh dim'* &&
     $rendered_dim == *'idle-dim.sh restore'* &&
-    $rendered_dim != *'dpms("off")'* ]] &&
+    $rendered_dim != *'screen-off'* ]] &&
     grep -q 'after_sleep_cmd = lock-screen.sh resume' "$config" &&
     grep -q 'condition_cmd = lock-screen.sh can-suspend' "$config" &&
     grep -q 'inhibit_sleep = 3' "$config"; then
@@ -212,11 +215,51 @@ printf '#!/bin/sh\nprintf "hyprctl %%s\\n" "$*" >>"%s/lock-calls"\n' "$work" >"$
 printf '#!/bin/sh\nprintf "idle-dim %%s\\n" "$*" >>"%s/lock-calls"\n' "$work" >"$work/lock-bin/idle-dim.sh"
 chmod +x "$work/lock-bin"/*
 XDG_STATE_HOME="$work/lock-state" PATH="$work/lock-bin:$PATH" "$LOCK" lock
-if grep -q 'hyprctl dispatch hl.dsp.dpms("on")' "$work/lock-calls" &&
+if grep -q 'hyprctl dispatch hl.dsp.dpms({ action = "on" })' "$work/lock-calls" &&
     grep -q 'idle-dim restore' "$work/lock-calls"; then
     pass "unlocking restores DPMS and the backlight"
 else
     fail "the locker did not restore the panel: $(cat "$work/lock-calls" 2>/dev/null)"
+fi
+
+# The Lua dispatcher treats a bare string as "toggle"; the helper must force
+# the action, or the post-unlock restore turns the panel off instead of on.
+if grep -q 'dpms("on")' "$LOCK"; then
+    fail "the locker still passes a bare string to hl.dsp.dpms"
+else
+    pass "the locker forces the DPMS action instead of toggling"
+fi
+
+: >"$work/lock-calls"
+date +%s >"$work/lock-state/dotfiles/resumed-at"
+XDG_STATE_HOME="$work/lock-state" PATH="$work/lock-bin:$PATH" "$LOCK" screen-off
+if [[ ! -s $work/lock-calls ]]; then
+    pass "screen-off is skipped just after a resume"
+else
+    fail "screen-off fired right after a resume: $(cat "$work/lock-calls")"
+fi
+printf '%s\n' "$(($(date +%s) - 60))" >"$work/lock-state/dotfiles/resumed-at"
+XDG_STATE_HOME="$work/lock-state" PATH="$work/lock-bin:$PATH" "$LOCK" screen-off
+if grep -q 'hyprctl dispatch hl.dsp.dpms({ action = "off" })' "$work/lock-calls"; then
+    pass "screen-off powers the panel off once the guard expires"
+else
+    fail "screen-off did not power the panel off: $(cat "$work/lock-calls")"
+fi
+
+: >"$SYSTEMCTL_LOG"
+date +%s >"$work/lock-state/dotfiles/resumed-at"
+XDG_STATE_HOME="$work/lock-state" PATH="$work/lock-bin:$PATH" "$LOCK" suspend
+if ! grep -qx suspend "$SYSTEMCTL_LOG"; then
+    pass "suspend is skipped just after a resume"
+else
+    fail "suspend fired right after a resume"
+fi
+printf '%s\n' "$(($(date +%s) - 60))" >"$work/lock-state/dotfiles/resumed-at"
+XDG_STATE_HOME="$work/lock-state" PATH="$work/lock-bin:$PATH" "$LOCK" suspend
+if grep -qx suspend "$SYSTEMCTL_LOG"; then
+    pass "suspend works once the guard expires"
+else
+    fail "suspend did not run after the guard expired"
 fi
 
 # --- brightness dim ---------------------------------------------------------

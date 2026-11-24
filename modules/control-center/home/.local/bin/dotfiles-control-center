@@ -522,6 +522,16 @@ nightlight_label() {
     fi
 }
 
+nightlight_toggle() {
+    local out
+    if out="$(nightlight.sh toggle 2>&1)"; then
+        notify "$(nightlight_label)"
+    else
+        out="${out//$'\n'/ }"
+        notify "Night light: ${out:-could not be toggled}"
+    fi
+}
+
 nightlight_page() {
     local choice mode value schedule schedule_label
     while :; do
@@ -539,11 +549,7 @@ nightlight_page() {
             $'\uf3c5|Location: '"$(nightlight.sh get location 2>/dev/null)")" || return 0
         case "$choice" in
             "Night light: on"|"Night light: off")
-                if nightlight.sh toggle >/dev/null 2>&1; then
-                    notify "$(nightlight_label)"
-                else
-                    notify "Night light could not be toggled"
-                fi
+                nightlight_toggle
                 ;;
             Schedule:*)
                 mode="$(pick_icon "Night light schedule" \
@@ -675,11 +681,7 @@ menu_page() {
             "Autostart") autostart.sh pick </dev/null ;;
             "Enable idle"|"Disable idle") run_terminal "idle-tune.sh toggle"; exit 0 ;;
             "Night light: on"|"Night light: off")
-                if nightlight.sh toggle >/dev/null 2>&1; then
-                    notify "$(nightlight_label)"
-                else
-                    notify "Night light could not be toggled"
-                fi
+                nightlight_toggle
                 ;;
             "Lid status") run_terminal --hold "lid-handler.sh status"; exit 0 ;;
             "Enable game mode"|"Disable game mode") run_and_notify "Game mode toggled" gamemode.sh toggle; exit 0 ;;
