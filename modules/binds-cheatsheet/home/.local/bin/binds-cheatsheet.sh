@@ -291,7 +291,8 @@ add_bind() {
     # Insert after the last existing bind so the new line stays in the binds
     # section instead of landing below the window rules at the end of the file.
     local last_bind tmp
-    last_bind="$(grep -n 'hl\.bind(' "$CONFIG" | tail -n1 | cut -d: -f1)"
+    last_bind="$(grep -n 'hl\.bind(' "$CONFIG" | tail -n1)"
+    last_bind="${last_bind%%:*}"
     tmp="$(mktemp)"
 
     if [[ -n $last_bind ]]; then
