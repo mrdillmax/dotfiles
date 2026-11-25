@@ -455,7 +455,9 @@ choose_line() {
 }
 
 sanitize_name() {
-    printf '%s' "$1" | sed 's/[^A-Za-z0-9_.-]/-/g'
+    local v="$1"
+    v="${v//[^A-Za-z0-9_.-]/-}"
+    printf '%s' "$v"
 }
 
 # Installed desktop entries as id<TAB>name<TAB>command. The id keeps names
