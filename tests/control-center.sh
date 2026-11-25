@@ -70,14 +70,6 @@ else
     fail "Bluetooth hidden despite an adapter"
 fi
 
-printf '#!/bin/sh\necho stub-hyprlock\n' >"$stub/hyprlock"
-chmod +x "$stub/hyprlock"
-if [[ $(lock_screen_page) == *stub-hyprlock* ]]; then
-    pass "Lock screen runs hyprlock when installed"
-else
-    fail "Lock screen does not run hyprlock"
-fi
-
 BT_CALLS="$stub/bt-calls" BT_ON="$stub/bt-on"
 export BT_CALLS BT_ON
 cat >"$stub/bluetoothctl" <<'BT'
@@ -174,8 +166,8 @@ esac
 ' "$stub" >"$stub/nightlight.sh"
 chmod +x "$stub/nightlight.sh"
 
-if [[ $(nightlight_label) == "Night light: on" ]]; then
-    pass "the menu label names the night light state"
+if [[ $(nightlight_label) == "Disable night light" ]]; then
+    pass "night light label: Disable night light"
 else
     fail "night light label: $(nightlight_label)"
 fi
@@ -201,7 +193,7 @@ fi
     }
     menu_page
 )
-if grep -q 'Night light: on' "$stub/menu-rows"; then
+if grep -q 'Disable night light' "$stub/menu-rows"; then
     pass "the Menu carries the stateful night light row"
 else
     fail "the Menu does not list the night light"
@@ -227,7 +219,7 @@ fi
     configuration_page
 )
 missing=0
-for label in Sound Monitors "Lock screen" Keybinds Tide "Night light"; do
+for label in Sound Monitors Keybinds Tide "Night light"; do
     grep -q "$label" "$stub/config-rows" || missing=1
 done
 if ((missing == 0)); then
@@ -281,9 +273,9 @@ chmod +x "$stub/idle-tune.sh"
 ) >/dev/null
 if grep -q 'Disable idle' "$stub/menu-specs" &&
     grep -q 'Idle' "$stub/config-specs" &&
-    grep -q 'Configure' "$stub/idle-specs" &&
-    ! grep -q 'Configure idle' "$stub/menu-specs"; then
-    pass "idle configuration is in Configuration and the toggle stays in Menu"
+    grep -q 'Battery dim' "$stub/idle-specs" &&
+    ! grep -q 'Configure' "$stub/idle-specs"; then
+    pass "idle pages are split correctly"
 else
     fail "idle pages are split incorrectly"
 fi

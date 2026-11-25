@@ -338,8 +338,8 @@ else
         chown "$SUDO_UID:$SUDO_GID" "$STATE_DIR" 2>/dev/null || true
     fi
     LOG_FILE="$STATE_DIR/install-$TIMESTAMP.log"
-    mkdir -p "$BACKUP_DIR"
-    printf 'target\tbackup\n' >"$BACKUP_DIR/manifest.tsv"
+    # Clean up empty backup directories left by runs that changed nothing.
+    prune_empty_backups
 fi
 
 HOST_NAME="${HOST_ARG:-$(detect_host_type)}"

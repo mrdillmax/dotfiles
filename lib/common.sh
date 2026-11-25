@@ -78,18 +78,58 @@ real_home() {
     getent passwd "$user" | cut -d: -f6
 }
 
+# Lazily create the backup directory and manifest on the first real backup.
+# Returns 1 when the directory could not be created (dry-run skips).
+ensure_backup_dir() {
+    if (( DRY_RUN )); then
+        return 0
+    fi
+    if [[ -d $BACKUP_DIR ]]; then
+        return 0
+    fi
+    if mkdir -p "$BACKUP_DIR" 2>/dev/null; then
+        [[ -r "$BACKUP_DIR/manifest.tsv" ]] ||
+            printf 'target\tbackup\n' >"$BACKUP_DIR/manifest.tsv"
+        return 0
+    fi
+    warn "cannot create backup directory: $BACKUP_DIR"
+    return 1
+}
+
+# Remove backup directories that contain only manifest.tsv (no backed-up
+# files). This cleans up empty directories left by runs that changed nothing.
+prune_empty_backups() {
+    local root="$BACKUP_DIR"
+    (( DRY_RUN )) && return 0
+    [[ -d $root ]] || return 0
+    local dir
+    for dir in "$root"/*/; do
+        [[ -d $dir ]] || continue
+        # A directory with only manifest.tsv (or nothing else) is empty.
+        local file_count
+        file_count="$(find "$dir" -type f ! -name manifest.tsv | wc -l)"
+        if (( file_count == 0 )); then
+            rm -rf -- "$dir"
+            log "removed empty backup: $(basename "$dir")"
+        fi
+    done
+}
+
 backup_path() {
     local target="$1"
     local rel="${target#"$REAL_HOME"/}"
     rel="${rel#/}"
     local dest="$BACKUP_DIR/$rel"
 
-    LAST_BACKUP="$dest"
+    LAST_BACKUP=""
 
     if (( DRY_RUN )); then
         log "${C_DIM}[dry-run]${C_RESET} backup $target -> $dest"
         return 0
     fi
+
+    ensure_backup_dir || return 1
+    LAST_BACKUP="$dest"
 
     (( VERBOSE )) && log "${C_DIM}[cmd]${C_RESET} $(trace_cmd cp -a -- "$target" "$dest")"
     mkdir -p "$(dirname "$dest")"
