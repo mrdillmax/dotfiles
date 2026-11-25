@@ -16,7 +16,7 @@ while IFS= read -r file; do
     fi
 done < <(find "$ROOT/modules" -path '*/.config/*' -type f)
 
-for name in powermenu.sh dunst-history.sh waybar-dunst.sh switch-workspace.sh; do
+for name in powermenu.sh dunst-history.sh switch-workspace.sh; do
     found=0
     for candidate in "$ROOT"/modules/*/home/.local/bin/"$name"; do
         [[ -x $candidate ]] && found=1
@@ -37,7 +37,7 @@ fi
 if grep -q 'waybar/scripts/dunst.sh' "$ROOT/modules/waybar/home/.config/waybar/config.jsonc"; then
     fail "waybar config still points at the old dunst path"
 else
-    pass "waybar config uses waybar-dunst.sh"
+    pass "waybar config inlines dunst state check"
 fi
 
 if grep -q 'uwsm check may-start' "$ROOT/modules/fish/home/.config/fish/config.fish"; then

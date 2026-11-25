@@ -4,14 +4,6 @@ set -uo pipefail
 
 SYSTEMCTL="${SYSTEMCTL_BIN:-systemctl}"
 
-json_escape() {
-    local value="$1"
-    value="${value//\\/\\\\}"
-    value="${value//\"/\\\"}"
-    value="${value//$'\n'/\\n}"
-    printf '%s' "$value"
-}
-
 mapfile -t system_units < <("$SYSTEMCTL" --failed --no-legend --plain 2>/dev/null | awk 'NF {print $1}')
 mapfile -t user_units < <("$SYSTEMCTL" --user --failed --no-legend --plain 2>/dev/null | awk 'NF {print $1}')
 units=("${system_units[@]}" "${user_units[@]}")
@@ -27,5 +19,10 @@ for unit in "${units[@]}"; do
     tooltip+=$'\n'"  $unit"
 done
 
+# JSON-escape tooltip inline to avoid a subprocess.
+tooltip="${tooltip//\\/\\\\}"
+tooltip="${tooltip//\"/\\\"}"
+tooltip="${tooltip//$'\n'/\\n}"
+
 printf '{"text":"\uf071 %d","alt":"failed","tooltip":"%s","class":"failed"}\n' \
-    "$count" "$(json_escape "$tooltip")"
+    "$count" "$tooltip"

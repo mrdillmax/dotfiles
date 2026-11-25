@@ -55,13 +55,12 @@
 
 
 
-  // Notification state. Clicking pauses or resumes dunst and refreshes the
-  // module through its realtime signal.
+  // Notification state. Polls dunstctl and inlines the output. Clicking
+  // pauses or resumes dunst and refreshes the bar via signal 8.
   "custom/dunst": {
-    "exec": "~/.local/bin/waybar-dunst.sh",
+    "exec": "bash -c 'dunstctl is-paused >/dev/null 2>&1 && printf \"{\\\"text\\\":\\\"\\xf0e3\\\",\\\"class\\\":\\\"paused\\\",\\\"tooltip\\\":\\\"Notifications paused\\\"}\\n\" || printf \"{\\\"text\\\":\\\"\\xf0e3\\\",\\\"class\\\":\\\"active\\\",\\\"tooltip\\\":\\\"Notifications active\\\"}\\n\"'",
     "return-type": "json",
-    "interval": "once",
-    "signal": 8,
+    "interval": 30,
     "on-click": "dunstctl set-paused toggle && pkill -RTMIN+8 waybar",
     "tooltip": true
   },

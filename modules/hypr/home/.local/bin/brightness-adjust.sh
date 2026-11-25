@@ -22,8 +22,7 @@ esac
 
 command -v brightnessctl >/dev/null 2>&1 || exit 0
 
-current="$(brightnessctl -m 2>/dev/null | head -n1 |
-    awk -F, '{gsub(/%/, "", $4); print $4}')"
+current="$(brightnessctl -m 2>/dev/null | awk -F, '{gsub(/%/, "", $4); print $4}')"
 [[ $current =~ ^[0-9]+$ ]] || exit 0
 
 if [[ $ACTION == up ]]; then

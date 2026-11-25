@@ -3,11 +3,11 @@
 ## High priority (waybar modules, idle, brightness — викликаються часто)
 | # | Скрипт | Статус | Примітки |
 |---|--------|--------|----------|
-| 1 | waybar-battery.sh | ⬜ | |
-| 2 | waybar-brightness.sh | ⬜ | |
-| 3 | waybar-network.sh | ⬜ | |
-| 4 | waybar-update.sh | ⬜ | |
-| 5 | waybar-units.sh | ⬜ | |
+| 1 | waybar-battery.sh | ✅ | `cat` → `$(<file)` (1 підпроцес менше) |
+| 2 | waybar-brightness.sh | ⏭ skip | вже оптимізований |
+| 3 | waybar-network.sh | ⏭ skip | nmcli+ip не об'єднати |
+| 4 | waybar-update.sh | ✅ | 2 sed → 1 sed |
+| 5 | waybar-units.sh | ✅ | json_escape $() → inline |
 | 6 | waybar-dunst.sh | ⬜ | |
 | 7 | idle-dim.sh | ⬜ | |
 | 8 | idle-tune.sh | ⬜ | |
