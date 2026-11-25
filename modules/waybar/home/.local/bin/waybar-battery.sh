@@ -11,7 +11,7 @@ print_status() {
         return 0
     fi
     capacity="$(<"$BAT_DIR/capacity")"
-    status="$(<"$BAT_DIR/status" 2>/dev/null)" || status="Unknown"
+    status="$(cat "$BAT_DIR/status" 2>/dev/null || printf 'Unknown')"
     class=""
     if ((capacity <= 10)); then
         icon="\uf244"

@@ -17,8 +17,7 @@ if [[ ${1:-} == --click ]]; then
 fi
 
 json="$("$CHECK" --json 2>/dev/null || true)"
-status="$(sed -n 's/.*"status":"\([a-z]*\)".*/\1/p' <<<"$json")"
-behind="$(sed -n 's/.*"behind":\([0-9]*\).*/\1/p' <<<"$json")"
+read -r status behind < <(sed -n 's/.*"status":"\([a-z]*\)".*"behind":\([0-9]*\).*/\1 \2/p' <<<"$json")
 behind="${behind:-0}"
 
 if [[ $status == behind ]] && ((behind > 0)); then
