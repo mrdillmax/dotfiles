@@ -117,7 +117,9 @@ get_option() {
     if grep -q '^no such option' <<<"$raw"; then
         return 0
     fi
-    sed -n 's/^[a-z]*: //p' <<<"$raw" | head -n1
+    raw="${raw##*"$'\n'"*}"
+    raw="${raw##* } "
+    printf '%s\n' "$raw"
 }
 
 # Convert getoption output to a plain value (empty string means "unset").
