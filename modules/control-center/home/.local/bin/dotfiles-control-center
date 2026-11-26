@@ -511,6 +511,29 @@ idle_label() {
         printf 'Disable idle'
     fi
 }
+idle_toggle() {
+    if [[ -r $STATE_DIR/idle.conf ]]; then
+        if grep -q '^ENABLED=0' "$STATE_DIR/idle.conf" 2>/dev/null; then
+            sed -i 's/^ENABLED=0/ENABLED=1/' "$STATE_DIR/idle.conf"
+        else
+            sed -i 's/^ENABLED=1/ENABLED=0/' "$STATE_DIR/idle.conf"
+        fi
+    fi
+
+    if systemctl --user is-active --quiet hypridle.service 2>/dev/null; then
+        if grep -q '^ENABLED=0' "$STATE_DIR/idle.conf" 2>/dev/null; then
+            systemctl --user stop hypridle.service >/dev/null 2>&1 || true
+        else
+            systemctl --user start hypridle.service >/dev/null 2>&1 || true
+        fi
+    elif pgrep -x hypridle >/dev/null 2>&1; then
+        if grep -q '^ENABLED=0' "$STATE_DIR/idle.conf" 2>/dev/null; then
+            pkill -x hypridle >/dev/null 2>&1 || true
+        fi
+    fi
+    notify "$(idle_label)"
+}
+
 
 nightlight_label() {
     if ! have nightlight.sh; then
