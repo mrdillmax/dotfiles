@@ -26,6 +26,9 @@ secret_files() {
 
     find "$root" \
         -path "$root/.git" -prune -o \
+        -path "$root/.superpowers" -prune -o \
+        -path "$root/personal" -prune -o \
+        -path "$root/docs/superpowers" -prune -o \
         -type f \
         ! -name '*.md' \
         ! -name '*.example' \
