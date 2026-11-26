@@ -25,10 +25,9 @@ help:
 	  '  ./install.sh --help     every flag for automation'
 
 lint:
-	@find . -path ./.git -prune -o -type f -name '*.sh' -print0 \
-	    | xargs -0 -r -n1 bash -n
+	@git ls-files '*.sh' | xargs -r -n1 bash -n
 	@bash -n hooks/pre-commit
-	@files=$$(find . -path ./.git -prune -o -type f -name '*.sh' -print; printf '%s\n' hooks/pre-commit); \
+	@files=$$(git ls-files '*.sh'; printf '%s\n' hooks/pre-commit); \
 	shellcheck -x $$files
 	@printf 'lint: ok\n'
 
