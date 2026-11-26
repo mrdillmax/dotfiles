@@ -435,11 +435,12 @@ print_rofi() {
 }
 
 print_rofi_edit() {
-    local i index bind_index
+    local i icon index bind_index
     local -a rows=("<span font='JetBrainsMono Nerd Font 13'></span>  Add keybind")
 
     for i in "${!KEYS[@]}"; do
-        rows+=("<span font='JetBrainsMono Nerd Font 13'></span>  $(printf '%-28s %s' "${KEYS[$i]}" "${ACTIONS[$i]}")")
+        icon="$(rofi_icon_for_key "${KEYS[$i]}")"
+        rows+=("<span font='JetBrainsMono Nerd Font 13'>${icon}</span>  $(printf '%-28s %s' "${KEYS[$i]}" "${ACTIONS[$i]}")")
     done
 
     if ! command -v rofi >/dev/null 2>&1 || [[ -z ${WAYLAND_DISPLAY:-}${DISPLAY:-} ]]; then
