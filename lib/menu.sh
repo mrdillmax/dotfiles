@@ -68,7 +68,8 @@ menu_should_run() {
     (( !HAS_ACTION && !ASSUME_YES )) && [[ -t 0 ]]
 }
 
-menu_prerequisite_hint() {    local -a missing=()
+menu_prerequisite_hint() {
+    local -a missing=()
     local tool
     for tool in gum jq git; do
         command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
