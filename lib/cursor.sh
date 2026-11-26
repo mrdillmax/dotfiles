@@ -10,6 +10,10 @@ CURSOR_THEME="${CURSOR_THEME:-win11-concept-cursors}"
 CURSOR_SIZE="${CURSOR_SIZE:-24}"
 CURSOR_INSTALLED_THEME=""
 
+# Valid cursor size range. Most themes support 16..128.
+CURSOR_SIZE_MIN=16
+CURSOR_SIZE_MAX=128
+
 load_cursor_conf() {
     local conf="$DOTFILES_DIR/hosts/${HOST_NAME:-desktop}/cursor.conf"
 
@@ -25,8 +29,8 @@ load_cursor_conf() {
 
 cursor_validate_size() {
     local size="$1"
-    if [[ ! $size =~ ^[0-9]+$ ]] || (( size < 16 || size > 128 )); then
-        die "invalid cursor size: $size (expected 16..128)"
+    if [[ ! $size =~ ^[0-9]+$ ]] || (( size < CURSOR_SIZE_MIN || size > CURSOR_SIZE_MAX )); then
+        die "invalid cursor size: $size (expected $CURSOR_SIZE_MIN..$CURSOR_SIZE_MAX)"
     fi
 }
 
