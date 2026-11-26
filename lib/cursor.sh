@@ -1,7 +1,8 @@
 # shellcheck shell=bash
 # Cursor theme installation and rendering.
 #
-# The cursor theme archive and its files are never stored in this repository.
+# Default themes live under assets/cursors/ so a fresh clone works out of the
+# box. Custom archives go into personal/cursor/ (git-ignored) as a fallback.
 # The host configuration only records the theme name and size.
 [[ -n ${_DOTFILES_CURSOR:-} ]] && return 0
 _DOTFILES_CURSOR=1
