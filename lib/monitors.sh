@@ -3,6 +3,23 @@
 [[ -n ${_DOTFILES_MONITORS:-} ]] && return 0
 _DOTFILES_MONITORS=1
 
+# Workspace slots per monitor when layout is auto-generated.
+WS_PER_MONITOR=10
+
+# Default app workspaces when no host preset exists.
+APP_WS_VESKTOP_DEFAULT=6
+APP_WS_OBSIDIAN_DEFAULT=5
+
+# Single-monitor defaults: vesktop on ws 2, obsidian on ws 3.
+APP_WS_VESKTOP_SINGLE=2
+APP_WS_OBSIDIAN_SINGLE=3
+
+# Chassis type codes from /sys/class/dmi/id/chassis_type (Linux kernel).
+CHASSIS_LAPTOP=8
+CHASSIS_NOTEBOOK=9
+CHASSIS_DETACHABLE=10
+CHASSIS_CONSOLE=14
+
 detect_host_type() {
     if compgen -G "/sys/class/power_supply/BAT*" >/dev/null 2>&1; then
         printf 'laptop\n'
@@ -14,7 +31,7 @@ detect_host_type() {
         chassis="$(cat /sys/class/dmi/id/chassis_type)"
     fi
     case "$chassis" in
-        8|9|10|14) printf 'laptop\n' ;;
+        "$CHASSIS_LAPTOP"|"$CHASSIS_NOTEBOOK"|"$CHASSIS_DETACHABLE"|"$CHASSIS_CONSOLE") printf 'laptop\n' ;;
         *)         printf 'desktop\n' ;;
     esac
 }
@@ -180,15 +197,15 @@ render_monitors() {
             MON_POSITION+=("${dpos:-auto}")
             MON_SCALE+=("${dscale:-1}")
             MON_WS_FIRST+=("$first")
-            MON_WS_COUNT+=(10)
-            first=$((first + 10))
+            MON_WS_COUNT+=("$WS_PER_MONITOR")
+            first=$((first + WS_PER_MONITOR))
         done
         MON_COUNT=${#MON_NAME[@]}
         if ((MON_COUNT > 0)); then
             generated=1
-            ((APP_WS_VESKTOP)) || APP_WS_VESKTOP=6
-            ((APP_WS_OBSIDIAN)) || APP_WS_OBSIDIAN=5
-            info "no monitor preset: generated 10 workspace slots per detected monitor"
+            ((APP_WS_VESKTOP)) || APP_WS_VESKTOP=$APP_WS_VESKTOP_DEFAULT
+            ((APP_WS_OBSIDIAN)) || APP_WS_OBSIDIAN=$APP_WS_OBSIDIAN_DEFAULT
+            info "no monitor preset: generated $WS_PER_MONITOR workspace slots per detected monitor"
         fi
     fi
 
@@ -363,8 +380,8 @@ build_layout() {
     local out_names=() out_modes=() out_pos=() out_scales=() out_first=() out_counts=()
     local mode scale w x=0 ws_count name
 
-    ws_count="$(tui_input "Workspaces per monitor" "10")"
-    [[ $ws_count =~ ^[1-9][0-9]*$ ]] || ws_count=10
+    ws_count="$(tui_input "Workspaces per monitor" "$WS_PER_MONITOR")"
+    [[ $ws_count =~ ^[1-9][0-9]*$ ]] || ws_count=$WS_PER_MONITOR
 
     for i in "${!order[@]}"; do
         local mon="${order[$i]}"
@@ -399,7 +416,7 @@ build_layout() {
         x="$(awk -v x="$x" -v w="$w" -v s="$scale" 'BEGIN { printf "%d", x + (s > 0 ? w / s : w) }')"
     done
 
-    local vesktop=2 obsidian=3
+    local vesktop=$APP_WS_VESKTOP_SINGLE obsidian=$APP_WS_OBSIDIAN_SINGLE
     if ((${#out_first[@]} > 1)); then
         vesktop=$(( out_first[1] + 1 ))
         obsidian=$(( out_first[1] + 2 ))
