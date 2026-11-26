@@ -512,23 +512,13 @@ idle_label() {
     fi
 }
 idle_toggle() {
-    if [[ -r $STATE_DIR/idle.conf ]]; then
+    if have idle-tune.sh; then
+        idle-tune.sh toggle >/dev/null 2>&1 || true
+    elif [[ -r $STATE_DIR/idle.conf ]]; then
         if grep -q '^ENABLED=0' "$STATE_DIR/idle.conf" 2>/dev/null; then
             sed -i 's/^ENABLED=0/ENABLED=1/' "$STATE_DIR/idle.conf"
         else
             sed -i 's/^ENABLED=1/ENABLED=0/' "$STATE_DIR/idle.conf"
-        fi
-    fi
-
-    if systemctl --user is-active --quiet hypridle.service 2>/dev/null; then
-        if grep -q '^ENABLED=0' "$STATE_DIR/idle.conf" 2>/dev/null; then
-            systemctl --user stop hypridle.service >/dev/null 2>&1 || true
-        else
-            systemctl --user start hypridle.service >/dev/null 2>&1 || true
-        fi
-    elif pgrep -x hypridle >/dev/null 2>&1; then
-        if grep -q '^ENABLED=0' "$STATE_DIR/idle.conf" 2>/dev/null; then
-            pkill -x hypridle >/dev/null 2>&1 || true
         fi
     fi
     notify "$(idle_label)"
@@ -569,7 +559,7 @@ nightlight_page() {
             $'\uf073|Schedule: '"$schedule_label" \
             $'\uf017|On at: '"$(nightlight.sh get on-time 2>/dev/null)" \
             $'\uf017|Off at: '"$(nightlight.sh get off-time 2>/dev/null)" \
-            $'\uf3c5|Location: '"$(nightlight.sh get location 2>/dev/null)")" || return 0
+            $'\uf041|Location: '"$(nightlight.sh get location 2>/dev/null)")" || return 0
         case "$choice" in
             "Enable night light"|"Disable night light")
                 nightlight_toggle
@@ -617,78 +607,106 @@ nightlight_page() {
     done
 }
 
+idle_load_state() {
+    local key val
+    BATTERY_DIM=150
+    BATTERY_LOCK=300
+    BATTERY_OFF=330
+    BATTERY_SUSPEND=900
+    AC_DIM=300
+    AC_LOCK=600
+    AC_OFF=660
+    AC_SUSPEND=1800
+    [[ -r $STATE_DIR/idle.conf ]] || return 0
+    while IFS='=' read -r key val; do
+        case "$key" in
+            BATTERY_DIM|BATTERY_LOCK|BATTERY_OFF|BATTERY_SUSPEND|\
+            AC_DIM|AC_LOCK|AC_OFF|AC_SUSPEND)
+                [[ $val =~ ^[0-9]+$ ]] && printf -v "$key" '%s' "$val"
+                ;;
+        esac
+    done <"$STATE_DIR/idle.conf"
+}
+
+idle_set_value() {
+    local profile="$1" flag="$2" label="$3" value="$4" err
+    if err="$(idle-tune.sh set --profile "$profile" "$flag" "$value" 2>&1)"; then
+        notify "$label: ${value}s"
+    else
+        err="${err//$'\n'/ }"
+        notify "Could not set ${label,,}: ${err:-invalid value}"
+    fi
+}
+
 idle_page() {
-    local choice value profile
+    local choice value
+    local BATTERY_DIM BATTERY_LOCK BATTERY_OFF BATTERY_SUSPEND
+    local AC_DIM AC_LOCK AC_OFF AC_SUSPEND
+    local laptop=0
+    host_is_laptop && laptop=1
+
     while :; do
-        choice="$(pick_icon "Idle" \
-            $'\uf011|'"$(idle_label)" \
-            $'\uf017|Battery dim: '"${BATTERY_DIM:-150}"' s' \
-            $'\uf017|Battery lock: '"${BATTERY_LOCK:-300}"' s' \
-            $'\uf017|Battery off: '"${BATTERY_OFF:-330}"' s' \
-            $'\uf017|Battery suspend: '"${BATTERY_SUSPEND:-900}"' s' \
-            $'\uf017|AC dim: '"${AC_DIM:-300}"' s' \
-            $'\uf017|AC lock: '"${AC_LOCK:-600}"' s' \
-            $'\uf017|AC off: '"${AC_OFF:-660}"' s' \
-            $'\uf017|AC suspend: '"${AC_SUSPEND:-1800}"' s')" || return 0
+        idle_load_state
+        local -a specs=($'\uf011|'"$(idle_label)")
+        # Battery options only on laptops.
+        if ((laptop)); then
+            specs+=(
+                $'\uf017|Battery dim: '"${BATTERY_DIM}"' s'
+                $'\uf017|Battery lock: '"${BATTERY_LOCK}"' s'
+                $'\uf017|Battery off: '"${BATTERY_OFF}"' s'
+                $'\uf017|Battery suspend: '"${BATTERY_SUSPEND}"' s'
+            )
+        fi
+        specs+=(
+            $'\uf017|AC dim: '"${AC_DIM}"' s'
+            $'\uf017|AC lock: '"${AC_LOCK}"' s'
+            $'\uf017|AC off: '"${AC_OFF}"' s'
+            $'\uf017|AC suspend: '"${AC_SUSPEND}"' s'
+        )
+        choice="$(pick_icon "Idle" "${specs[@]}")" || return 0
         case "$choice" in
             "Enable idle"|"Disable idle")
-                run_terminal "idle-tune.sh toggle"; exit 0
+                idle_toggle
                 ;;
             "Battery dim:"*)
                 value="$(ask_text "Battery dim (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --profile battery --battery-dim "$value" >/dev/null 2>&1 &&
-                    notify "Battery dim: ${value}s" ||
-                    notify "Could not set battery dim"
+                idle_set_value battery --battery-dim "Battery dim" "$value"
                 ;;
             "Battery lock:"*)
                 value="$(ask_text "Battery lock (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --profile battery --battery-lock "$value" >/dev/null 2>&1 &&
-                    notify "Battery lock: ${value}s" ||
-                    notify "Could not set battery lock"
+                idle_set_value battery --battery-lock "Battery lock" "$value"
                 ;;
             "Battery off:"*)
                 value="$(ask_text "Battery screen-off (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --profile battery --battery-off "$value" >/dev/null 2>&1 &&
-                    notify "Battery off: ${value}s" ||
-                    notify "Could not set battery off"
+                idle_set_value battery --battery-off "Battery off" "$value"
                 ;;
             "Battery suspend:"*)
                 value="$(ask_text "Battery suspend (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --profile battery --battery-suspend "$value" >/dev/null 2>&1 &&
-                    notify "Battery suspend: ${value}s" ||
-                    notify "Could not set battery suspend"
+                idle_set_value battery --battery-suspend "Battery suspend" "$value"
                 ;;
             "AC dim:"*)
                 value="$(ask_text "AC dim (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --profile ac --ac-dim "$value" >/dev/null 2>&1 &&
-                    notify "AC dim: ${value}s" ||
-                    notify "Could not set AC dim"
+                idle_set_value ac --ac-dim "AC dim" "$value"
                 ;;
             "AC lock:"*)
                 value="$(ask_text "AC lock (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --profile ac --ac-lock "$value" >/dev/null 2>&1 &&
-                    notify "AC lock: ${value}s" ||
-                    notify "Could not set AC lock"
+                idle_set_value ac --ac-lock "AC lock" "$value"
                 ;;
             "AC off:"*)
                 value="$(ask_text "AC screen-off (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --profile ac --ac-off "$value" >/dev/null 2>&1 &&
-                    notify "AC off: ${value}s" ||
-                    notify "Could not set AC off"
+                idle_set_value ac --ac-off "AC off" "$value"
                 ;;
             "AC suspend:"*)
                 value="$(ask_text "AC suspend (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --profile ac --ac-suspend "$value" >/dev/null 2>&1 &&
-                    notify "AC suspend: ${value}s" ||
-                    notify "Could not set AC suspend"
+                idle_set_value ac --ac-suspend "AC suspend" "$value"
                 ;;
             "") return 0 ;;
         esac
@@ -1464,8 +1482,8 @@ configuration_page() {
         )
         wifi_hardware_present && specs+=($'\uf1eb|Wi-Fi')
         bluetooth_hardware_present && specs+=($'\uf293|Bluetooth')
+        host_is_laptop && specs+=($'\uf108|Monitors')
         specs+=(
-            $'\uf108|Monitors'
             $'\uf017|Idle'
             $'\uf185|Night light'
             $'\uf11c|Keybinds'
