@@ -413,16 +413,21 @@ print_json() {
     printf ']\n'
 }
 
+rofi_icon_for_key() {
+    [[ "${1:-}" == SUPER* ]] && printf '' || printf ''
+}
+
 print_rofi() {
-    local i
+    local i icon
     local -a rows=()
 
     for i in "${!KEYS[@]}"; do
-        rows+=("$(printf '%-28s %s' "${KEYS[$i]}" "${ACTIONS[$i]}")")
+        icon="$(rofi_icon_for_key "${KEYS[$i]}")"
+        rows+=("<span font='JetBrainsMono Nerd Font 13'>${icon}</span>  ${KEYS[$i]}  ${ACTIONS[$i]}")
     done
 
     if command -v rofi >/dev/null 2>&1 && [[ -n ${WAYLAND_DISPLAY:-}${DISPLAY:-} ]]; then
-        printf '%s\n' "${rows[@]}" | rofi -theme "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/launcher.rasi" -dmenu -p "" -no-custom -no-fixed-num-lines \
+        printf '%s\n' "${rows[@]}" | rofi -theme "${XDG_CONFIG_HOME:-$HOME/.config}/rofi/launcher.rasi" -dmenu -p "" -no-custom -no-fixed-num-lines -markup-rows \
             -theme-str 'entry { placeholder: "Hyprland binds"; }'
     else
         print_plain
