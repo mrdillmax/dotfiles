@@ -1,275 +1,151 @@
 # Arch Linux install guide
 
-This guide installs Arch Linux and then applies these dotfiles. It is written
-for a UEFI system with GRUB, but the dotfiles themselves are bootloader-neutral.
+This guide installs Arch Linux and then applies these dotfiles. It assumes
+a UEFI system with GRUB; the dotfiles themselves are bootloader-neutral.
 
-The repository never edits live files on its own. Every step below is explicit;
+The repository never edits live files on its own. Every step is explicit;
 the installer backs up anything it replaces.
 
-## 1. Base system
+## 1. Install Arch Linux
 
-Boot the Arch ISO and follow the official installation guide, or use
-`archinstall` with:
+Boot the Arch ISO and follow the [official installation guide](https://wiki.archlinux.org/title/Installation_guide). Recommended settings:
 
-- UEFI boot, GPT, a btrfs or ext4 root
-- a swap file or zram (this repository ships an optional zram preset)
-- locale `en_US.UTF-8` plus `uk_UA.UTF-8` if you want Ukrainian
-- a regular user in the `wheel` group
+- UEFI boot, GPT, btrfs or ext4 root partition
+- A swap file or zram (this repo ships an optional zram preset)
+- Locale `en_US.UTF-8`, optionally `uk_UA.UTF-8`
+- A regular user in the `wheel` group
 - `NetworkManager` for networking
-- GRUB (or another bootloader) and `linux-lts` as the fallback kernel
+- GRUB as bootloader, `linux-lts` as fallback kernel
 
-After the first boot:
+After the first boot, log in as your user and update the system:
 
 ```bash
 sudo pacman -Syu --needed git base-devel
 ```
 
-Install an AUR helper (the installer supports `yay` and `paru`):
+## 2. Install an AUR helper
+
+The installer supports `yay` and `paru`. Choose one:
 
 ```bash
+# Option A: yay
 git clone https://aur.archlinux.org/yay.git /tmp/yay
 cd /tmp/yay && makepkg -si
+
+# Option B: paru
+git clone https://aur.archlinux.org/paru.git /tmp/paru
+cd /tmp/paru && makepkg -si
 ```
 
-## 2. Clone and inspect
+## 3. Clone and inspect
 
 ```bash
-git clone <repo-url> ~/Projects/dotfiles
+git clone <your-repo-url> ~/Projects/dotfiles
 cd ~/Projects/dotfiles
-
-make lint
-./tests/run.sh        # temporary HOME; live files are never touched
-./install.sh --dry-run --all   # full preview, changes nothing
-make doctor           # read-only health check
+./install.sh --dry-run
 ```
 
-`./install.sh --dry-run --all` selects the required modules and default packages but never touches `/etc`.
+The first screen shows the detected host (desktop / laptop), GPU profile,
+monitor count and CPU level. You can change any of them before proceeding.
+Every action returns to the menu, and the top entry toggles `--dry-run`
+for the whole session.
 
-If the machine lacks the prerequisites (`base-devel`, `git`, `curl`, `jq`, `gum`, `networkmanager`), bootstrap
-can install them and then start the installer:
-
-```bash
-./bootstrap.sh --dry-run
-./bootstrap.sh --yes -- --host laptop --gpu intel
-```
-
-Bootstrap builds `yay-bin` when no AUR helper exists; `--no-aur` only reports a missing `yay`/`paru`.
-Everything after `--` is passed to `install.sh`.
-
-## 3. Interactive install
+## 4. Run the installer
 
 ```bash
 ./install.sh
 ```
 
-Useful non-interactive variants:
+The menu walks you through:
+
+1. **Profile** — confirm host (`desktop` / `laptop`) and GPU profile
+2. **Modules** — select which config modules to install (all selected by default)
+3. **Packages** — choose categories and individual packages
+4. **System** — opt-in /etc files (requires sudo): DNS, zram, services, etc.
+5. **Kernel** — detect CPU level and install a matching kernel
+
+Each step is confirmed individually. Files are backed up before replacement.
+
+If you prefer non-interactive mode:
 
 ```bash
-./install.sh --host desktop --gpu nvidia --modules hypr,uwsm,waybar,rofi,kitty,fish
-./install.sh --all --yes          # required modules + default packages, no /etc
-./install.sh --modules cursor --cursor-archive ~/Downloads/theme.7z
+./install.sh --all --gpu nvidia --host desktop --yes
 ```
 
-The host (`desktop` or `laptop`) and GPU profile are detected automatically and
-can be overridden with `--host` and `--gpu`.
-
-### Cursor theme
-
-Cursor theme files are never committed. The repository stores only the theme
-name and size in `hosts/<host>/cursor.conf`, then renders them into uwsm, GTK3,
-GTK4, Qt, xsettingsd and (optionally) applies them with `hyprctl setcursor`.
-
-```bash
-./install.sh --cursor --cursor-archive /path/to/theme.7z
-./install.sh --cursor --cursor-theme Bibata-Modern-Ice --cursor-size 24
-```
-
-Without an archive the installer offers package-only themes (`breeze`,
-`capitaine-cursors`, `bibata-cursor-theme`). A live `hyprctl setcursor` is only
-run after an explicit confirmation.
-
-### Wallpaper
-
-The image is not copied into the repository. Its absolute path is written to
-`~/.config/hypr/wallpaper.path`, and `make theme` prefers that file:
-
-```bash
-./install.sh --wallpaper ~/Pictures/wallpaper.jpg
-make theme
-```
-
-### State and daily helpers
-
-Small runtime tools keep their state under `~/.local/state/dotfiles/`, not in
-the compositor config:
-
-```bash
-make autostart                         # list login applications
-make autostart ACTION=pick             # SUPER+SHIFT+A picker
-make theme-menu                        # wallpaper, mode, colour scheme
-make binds ROFI=1                      # keybind cheatsheet
-make gamemode ACTION=toggle            # animations, blur, shadows, rounding
-make idle ACTION=status                # battery/AC idle profiles
-make lid ACTION=status                 # lid-switch behaviour
-```
-
-`idle` renders `~/.config/hypr/hypridle.conf` and backs up the previous file.
-`hypridle`/`hyprlock` are optional Session packages; idle and lock also work on desktops.
-`autostart.sh` replaces the static login list in `hyprland.lua`.
-
-## 4. Monitors and input
+## 5. Configure monitors
 
 ```bash
 ./install.sh --monitors
-./install.sh --mouse
 ```
 
-Monitor names live in `hosts/<host>/monitors.conf.sh`; the installer renders
-`~/.config/hypr/monitors.lua` and never hardcodes a monitor layout into
-universal templates.
+This detects your connected displays and writes the layout to
+`hosts/<host>/monitors.lua`. The file is rendered into
+`~/.config/hypr/monitors.lua` on install.
 
-For a laptop with a dock or an external display, install the optional hotplug
-module and choose a layout:
+## 6. Finish fish setup
 
 ```bash
-./install.sh --modules monitor-profiles --dock-layout right
-make monitor-profiles ACTION=apply DRY_RUN=1
-make monitor-profiles ACTION=watch
+fish -c 'fisher update'
 ```
 
-`watch` listens on the Hyprland event socket with `socat`. The monitor-profile
-code is **not verified on real dock hardware**: run a dry run first, keep the
-saved `hyprctl monitors -j` snapshot, and use `./install.sh --restore` if the
-result is wrong. `DOCK_LAYOUT=ask` never changes monitors.
+This installs the tide prompt plugins. You may need to restart your
+terminal for the changes to take effect.
 
-## 5. Kernel by CPU level
-
-Pick a kernel that matches the CPU x86-64 microarchitecture level:
+## 7. Set wallpaper and theme
 
 ```bash
-./install.sh --kernel
+./install.sh --wallpaper ~/Pictures/wallpaper.jpg
+./install.sh --theme
 ```
 
-The installer detects the highest level supported by the CPU (`v1`..`v4`) and
-offers kernels at or below that level:
+This generates colours from the wallpaper using matugen and applies
+them to GTK, Qt, waybar, rofi, dunst, and hyprlock.
 
-- `linux-lts` + headers — fallback, always recommended
-- `linux` + headers, `linux-zen` + headers — desktops only
-- xanmod `vN` + headers — only at or below the detected level, desktops only
-
-Rules enforced by the installer:
-
-- it never removes the running kernel or the fallback kernel;
-- laptops are treated conservatively (no xanmod and no `linux-zen` offer);
-- NVIDIA DKMS always gets the matching headers, and a warning is printed if
-  DKMS support for a bin kernel is uncertain;
-- an above-CPU level requires a red warning **and** typing `I UNDERSTAND`;
-- non-interactive mode refuses above-CPU levels.
-
-After installation the installer prints, but never runs:
+## 8. Optional: system configuration
 
 ```bash
-sudo mkinitcpio -P
-sudo grub-mkconfig -o /boot/grub/grub.cfg   # GRUB only
+sudo ./install.sh --system
 ```
 
-Install headers for every kernel used by DKMS. `make doctor` and `make audit`
-compare the CPU level with the installed kernel level and report missing
-headers.
+This installs /etc files one at a time, each confirmed separately:
 
-## 6. Opt-in system files
+- **DNS** — Pi-hole + unbound (ad-blocking DNS)
+- **zram** — compressed swap device
+- **Services** — irqbalance, ananicy-cpp, cpupower
+- **GRUB / mkinitcpio** — boot configuration (NVIDIA/hybrid only)
+- **Autologin** — getty autologin drop-in
+- **UFW** — firewall with a minimal policy
+
+Without `--system`, no /etc files are touched.
+
+## Verification
 
 ```bash
-sudo ./install.sh --system --iface eno1
-sudo ./install.sh --system --autologin-user "$USER"
+./install.sh --doctor    # read-only health check
+./install.sh --dns-check # DNS chain check
 ```
 
-Only this mode writes `/etc`, one file at a time, with a backup. It never runs
-`grub-mkconfig`, `mkinitcpio -P`, and never starts or restarts a service.
+## Troubleshooting
 
-`--autologin-user` fills the getty drop-in. Without the flag the installer uses
-`SUDO_USER`, then the invoking login, and prompts as a last resort.
+**Waybar doesn't start:** check that the `waybar` module is installed
+and that `~/.config/waybar/config.jsonc` exists. Run `waybar` directly
+to see error output.
 
-`pihole.toml.example` is copied over `/etc/pihole/pihole.toml` and has an empty
-password hash, so it resets the Pi-hole admin password. Run
-`pihole setpassword` after installation.
+**No sound:** ensure `pipewire-pulse` and `pavucontrol` are installed,
+then run `pavucontrol` to set the default device.
 
-What is included:
+**GPU profile wrong:** run `./install.sh` and reselect the profile in
+the menu. The installer updates `~/.config/uwsm/env` and
+`~/.config/uwsm/env-hyprland`.
 
-- zram swap, `cpupower` governor and modprobe files
-- systemd units and drop-ins, including optional getty autologin
-- GRUB, mkinitcpio and `modprobe/nvidia.conf` only for the `nvidia` and
-  `hybrid` GPU profiles
-- Pi-hole + Unbound configs (render `@IFACE@` from `--iface` or the default
-  route; a fixed interface name is never substituted automatically)
-- NetworkManager `dns=none` / `rc-manager=unmanaged` (only when Pi-hole and
-  Unbound already exist; keep a DNS safety net)
-- pacman/makepkg merge proposals (diff, confirmation, backup; skipped with
-  `--yes`)
-- optional service enablement with `systemctl enable` only, never `start`
+**Packages missing:** run `./install.sh --only-packages` and select
+the needed category. Or check `packages/catalog.tsv` for the package
+name.
 
-UFW is documentation only. This repository never changes firewall state or
-rules; see `system/ufw/README.md` for general guidance.
-
-The same mode installs a pacman hook that touches
-`/var/lib/dotfiles/pkg-sync.stamp` after a package transaction. Review package
-drift later with `make pkg-sync`; `make pkg-sync ACTION=pull YES=1` only
-appends missing packages to `packages/local.tsv`.
-
-## 7. Theming
+## Uninstall
 
 ```bash
-make theme WALLPAPER=~/Pictures/wallpaper.jpg
+./install.sh --uninstall              # remove all installed files
+./install.sh --uninstall --modules hypr  # remove specific module
+sudo ./install.sh --uninstall --system # remove /etc files
 ```
-
-matugen templates regenerate colors for Hyprland, waybar, dunst, GTK, Qt and
-Firefox. Generated color files are never committed.
-
-## 8. Verification
-
-```bash
-make lint       # bash -n + shellcheck
-make audit      # read-only configuration audit
-make doctor     # CPU/kernel, cursor, wallpaper, managed symlinks
-make dns-check  # resolv.conf -> Pi-hole -> unbound
-make check      # lint + audit + doctor
-./tests/run.sh  # full shell suite
-```
-
-`make doctor` exits non-zero only on failures (above-CPU kernel, broken
-managed links, missing repository files). Warnings are informational.
-`./install.sh --doctor --json` gives the same result in machine-readable form;
-`./install.sh --dns-check` fails when the resolver chain cannot work.
-
-The tests use a temporary `$HOME` and stub system tools. Restore and sync tests
-also verify that live files stay unchanged and that a backup is created.
-`tests/run.sh [pattern]` runs selected files and excludes itself. CI runs lint
-and the suite inside an `archlinux:latest` container.
-
-## 9. Secrets
-
-Never commit:
-
-- `pihole.toml`, DNS/API secrets
-- rclone, RustDesk and OpenCode configs
-- `.env`, SSH/GPG keys
-- the whole `personal/` directory
-- cursor theme archives and wallpapers
-
-`sanitized` Pi-hole examples live in `system/pihole/`. Rotate any credential
-that was ever stored in a tracked file.
-
-## 10. Notes
-
-- `--all` means required modules and default packages; optional modules are not selected, and `/etc` requires `--system`.
-- Every replaced file is backed up under `~/.dotfiles-backup/<timestamp>/`.
-- Restore with `./install.sh --restore [date]` (or `make restore`): it shows a
-  diff, confirms, and backs up the current state first. `/etc` needs `--system`.
-- Copy live changes back with `make sync-status`, `make sync-diff`,
-  `make sync-pull` — direction is always system → repository.
-- Pre-commit safety checks: `make hooks` installs them into this repository
-  only; `git commit --no-verify` is the only bypass.
-- The lid handler and monitor profiles are covered by synthetic tests only.
-  Verify them on the real laptop/dock with `--dry-run` first.
-- Live configuration is never modified without an explicit installer step.
-- `make audit` lists unmerged `.pacnew` files and other live drift.
