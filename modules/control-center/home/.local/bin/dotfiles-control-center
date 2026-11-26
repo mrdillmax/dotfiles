@@ -521,7 +521,11 @@ idle_toggle() {
             sed -i 's/^ENABLED=1/ENABLED=0/' "$STATE_DIR/idle.conf"
         fi
     fi
-    notify "$(idle_label)"
+    if grep -q '^ENABLED=0' "$STATE_DIR/idle.conf" 2>/dev/null; then
+        notify "Idle disabled"
+    else
+        notify "Idle enabled"
+    fi
 }
 
 
