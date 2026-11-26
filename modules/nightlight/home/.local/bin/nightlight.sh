@@ -24,6 +24,12 @@ latitude=50.45
 longitude=30.52
 last_schedule=""
 
+# Valid temperature range for hyprsunset (Kelvin).
+TEMP_MIN=1000
+TEMP_MAX=10000
+# Maximum log file size before truncation (bytes).
+LOG_MAX_BYTES=65536
+
 die() { printf 'nightlight: %s\n' "$*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -70,7 +76,7 @@ save_state() {
     mv -f -- "$tmp" "$STATE_FILE"
 }
 
-valid_temp() { [[ $1 =~ ^[0-9]+$ ]] && (($1 >= 1000 && $1 <= 10000)); }
+valid_temp() { [[ $1 =~ ^[0-9]+$ ]] && (($1 >= TEMP_MIN && $1 <= TEMP_MAX)); }
 valid_time() { [[ $1 =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]]; }
 valid_latitude() { [[ $1 =~ ^-?[0-9]+(\.[0-9]+)?$ ]] && awk -v v="$1" 'BEGIN { exit !(v >= -90 && v <= 90) }'; }
 valid_longitude() { [[ $1 =~ ^-?[0-9]+(\.[0-9]+)?$ ]] && awk -v v="$1" 'BEGIN { exit !(v >= -180 && v <= 180) }'; }
@@ -249,7 +255,7 @@ watch_loop() {
         # A failed apply must not stop the watcher; retry on the next tick and
         # keep the reason where the user can find it.
         if ! out="$(schedule_tick 2>&1)"; then
-            [[ -f $LOG_FILE ]] && (($(wc -c <"$LOG_FILE") > 65536)) && : >"$LOG_FILE"
+            [[ -f $LOG_FILE ]] && (($(wc -c <"$LOG_FILE") > LOG_MAX_BYTES)) && : >"$LOG_FILE"
             printf '%s %s\n' "$(date '+%F %T')" "${out:-schedule tick failed}" >>"$LOG_FILE" 2>/dev/null || true
         fi
         sleep "${NIGHTLIGHT_WATCH_INTERVAL:-60}"
