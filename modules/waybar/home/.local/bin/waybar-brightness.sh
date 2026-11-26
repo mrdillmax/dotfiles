@@ -14,9 +14,10 @@ print_status() {
     max="$(<"$BACKLIGHT/max_brightness")"
     ((max > 0)) || max=1
     percent=$((current * 100 / max))
-    if ((percent <= 25)); then
+    local low=25 med=70
+    if ((percent <= low)); then
         icon="\uf186"
-    elif ((percent <= 70)); then
+    elif ((percent <= med)); then
         icon="\uf185"
     else
         icon="\uf185"
