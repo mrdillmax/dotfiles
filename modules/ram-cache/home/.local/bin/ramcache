@@ -48,13 +48,13 @@ limit_bytes() {
 }
 
 human_bytes() {
-    local bytes="$1"
-    if ((bytes >= 1073741824)); then
-        awk -v b="$bytes" 'BEGIN { printf "%.1f GiB", b / 1073741824 }'
-    elif ((bytes >= 1048576)); then
-        awk -v b="$bytes" 'BEGIN { printf "%.1f MiB", b / 1048576 }'
+    local bytes="$1" kib=1024 mib=$((kib * 1024)) gib=$((mib * 1024))
+    if ((bytes >= gib)); then
+        awk -v b="$bytes" 'BEGIN { printf "%.1f GiB", b / gib }'
+    elif ((bytes >= mib)); then
+        awk -v b="$bytes" 'BEGIN { printf "%.1f MiB", b / mib }'
     else
-        printf '%s KiB' "$((bytes / 1024))"
+        printf '%s KiB' "$((bytes / kib))"
     fi
 }
 
