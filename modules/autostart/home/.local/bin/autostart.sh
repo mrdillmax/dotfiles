@@ -332,9 +332,9 @@ run_entries() {
     # The optional greeter keeps the desktop behind hyprlock; do not launch
     # bars or apps until it is unlocked (the marker disappears with hyprlock).
     local greeter_marker="${XDG_RUNTIME_DIR:-/tmp}/dotfiles-greeter.lock"
-    local greeter_config="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/greeter-on"
+    local greeter_lua="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/greeter.lua"
     # The Lua start handler creates the marker; give it a moment to win the race.
-    if [[ -e $greeter_config ]]; then
+    if [[ -e $greeter_lua ]]; then
         for _ in {1..20}; do
             [[ -e $greeter_marker ]] && break
             sleep 0.1
