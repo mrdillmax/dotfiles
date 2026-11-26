@@ -21,7 +21,7 @@ print_status() {
                 break
                 ;;
             ethernet)
-                icon="\uf6ff"
+                icon="\uf0e8"
                 label="Ethernet"
                 state="ethernet"
                 break
