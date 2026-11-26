@@ -40,13 +40,30 @@ run_rofi() {
     echo -e "$logout\n$reboot\n$shutdown" | rofi_cmd
 }
 
+run_hyprshutdown() {
+    local post_cmd="$1"
+    if command -v systemd-run &>/dev/null && systemctl --user is-active --quiet 'wayland-wm@*' 2>/dev/null; then
+        systemd-run --user --scope --quiet hyprshutdown --post-cmd "$post_cmd"
+    else
+        hyprshutdown --post-cmd "$post_cmd"
+    fi
+}
+
 run_cmd() {
     selected="$(confirm_exit)"
     if [[ "$selected" == "$yes" ]]; then
         if [[ $1 == '--shutdown' ]]; then
-            systemctl poweroff
+            if command -v hyprshutdown &>/dev/null; then
+                run_hyprshutdown "systemctl poweroff"
+            else
+                systemctl poweroff
+            fi
         elif [[ $1 == '--reboot' ]]; then
-            systemctl reboot
+            if command -v hyprshutdown &>/dev/null; then
+                run_hyprshutdown "systemctl reboot"
+            else
+                systemctl reboot
+            fi
         elif [[ $1 == '--logout' ]]; then
                 uwsm stop
         fi
