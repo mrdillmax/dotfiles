@@ -637,56 +637,56 @@ idle_page() {
             "Battery dim:"*)
                 value="$(ask_text "Battery dim (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --battery-dim "$value" >/dev/null 2>&1 &&
+                idle-tune.sh set --profile battery --battery-dim "$value" >/dev/null 2>&1 &&
                     notify "Battery dim: ${value}s" ||
                     notify "Could not set battery dim"
                 ;;
             "Battery lock:"*)
                 value="$(ask_text "Battery lock (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --battery-lock "$value" >/dev/null 2>&1 &&
+                idle-tune.sh set --profile battery --battery-lock "$value" >/dev/null 2>&1 &&
                     notify "Battery lock: ${value}s" ||
                     notify "Could not set battery lock"
                 ;;
             "Battery off:"*)
                 value="$(ask_text "Battery screen-off (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --battery-off "$value" >/dev/null 2>&1 &&
+                idle-tune.sh set --profile battery --battery-off "$value" >/dev/null 2>&1 &&
                     notify "Battery off: ${value}s" ||
                     notify "Could not set battery off"
                 ;;
             "Battery suspend:"*)
                 value="$(ask_text "Battery suspend (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --battery-suspend "$value" >/dev/null 2>&1 &&
+                idle-tune.sh set --profile battery --battery-suspend "$value" >/dev/null 2>&1 &&
                     notify "Battery suspend: ${value}s" ||
                     notify "Could not set battery suspend"
                 ;;
             "AC dim:"*)
                 value="$(ask_text "AC dim (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --ac-dim "$value" >/dev/null 2>&1 &&
+                idle-tune.sh set --profile ac --ac-dim "$value" >/dev/null 2>&1 &&
                     notify "AC dim: ${value}s" ||
                     notify "Could not set AC dim"
                 ;;
             "AC lock:"*)
                 value="$(ask_text "AC lock (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --ac-lock "$value" >/dev/null 2>&1 &&
+                idle-tune.sh set --profile ac --ac-lock "$value" >/dev/null 2>&1 &&
                     notify "AC lock: ${value}s" ||
                     notify "Could not set AC lock"
                 ;;
             "AC off:"*)
                 value="$(ask_text "AC screen-off (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --ac-off "$value" >/dev/null 2>&1 &&
+                idle-tune.sh set --profile ac --ac-off "$value" >/dev/null 2>&1 &&
                     notify "AC off: ${value}s" ||
                     notify "Could not set AC off"
                 ;;
             "AC suspend:"*)
                 value="$(ask_text "AC suspend (seconds, 0=off)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                idle-tune.sh set --ac-suspend "$value" >/dev/null 2>&1 &&
+                idle-tune.sh set --profile ac --ac-suspend "$value" >/dev/null 2>&1 &&
                     notify "AC suspend: ${value}s" ||
                     notify "Could not set AC suspend"
                 ;;
