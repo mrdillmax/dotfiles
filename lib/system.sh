@@ -482,7 +482,7 @@ install_system_configs() {
         die "system configs require root: sudo ./install.sh --system"
     fi
 
-    local src dst mode tmp_src iface user prev_tmp
+    local src dst mode tmp_src iface user prev_tmp repo_src
     local count=0
     local boot_changed=0 dns_changed=0 zram_changed=0
     local rows=()
