@@ -4,7 +4,7 @@
 _DOTFILES_THEME=1
 
 theme_source_index() {
-    local state="$REAL_HOME/.local/state/dotfiles/theme.conf" value="auto"
+    local state="${XDG_STATE_HOME:-$REAL_HOME/.local/state}/dotfiles/theme.conf" value="auto"
 
     if [[ -r $state ]]; then
         value="$(sed -n 's/^source_index=//p' "$state" | tail -n1)"
