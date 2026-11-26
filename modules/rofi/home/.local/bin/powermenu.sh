@@ -44,9 +44,17 @@ run_cmd() {
     selected="$(confirm_exit)"
     if [[ "$selected" == "$yes" ]]; then
         if [[ $1 == '--shutdown' ]]; then
-            systemctl poweroff
+            if command -v hyprshutdown &>/dev/null; then
+                hyprshutdown --post-cmd "systemctl poweroff"
+            else
+                systemctl poweroff
+            fi
         elif [[ $1 == '--reboot' ]]; then
-            systemctl reboot
+            if command -v hyprshutdown &>/dev/null; then
+                hyprshutdown --post-cmd "systemctl reboot"
+            else
+                systemctl reboot
+            fi
         elif [[ $1 == '--logout' ]]; then
                 uwsm stop
         fi
