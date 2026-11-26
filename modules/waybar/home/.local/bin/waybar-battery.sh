@@ -12,16 +12,18 @@ print_status() {
     fi
     capacity="$(<"$BAT_DIR/capacity")"
     status="$(cat "$BAT_DIR/status" 2>/dev/null || printf 'Unknown')"
+    # Battery level thresholds for icon selection.
+    local crit=10 warn=30 low=60 high=90
     class=""
-    if ((capacity <= 10)); then
+    if ((capacity <= crit)); then
         icon="\uf244"
         class="critical"
-    elif ((capacity <= 30)); then
+    elif ((capacity <= warn)); then
         icon="\uf243"
         class="warning"
-    elif ((capacity <= 60)); then
+    elif ((capacity <= low)); then
         icon="\uf242"
-    elif ((capacity <= 90)); then
+    elif ((capacity <= high)); then
         icon="\uf241"
     else
         icon="\uf240"
