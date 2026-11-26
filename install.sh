@@ -44,7 +44,6 @@ CURSOR_THEME_ARG=""
 CURSOR_SIZE_ARG=""
 WALLPAPER_ARG=""
 DO_WALLPAPER=0
-GREETER_ACTION=""
 DO_HOOKS=0
 DO_DOCTOR=0
 DO_JSON=0
@@ -146,7 +145,6 @@ Settings:
   --cursor-theme NAME   cursor theme name (default: host cursor.conf)
   --cursor-size N       cursor size 16..128 (default: 24)
   --wallpaper PATH      store the wallpaper path and optionally apply it
-  --greeter on|off      lock the session at startup with hyprlock
   --theme               regenerate colours from the current wallpaper (matugen)
   --theme-menu          wallpaper/mode/scheme menu
   --spicetify           install the Spicetify CLI from the upstream script
@@ -222,7 +220,6 @@ while (($#)); do
         --cursor-theme)   CURSOR_THEME_ARG="${2:?missing value for --cursor-theme}"; DO_CURSOR=1; HAS_ACTION=1; shift ;;
         --cursor-size)    CURSOR_SIZE_ARG="${2:?missing value for --cursor-size}"; DO_CURSOR=1; HAS_ACTION=1; shift ;;
         --wallpaper)  WALLPAPER_ARG="${2:?missing value for --wallpaper}"; DO_WALLPAPER=1; HAS_ACTION=1; shift ;;
-        --greeter)    GREETER_ACTION="${2:?missing value for --greeter}"; HAS_ACTION=1; shift ;;
         --theme)      DO_THEME=1; HAS_ACTION=1 ;;
         --theme-menu) DO_THEME_MENU=1; HAS_ACTION=1 ;;
         --spicetify)  DO_SPICETIFY=1; HAS_ACTION=1 ;;
@@ -389,45 +386,6 @@ fi
 
 if (( DO_WALLPAPER )); then
     set_wallpaper "$WALLPAPER_ARG"
-    exit 0
-fi
-
-if [[ -n $GREETER_ACTION ]]; then
-    greeter_dir="${GREETER_STATE_DIR:-${XDG_CONFIG_HOME:-$REAL_HOME/.config}/dotfiles}"
-    greeter_conf="$greeter_dir/greeter-on"
-    case "$GREETER_ACTION" in
-        on)
-            if ! command -v hyprlock >/dev/null 2>&1; then
-                warn "hyprlock is not installed; select the idle module"
-            fi
-            if [[ ! -r $REAL_HOME/.config/hypr/greeter.lua ]]; then
-                warn "greeter.lua is missing; install the idle module first"
-            fi
-            if ((DRY_RUN)); then
-                log "${C_DIM}[dry-run]${C_RESET} enable the startup lock: $greeter_conf"
-            else
-                mkdir -p -- "$greeter_dir"
-                printf 'enabled=1\n' >"$greeter_conf"
-            fi
-            info "startup lock enabled; the next session asks for the password"
-            ;;
-        off)
-            if ((DRY_RUN)); then
-                log "${C_DIM}[dry-run]${C_RESET} disable the startup lock: $greeter_conf"
-            else
-                rm -f -- "$greeter_conf"
-            fi
-            info "startup lock disabled"
-            ;;
-        status)
-            if [[ -e $greeter_conf ]]; then
-                printf 'enabled\n'
-            else
-                printf 'disabled\n'
-            fi
-            ;;
-        *) die "unknown --greeter action: $GREETER_ACTION (use on|off|status)" ;;
-    esac
     exit 0
 fi
 
