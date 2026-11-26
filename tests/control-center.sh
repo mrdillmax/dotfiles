@@ -212,6 +212,8 @@ fi
 
 (
     # shellcheck disable=SC2329 # called by configuration_page
+    host_is_laptop() { return 0; }
+    # shellcheck disable=SC2329 # called by configuration_page
     pick_icon() {
         printf '%s\n' "$@" >"$stub/config-rows"
         return 1
@@ -223,9 +225,25 @@ for label in Sound Monitors Keybinds Tide "Night light"; do
     grep -q "$label" "$stub/config-rows" || missing=1
 done
 if ((missing == 0)); then
-    pass "Configuration lists the installable entries before they exist"
+    pass "Configuration lists the installable entries on laptops"
 else
     fail "Configuration hid an installable entry: $(cat "$stub/config-rows")"
+fi
+
+(
+    # shellcheck disable=SC2329 # called by configuration_page
+    host_is_laptop() { return 1; }
+    # shellcheck disable=SC2329 # called by configuration_page
+    pick_icon() {
+        printf '%s\n' "$@" >"$stub/config-rows-desktop"
+        return 1
+    }
+    configuration_page
+)
+if ! grep -q "Monitors" "$stub/config-rows-desktop"; then
+    pass "Configuration hides Monitors on desktops"
+else
+    fail "Configuration showed Monitors on a desktop"
 fi
 
 if [[ $(config_check_cmd Sound) == pavucontrol &&
@@ -268,6 +286,8 @@ chmod +x "$stub/idle-tune.sh"
 ) >/dev/null
 (
     # shellcheck disable=SC2329
+    host_is_laptop() { return 0; }
+    # shellcheck disable=SC2329
     pick_icon() { printf '%s\n' "$@" >"$stub/idle-specs"; return 1; }
     idle_page
 ) >/dev/null
@@ -278,6 +298,43 @@ if grep -q 'Disable idle' "$stub/menu-specs" &&
     pass "idle pages are split correctly"
 else
     fail "idle pages are split incorrectly"
+fi
+
+# idle_page reloads values from idle.conf and toggles without opening a terminal.
+mkdir -p "$stub/idle-state"
+printf 'AC_DIM=420\nENABLED=1\n' >"$stub/idle-state/idle.conf"
+(
+    # shellcheck disable=SC2034 # read by idle_page
+    STATE_DIR="$stub/idle-state"
+    # shellcheck disable=SC2329
+    host_is_laptop() { return 1; }
+    # shellcheck disable=SC2329
+    run_terminal() { touch "$stub/idle-opened-terminal"; }
+    # shellcheck disable=SC2329
+    idle-tune.sh() {
+        if [[ ${1:-} == toggle ]]; then
+            sed -i 's/^ENABLED=1/ENABLED=0/' "$stub/idle-state/idle.conf"
+        fi
+    }
+    # shellcheck disable=SC2329
+    pick_icon() {
+        printf '%s\n' "$@" >>"$stub/idle-reload-specs"
+        if [[ ! -e $stub/idle-toggled ]]; then
+            : >"$stub/idle-toggled"
+            printf 'Disable idle\n'
+            return 0
+        fi
+        return 1
+    }
+    idle_page
+) >/dev/null
+if grep -q 'AC dim: 420 s' "$stub/idle-reload-specs" &&
+    ! grep -q 'Battery dim' "$stub/idle-reload-specs" &&
+    grep -q 'Enable idle' "$stub/idle-reload-specs" &&
+    [[ ! -e $stub/idle-opened-terminal ]]; then
+    pass "idle_page reads idle.conf, hides battery on desktop, and toggles without a terminal"
+else
+    fail "idle_page reload/toggle: $(cat "$stub/idle-reload-specs" 2>/dev/null)"
 fi
 
 mkdir -p "$stub/wp-home/.local/share/wallpapers"
