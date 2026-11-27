@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Adjust the backlight by a fixed step, clamped to a usable range. The panel
-# must never reach 0%: the keys and the Waybar wheel stop at 5%.
+# Adjust the panel brightness by a fixed step, clamped to a usable range. The
+# panel must never reach 0%: the keys and the Waybar wheel stop at 5%.
+#
+# panel-brightness.sh picks the backend: brightnessctl on laptops, DDC/CI on
+# desktops with external monitors.
 set -uo pipefail
 
 ACTION="${1:-}"
@@ -20,9 +23,13 @@ case "$ACTION" in
 esac
 [[ $STEP =~ ^[0-9]+$ ]] && ((STEP > 0)) || STEP=5
 
-command -v brightnessctl >/dev/null 2>&1 || exit 0
+PANEL_FALLBACK="$(cd -- "${BASH_SOURCE[0]%/*}" && pwd)/panel-brightness.sh"
+PANEL=""
+[[ -x $PANEL_FALLBACK ]] && PANEL="$PANEL_FALLBACK"
+[[ -n $PANEL ]] || PANEL="$(command -v panel-brightness.sh 2>/dev/null || true)"
+[[ -n $PANEL ]] || exit 0
 
-current="$(brightnessctl -m 2>/dev/null | awk -F, '{gsub(/%/, "", $4); print $4}')"
+current="$("$PANEL" get 2>/dev/null)"
 [[ $current =~ ^[0-9]+$ ]] || exit 0
 
 if [[ $ACTION == up ]]; then
@@ -33,7 +40,7 @@ fi
 ((next > 100)) && next=100
 ((next < 5)) && next=5
 
-brightnessctl set "${next}%" >/dev/null 2>&1 || exit 1
+"$PANEL" set "$next" >/dev/null 2>&1 || exit 1
 
 if ((OSD)) && command -v swayosd-client >/dev/null 2>&1; then
     swayosd-client --custom-message "Brightness ${next}%" \
