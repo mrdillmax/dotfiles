@@ -1386,8 +1386,42 @@ sound_page() {
     fi
 }
 
-tide_configure() {
-    if ! have fish; then
+# External monitors over DDC/CI: brightness and contrast. Internal panels are
+# handled by the brightness keys and do not need this page.
+display_page() {
+    local choice value current
+    while :; do
+        local -a specs=()
+        current="$(ddc-display.sh get 10 2>/dev/null)"
+        specs+=($'\uf185|Brightness: '"${current:-?}"' %')
+        current="$(ddc-display.sh get 12 2>/dev/null)"
+        specs+=($'\uf042|Contrast: '"${current:-?}"' %')
+        choice="$(pick_icon "Display" "${specs[@]}")" || return 0
+        case "$choice" in
+            "Brightness:"*)
+                value="$(ask_text "Brightness (5-100)")" || continue
+                [[ $value =~ ^[0-9]+$ ]] || continue
+                if ddc-display.sh set 10 "$value" >/dev/null 2>&1; then
+                    notify "Brightness: ${value}%"
+                else
+                    notify "Could not set brightness (check the i2c group)"
+                fi
+                ;;
+            "Contrast:"*)
+                value="$(ask_text "Contrast (0-100)")" || continue
+                [[ $value =~ ^[0-9]+$ ]] || continue
+                if ddc-display.sh set 12 "$value" >/dev/null 2>&1; then
+                    notify "Contrast: ${value}%"
+                else
+                    notify "Could not set contrast (check the i2c group)"
+                fi
+                ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
+tide_configure() {    if ! have fish; then
         notify "fish is not installed"
         return 0
     fi
@@ -1445,6 +1479,7 @@ config_check_cmd() {
         Wi-Fi)         printf '%s' nmcli ;;
         Bluetooth)     printf '%s' bluetoothctl ;;
         Monitors)      printf '%s' monitor-profiles.sh ;;
+        Display)       printf '%s' ddcutil ;;
         Idle)          printf '%s' idle-tune.sh ;;
         "Night light") printf '%s' nightlight.sh ;;
         Keybinds)      printf '%s' binds-cheatsheet.sh ;;
@@ -1463,6 +1498,7 @@ config_install_cmd() {
         Wi-Fi)         printf '%s --only-packages --packages networkmanager --yes && sudo systemctl enable --now NetworkManager' "$installer" ;;
         Bluetooth)     printf '%s --only-packages --packages bluez,bluez-utils --yes && sudo systemctl enable --now bluetooth' "$installer" ;;
         Monitors)      printf '%s --modules monitor-profiles --yes' "$installer" ;;
+        Display)       printf '%s --only-packages --packages ddcutil --yes && sudo usermod -aG i2c "$USER"' "$installer" ;;
         Idle)          printf '%s --modules idle --yes' "$installer" ;;
         "Night light") printf '%s --modules nightlight --yes' "$installer" ;;
         Keybinds)      printf '%s --modules binds-cheatsheet --yes' "$installer" ;;
@@ -1504,6 +1540,9 @@ configuration_page() {
         wifi_hardware_present && specs+=($'\uf1eb|Wi-Fi')
         bluetooth_hardware_present && specs+=($'\uf293|Bluetooth')
         host_is_laptop && specs+=($'\uf108|Monitors')
+        if have ddc-display.sh && ddc-display.sh available >/dev/null 2>&1; then
+            specs+=($'\uf108|Display')
+        fi
         specs+=(
             $'\uf017|Idle'
             $'\uf185|Night light'
@@ -1521,6 +1560,7 @@ configuration_page() {
             "Wi-Fi") ensure_config_dep "Wi-Fi" && wifi_page ;;
             "Bluetooth") ensure_config_dep "Bluetooth" && bluetooth_page ;;
             "Monitors") ensure_config_dep "Monitors" && monitors_page ;;
+            "Display") display_page ;;
             "Idle") ensure_config_dep "Idle" && idle_page ;;
             "Night light") ensure_config_dep "Night light" && nightlight_page ;;
             "Keybinds") ensure_config_dep "Keybinds" && edit_bind_page ;;
