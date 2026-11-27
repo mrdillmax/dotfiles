@@ -42,10 +42,12 @@ run_rofi() {
 
 run_hyprshutdown() {
     local post_cmd="$1"
+    # --no-fork keeps hyprshutdown attached to the launcher instead of
+    # daemonising, so it cannot leave a stray window behind.
     if command -v systemd-run &>/dev/null && systemctl --user is-active --quiet 'wayland-wm@*' 2>/dev/null; then
-        systemd-run --user --scope --quiet hyprshutdown --post-cmd "$post_cmd"
+        systemd-run --user --scope --quiet hyprshutdown --no-fork --post-cmd "$post_cmd"
     else
-        hyprshutdown --post-cmd "$post_cmd"
+        hyprshutdown --no-fork --post-cmd "$post_cmd"
     fi
 }
 
