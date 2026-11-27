@@ -1,0 +1,45 @@
+/* style.css — swayosd overlay styled with the Waybar matugen palette. */
+
+@import "../waybar/colors.css";
+
+window#osd {
+  border-radius: 14px;
+  border: 1.5px solid @primary;
+  background-color: @surface_container;
+}
+
+window#osd #container {
+  margin: 12px 16px;
+}
+
+window#osd image,
+window#osd label {
+  font-family: "Inter", "JetBrainsMono Nerd Font Propo", sans-serif;
+  color: @on_surface;
+}
+
+window#osd progressbar:disabled,
+window#osd image:disabled {
+  opacity: 0.5;
+}
+
+window#osd progressbar {
+  min-height: 6px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+}
+
+window#osd trough {
+  min-height: inherit;
+  border-radius: inherit;
+  border: none;
+  background: @surface_container_high;
+}
+
+window#osd progress {
+  min-height: inherit;
+  border-radius: inherit;
+  border: none;
+  background: @primary;
+}
