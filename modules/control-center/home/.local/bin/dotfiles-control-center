@@ -1229,7 +1229,24 @@ wifi_connect() {
     run_terminal --hold "nmcli device wifi connect $(printf '%q' "$ssid") --ask"
 }
 
+network_status_notify() {
+    local dev="" ip=""
+    if have nmcli; then
+        dev="$(nmcli -t -f TYPE,STATE,DEVICE device status 2>/dev/null | awk -F: '$1=="ethernet" && $2=="connected"{print $3; exit}')"
+    fi
+    if [[ -n $dev ]]; then
+        ip="$(ip -4 -o addr show dev "$dev" 2>/dev/null | awk '{print $4; exit}')"
+        notify "Ethernet connected: ${dev}${ip:+ ($ip)}"
+    else
+        notify "Network disconnected (no Wi-Fi adapter)"
+    fi
+}
+
 wifi_page() {
+    if ! wifi_hardware_present; then
+        network_status_notify
+        return 0
+    fi
     local choice connection
     while :; do
         choice="$(pick_icon "Wi-Fi" \
