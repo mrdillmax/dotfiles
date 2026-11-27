@@ -115,11 +115,23 @@ window#waybar > box {
   border-radius: 10px 0 0 10px;
 }
 
+/* Waybar draws its own rounded tooltip; GTK adds a decoration and shadow on
+ * top of it, so reset every layer explicitly. Without this the tooltip shows
+ * the Waybar border plus the GTK one (a visible double frame). */
+tooltip,
+tooltip > box,
+tooltip > box > label {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  outline: none;
+}
+
 tooltip {
   background-color: @surface_container;
   color: @on_surface;
-  border: 1.5px solid @primary;
   border-radius: 12px;
+  padding: 0;
 }
 
 tooltip label {
