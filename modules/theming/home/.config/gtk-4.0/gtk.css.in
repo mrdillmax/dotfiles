@@ -1,3 +1,65 @@
+/* gtk.css — GTK4 / libadwaita styling for the Hyprland session.
+ *
+ * matugen writes colors.css which defines all @accent_color /
+ * @window_bg_color / … tokens that libadwaita reads natively.
+ * adw-gtk3 provides the base libadwaita-compatible theme for GTK4 apps.
+ * Custom rules below override shape and rounding to match the system style.
+ */
 @import url("colors.css");
 @import url("/usr/share/themes/@GTK_THEME@/gtk-4.0/libadwaita.css");
 @import url("/usr/share/themes/@GTK_THEME@/gtk-4.0/libadwaita-tweaks.css");
+
+/* ── Window chrome ───────────────────────────────────────────────────── */
+window,
+dialog {
+  border-radius: 12px;
+}
+
+/* ── Header bar ──────────────────────────────────────────────────────── */
+headerbar {
+  border-radius: 12px 12px 0 0;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+button {
+  border-radius: 8px;
+}
+
+button.suggested-action {
+  background-color: @accent_color;
+  color: @accent_fg_color;
+  border-radius: 8px;
+}
+
+button.destructive-action {
+  border-radius: 8px;
+}
+
+/* ── Entry / search fields ───────────────────────────────────────────── */
+entry,
+searchentry {
+  border-radius: 8px;
+}
+
+/* ── Popovers and menus ──────────────────────────────────────────────── */
+popover > contents {
+  border-radius: 10px;
+}
+
+/* ── Cards (used by hyprland-share-picker thumbnails) ────────────────── */
+.card {
+  border-radius: 10px;
+}
+
+/* ── Checkboxes / radio buttons ──────────────────────────────────────── */
+checkbutton > check,
+radiobutton > radio {
+  border-radius: 4px;
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────────────── */
+scrollbar slider {
+  border-radius: 4px;
+  min-width: 6px;
+  min-height: 6px;
+}
