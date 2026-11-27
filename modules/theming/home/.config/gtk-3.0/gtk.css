@@ -1,2 +1,12 @@
-@import 'colors.css';
+/* gtk.css — GTK3 styling for portals and dialogs using the matugen palette. */
 @import url("colors.css");
+
+window.csd,
+dialog.csd {
+  border-radius: 12px;
+}
+
+decoration {
+  border-radius: 12px;
+  border: 1px solid alpha(@accent_color, 0.28);
+}
