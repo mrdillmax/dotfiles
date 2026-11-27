@@ -19,5 +19,5 @@ MON_SCALE=("1")
 MON_WS_FIRST=(1)
 MON_WS_COUNT=(10)
 
-APP_WS_VESKTOP=2
-APP_WS_OBSIDIAN=3
+# App workspaces follow the monitor count: 12/13 with a second monitor,
+# 6/7 on a single one (computed by install.sh).

@@ -13,6 +13,5 @@
 # to record an explicit layout with per-monitor workspace ranges.
 MON_COUNT=0
 
-# Workspaces for apps that should always open on a fixed workspace.
-APP_WS_VESKTOP=6
-APP_WS_OBSIDIAN=5
+# App workspaces follow the monitor count: 12/13 with a second monitor,
+# 6/7 on a single one (computed by install.sh).

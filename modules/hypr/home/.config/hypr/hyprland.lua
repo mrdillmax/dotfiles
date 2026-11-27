@@ -292,12 +292,17 @@ end
 -- Optional per-host workspace targets (see hosts/<host>/monitors.conf.sh)
 local app_ws = monitors.app_workspaces or {}
 
-local function app_workspace(key, fallback)
+local function app_workspace(key, single_fallback, multi_fallback)
     local value = app_ws[key]
     if type(value) == "number" and value > 0 then
         return value
     end
-    return fallback
+    -- Without a host preset, pick by the number of configured monitors.
+    local count = 0
+    for _ in ipairs(monitors) do
+        count = count + 1
+    end
+    return count > 1 and multi_fallback or single_fallback
 end
 
 
@@ -339,13 +344,13 @@ hl.window_rule({
 -- Obsidian reopens on its own workspace so notes are always in the same place.
 hl.window_rule({
     match = { class = ".*[Oo]bsidian.*" },
-    workspace = tostring(app_workspace("obsidian", 5)) .. " silent",
+    workspace = tostring(app_workspace("obsidian", 7, 13)) .. " silent",
 })
 
 -- Vesktop belongs on workspace 6, next to the other chat windows.
 hl.window_rule({
     match = { class = ".*[Vv]esktop.*" },
-    workspace = tostring(app_workspace("vesktop", 6)) .. " silent",
+    workspace = tostring(app_workspace("vesktop", 6, 12)) .. " silent",
 })
 
 -- iriun turns a phone into a webcam; keep the preview on a special workspace.
@@ -403,7 +408,7 @@ hl.window_rule({
 hl.window_rule({
     match = {
         class = "org.qbittorrent.qBittorrent",
-        title = "negative:qBittorrent",
+        title = "negative:^qBittorrent v[0-9.]+",
     },
     float = true,
 })

@@ -6,13 +6,13 @@ _DOTFILES_MONITORS=1
 # Workspace slots per monitor when layout is auto-generated.
 WS_PER_MONITOR=10
 
-# Default app workspaces when no host preset exists.
-APP_WS_VESKTOP_DEFAULT=6
-APP_WS_OBSIDIAN_DEFAULT=5
-
-# Single-monitor defaults: vesktop on ws 2, obsidian on ws 3.
-APP_WS_VESKTOP_SINGLE=2
-APP_WS_OBSIDIAN_SINGLE=3
+# App workspaces depend on the monitor count: with a second monitor the chat
+# and notes windows move to the second monitor's range (12/13), otherwise they
+# stay on the main one (6/7).
+APP_WS_VESKTOP_MULTI=12
+APP_WS_OBSIDIAN_MULTI=13
+APP_WS_VESKTOP_SINGLE=6
+APP_WS_OBSIDIAN_SINGLE=7
 
 # Chassis type codes from /sys/class/dmi/id/chassis_type (Linux kernel).
 CHASSIS_LAPTOP=8
@@ -203,9 +203,19 @@ render_monitors() {
         MON_COUNT=${#MON_NAME[@]}
         if ((MON_COUNT > 0)); then
             generated=1
-            ((APP_WS_VESKTOP)) || APP_WS_VESKTOP=$APP_WS_VESKTOP_DEFAULT
-            ((APP_WS_OBSIDIAN)) || APP_WS_OBSIDIAN=$APP_WS_OBSIDIAN_DEFAULT
             info "no monitor preset: generated $WS_PER_MONITOR workspace slots per detected monitor"
+        fi
+    fi
+
+    # Resolve app workspaces from the monitor count unless the host preset
+    # pinned explicit values.
+    if ((APP_WS_VESKTOP == 0 || APP_WS_OBSIDIAN == 0)); then
+        if ((MON_COUNT > 1)); then
+            ((APP_WS_VESKTOP)) || APP_WS_VESKTOP=$APP_WS_VESKTOP_MULTI
+            ((APP_WS_OBSIDIAN)) || APP_WS_OBSIDIAN=$APP_WS_OBSIDIAN_MULTI
+        else
+            ((APP_WS_VESKTOP)) || APP_WS_VESKTOP=$APP_WS_VESKTOP_SINGLE
+            ((APP_WS_OBSIDIAN)) || APP_WS_OBSIDIAN=$APP_WS_OBSIDIAN_SINGLE
         fi
     fi
 
@@ -418,8 +428,8 @@ build_layout() {
 
     local vesktop=$APP_WS_VESKTOP_SINGLE obsidian=$APP_WS_OBSIDIAN_SINGLE
     if ((${#out_first[@]} > 1)); then
-        vesktop=$(( out_first[1] + 1 ))
-        obsidian=$(( out_first[1] + 2 ))
+        vesktop=$APP_WS_VESKTOP_MULTI
+        obsidian=$APP_WS_OBSIDIAN_MULTI
     fi
 
     write_repo_monitors "${#out_names[@]}" \
