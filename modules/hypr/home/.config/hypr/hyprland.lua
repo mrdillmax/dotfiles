@@ -372,12 +372,22 @@ hl.window_rule({
     float = true,
 })
 
--- GTK file dialogs from portals must float above the application.
+-- GTK file dialogs from portals must float centered above the application.
 hl.window_rule({
     match = {
         class = "xdg-desktop-portal-gtk",
     },
     float = true,
+    center = true,
+})
+
+-- Screen/window share picker from xdg-desktop-portal-hyprland floats centered.
+hl.window_rule({
+    match = {
+        class = "hyprland-share-picker",
+    },
+    float = true,
+    center = true,
 })
 
 -- Protontricks is a one-shot dialog and should not tile.
