@@ -22,7 +22,7 @@
    * name an icon font that is only installed as woff2: Pango cannot load it
    * and the glyphs turn into tofu boxes. */
   font-family:
-    "Inter", "JetBrainsMono Nerd Font", Roboto, Helvetica, Arial, sans-serif;
+    "Inter", "JetBrainsMono Nerd Font Propo", "JetBrainsMono Nerd Font", Roboto, Helvetica, Arial, sans-serif;
   font-size: 1.01em;
 }
 
@@ -169,6 +169,9 @@ window#waybar > box {
 #bluetooth {
   padding-left: 8px;
   padding-right: 8px;
+}
+#bluetooth.no-controller {
+  padding: 0;
 }
 #pulseaudio:hover,
 #custom-brightness:hover,
