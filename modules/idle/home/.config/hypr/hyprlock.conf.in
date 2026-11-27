@@ -12,31 +12,50 @@ background {
     monitor =
     path = screenshot
     blur_passes = 3
+    blur_size = 6
+    brightness = 0.72
     dim_inactive = false
 }
 
 input-field {
     monitor =
-    size = 260, 44
+    size = 280, 46
     rounding = 12
     outline_thickness = 2
-    dots_size = 0.18
-    dots_spacing = 0.15
+    dots_size = 0.20
+    dots_spacing = 0.18
     outer_color = rgb(8ed5cc)
     inner_color = rgb(1f2b28)
     font_color = rgb(dde4e1)
     fail_color = rgb(ffb4ab)
-    placeholder_text = <span foreground="#9aa5a1">Password</span>
-    fail_text = <span foreground="#ffb4ab">Wrong password</span>
+    check_color = rgb(b1ccc7)
+    capslock_color = rgb(ffb4ab)
+    placeholder_text = Password
+    fail_text = Wrong password
+    fade_on_empty = false
+    position = 0, -10
+    halign = center
+    valign = center
 }
 
 label {
     monitor =
     text = $TIME
     color = rgb(dde4e1)
-    font_size = 64
+    font_size = 72
+    font_family = @UI_FONT@ Bold
+    position = 0, 130
+    halign = center
+    valign = center
+}
+
+label {
+    monitor =
+    text = cmd[update:60000] date +"%A, %d %B"
+    color = rgb(9aa5a1)
+    font_size = 16
     font_family = @UI_FONT@
-    position = 0, 120
+    position = 0, 62
     halign = center
     valign = center
 }
@@ -47,7 +66,18 @@ label {
     color = rgb(9aa5a1)
     font_size = 14
     font_family = @UI_FONT@
-    position = 0, -40
+    position = 0, -58
+    halign = center
+    valign = center
+}
+
+label {
+    monitor =
+    text = $LAYOUT
+    color = rgb(8ed5cc)
+    font_size = 12
+    font_family = @MONO_FONT@
+    position = 0, -84
     halign = center
     valign = center
 }
