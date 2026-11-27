@@ -114,6 +114,8 @@ printf '#!/bin/sh\ncase "$*" in\n  *"connection show --active"*) echo Home ;;\n 
 chmod +x "$stub/nmcli"
 (
     # shellcheck disable=SC2329
+    wifi_hardware_present() { return 0; }
+    # shellcheck disable=SC2329
     pick_icon() { printf '%s\n' "Disconnect"; }
     # shellcheck disable=SC2329
     run_terminal() { printf '%s\n' "$*" >"$stub/wifi-terminal"; }
