@@ -166,5 +166,14 @@ else
     fail "Waybar started without explicit paths: $(cat "$work/uwsm.args" 2>/dev/null)"
 fi
 
+cal_out="$("$BIN/waybar-calendar.sh" --render 2026 11)"
+if grep -q 'October 2026' <<<"$cal_out" &&
+    grep -q 'November 2026' <<<"$cal_out" &&
+    grep -q 'December 2026' <<<"$cal_out"; then
+    pass "calendar renders previous, current and next month"
+else
+    fail "calendar output missing expected months: $cal_out"
+fi
+
 printf '\n%s: %d passed, %d failed\n' "$(basename "$0")" "$PASS" "$FAIL"
 ((FAIL == 0))
