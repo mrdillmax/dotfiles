@@ -885,9 +885,33 @@ refresh_waybar() {
     info "Waybar restarted with the managed config"
 }
 
+# External-monitor control over DDC/CI needs the i2c group: /dev/i2c-* is
+# root:i2c and ddcutil cannot open it as a normal user. Idempotent; takes
+# effect on the next login.
+ensure_i2c_group() {
+    command -v ddcutil >/dev/null 2>&1 || return 0
+
+    local user="${SUDO_USER:-$USER}"
+    if id -nG "$user" 2>/dev/null | tr ' ' '\n' | grep -qx i2c; then
+        return 0
+    fi
+    if (( DRY_RUN )); then
+        log "${C_DIM}[dry-run]${C_RESET} usermod -aG i2c $user"
+        return 0
+    fi
+    if (( EUID == 0 )); then
+        usermod -aG i2c "$user" &&
+            ok "added $user to the i2c group (log in again to control external monitors)"
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo usermod -aG i2c "$user" &&
+            ok "added $user to the i2c group (log in again to control external monitors)"
+    else
+        warn "add $user to the i2c group: sudo usermod -aG i2c $user"
+    fi
+}
+
 install_selected_modules() {
     local name
-
     TERMINAL_APP=""
     TERMINAL_SERVICE=""
     if TERMINAL_APP="$(selected_terminal)"; then
@@ -919,6 +943,10 @@ install_selected_modules() {
 
     if [[ " ${MODULES[*]} " == *" waybar "* ]]; then
         cleanup_legacy_waybar_config
+    fi
+
+    if [[ " ${MODULES[*]} " == *" hypr "* ]]; then
+        ensure_i2c_group
     fi
 
     # Not tied to hypr: a fresh install should always have a wallpaper.

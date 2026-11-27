@@ -68,6 +68,7 @@ ayugram-desktop-bin	Desktop	main	yes	any	any	Desktop Telegram client with good c
 cadcraft-bin	Desktop	pkg	no	any	any	Open-source CAD and drafting app
 cpu-x	Desktop	pkg	no	desktop	any	A Free software that gathers information on CPU, motherboard and more
 darktable	Desktop	pkg	no	desktop	any	Utility to organize and develop raw images
+ddcutil	Desktop	pkg	yes	desktop	any	Control external monitor brightness and contrast over DDC/CI
 deckcraft-bin	Desktop	alt	no	any	any	Open-source presentation app
 dupeguru	Desktop	pkg	no	desktop	any	Find duplicate files with various contents, using perceptual diff for pictures
 filezilla	Desktop	pkg	no	desktop	any	Fast and reliable FTP, FTPS and SFTP client
