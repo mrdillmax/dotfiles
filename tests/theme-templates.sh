@@ -16,7 +16,7 @@ render() {
     sed -E 's/\{\{colors\.[a-z0-9_]+\.default\.hex_stripped\}\}/112233/g; s/\{\{colors\.[a-z0-9_]+\.default\.hex\}\}/#112233/g' "$1"
 }
 
-for tpl in hyprlock.conf fastfetch.jsonc; do
+for tpl in hyprlock.conf hyprtoolkit.conf fastfetch.jsonc; do
     if [[ -r $TPL/$tpl ]]; then
         pass "$tpl template exists"
     else
@@ -36,6 +36,11 @@ if grep -q '\[templates\.hyprlock\]' "$CONFIG"; then
     pass "hyprlock is registered in matugen"
 else
     fail "hyprlock is not registered in matugen"
+fi
+if grep -q '\[templates\.hyprtoolkit\]' "$CONFIG"; then
+    pass "hyprtoolkit is registered in matugen"
+else
+    fail "hyprtoolkit is not registered in matugen"
 fi
 if grep -q '\[templates\.fastfetch\]' "$CONFIG"; then
     pass "fastfetch is registered in matugen"
@@ -63,6 +68,14 @@ if [[ -r $TPL/hyprlock.conf ]]; then
         pass "hyprlock colours render to rgb() syntax"
     else
         fail "hyprlock colours are not in rgb() syntax"
+    fi
+fi
+
+if [[ -r $TPL/hyprtoolkit.conf ]]; then
+    if render "$TPL/hyprtoolkit.conf" | grep -q '0xFF112233'; then
+        pass "hyprtoolkit colours render to 0xFF syntax"
+    else
+        fail "hyprtoolkit colours are not in 0xFF syntax"
     fi
 fi
 
