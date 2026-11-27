@@ -149,8 +149,26 @@
   },
   "clock": {
     "format": "{:L%a %d %b}",
-    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
-    "format-alt": "{:%d-%m-%Y}"
+    "tooltip-format": "<tt><small>{calendar}</small></tt>",
+    "on-click": "~/.local/bin/waybar-calendar.sh",
+    "calendar": {
+      "mode": "month",
+      "mode-mon-col": 3,
+      "weeks-pos": "left",
+      "on-scroll": 1,
+      "format": {
+        "months": "<span weight='bold'>{}</span>",
+        "days": "{}",
+        "weeks": "<span alpha='60%'>W{}</span>",
+        "weekdays": "<span weight='bold'>{}</span>",
+        "today": "<span weight='bold' underline='single'>{}</span>"
+      }
+    },
+    "actions": {
+      "on-click-right": "mode",
+      "on-scroll-up": "shift_up",
+      "on-scroll-down": "shift_down"
+    }
   },
 
 
