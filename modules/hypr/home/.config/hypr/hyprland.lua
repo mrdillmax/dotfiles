@@ -464,12 +464,3 @@ hl.window_rule({
     center = true,
     size = { 760, 700 },
 })
-
--- Waybar tooltip popups are styled entirely by CSS; suppress the Hyprland
--- border and rounding so there is no double-border artefact.
-hl.window_rule({
-    name = "waybar-tooltip",
-    match = { class = "^waybar$", floating = true },
-    no_border = true,
-    rounding = false,
-})
