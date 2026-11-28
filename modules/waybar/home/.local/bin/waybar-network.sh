@@ -4,6 +4,15 @@ set -uo pipefail
 
 NMCLI="${NMCLI_BIN:-nmcli}"
 IP="${IP_BIN:-ip}"
+PING="${PING_BIN:-ping}"
+
+# A connected link is not the same as a working connection: captive portals
+# and dead uplinks still report "connected". Probe once when the status
+# changes, which is cheap because this module is event-driven.
+online() {
+    [[ -x $PING || -n $(command -v "$PING" 2>/dev/null) ]] || return 0
+    "$PING" -c 1 -W 2 -n 1.1.1.1 >/dev/null 2>&1
+}
 
 print_status() {
     local type state _connection device icon label ip
@@ -35,6 +44,11 @@ print_status() {
     fi
     if [[ -n $device ]]; then
         ip="$("$IP" -4 -o addr show dev "$device" 2>/dev/null | awk '{print $4; exit}')"
+    fi
+    if ! online; then
+        printf '{"text":"\\uf071","alt":"%s","tooltip":"%s%s: connected, no internet","class":"no-internet"}\n' \
+            "$state" "$label" "${ip:+ ($ip)}"
+        return 0
     fi
     # The SSID stays out of the bar: the icon is enough, the tooltip names
     # only the link type and address.

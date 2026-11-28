@@ -210,7 +210,8 @@ tooltip label {
 #pulseaudio.input.source-muted {
   color: @red;
 }
-#custom-network.offline {
+#custom-network.offline,
+#custom-network.no-internet {
   color: @orange;
 }
 

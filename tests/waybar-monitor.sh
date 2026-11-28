@@ -77,11 +77,17 @@ else
     fail "empty battery output: $out"
 fi
 
-out="$(NMCLI_BIN="$work/bin/nmcli" IP_BIN="$work/bin/ip" "$BIN/waybar-network.sh" --once)"
+out="$(NMCLI_BIN="$work/bin/nmcli" IP_BIN="$work/bin/ip" PING_BIN=/bin/true "$BIN/waybar-network.sh" --once)"
 if [[ $out != *HomeNet* && $out == *'"alt":"wifi"'* && $out == *10.0.0.5* ]]; then
     pass "network hides the SSID but keeps the link type and address"
 else
     fail "network output: $out"
+fi
+out="$(NMCLI_BIN="$work/bin/nmcli" IP_BIN="$work/bin/ip" PING_BIN=/bin/false "$BIN/waybar-network.sh" --once)"
+if [[ $out == *'"class":"no-internet"'* && $out == *'no internet'* ]]; then
+    pass "a connected link without internet changes the icon"
+else
+    fail "no-internet output: $out"
 fi
 out="$(NMCLI_BIN=/bin/false "$BIN/waybar-network.sh" --once)"
 if [[ $out == *'"alt":"offline"'* && $out == *'"class":"offline"'* ]]; then
