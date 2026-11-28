@@ -32,6 +32,22 @@ esac
 SYSTEMCTL
 chmod +x "$work/bin/systemctl"
 
+# `pgrep` / `pkill` are used by `idle-tune.sh` (is_running / fallback kill).
+# Stub early so they never touch the real process table.
+cat >"$work/bin/pgrep" <<'PGREP'
+#!/bin/sh
+printf '%s\n' "$*" >>"$PGREP_LOG"
+exit 0
+PGREP
+cat >"$work/bin/pkill" <<'PKILL'
+#!/bin/sh
+printf '%s\n' "$*" >>"$PKILL_LOG"
+exit 0
+PKILL
+chmod +x "$work/bin/pgrep" "$work/bin/pkill"
+export PGREP_LOG="$work/pgrep.log"
+export PKILL_LOG="$work/pkill.log"
+
 export PATH="$work/bin:$PATH"
 export HOME="$work/home"
 export XDG_CONFIG_HOME="$work/config"
