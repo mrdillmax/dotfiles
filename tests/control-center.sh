@@ -100,6 +100,8 @@ fi
 (
     # shellcheck disable=SC2329
     pick_icon() { printf '%s\n' "$@" >"$stub/bt-page"; return 1; }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/bluetooth-notify"; }
     bluetooth_page
 )
 if grep -q 'Bluetooth: on' "$stub/bt-page" &&
@@ -121,6 +123,8 @@ chmod +x "$stub/nmcli"
     run_terminal() { printf '%s\n' "$*" >"$stub/wifi-terminal"; }
     # shellcheck disable=SC2329
     notify() { printf '%s\n' "$*" >>"$stub/wifi-notes"; }
+    # shellcheck disable=SC2329
+    rofi_pick() { printf '%s\n' "Disconnect" >"$stub/wifi-rofi"; return 0; }
     wifi_page
 )
 if [[ ! -e $stub/wifi-terminal ]] &&
@@ -144,6 +148,8 @@ chmod +x "$stub/dotfiles-update-check.sh"
     }
     # shellcheck disable=SC2329
     notify() { printf '%s\n' "$*" >>"$stub/notify"; }
+    # shellcheck disable=SC2329
+    rofi_pick() { printf '%s\n' "up to date" >"$stub/update-rofi"; return 0; }
     update_page
 )
 if grep -q 'dotfiles: up to date' "$stub/notify" 2>/dev/null; then
@@ -193,6 +199,8 @@ fi
         printf '%s\n' "$@" >"$stub/menu-rows"
         return 1
     }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/menu-notify"; }
     menu_page
 )
 if grep -q 'Disable night light' "$stub/menu-rows"; then
@@ -204,6 +212,8 @@ fi
 (
     # shellcheck disable=SC2329
     pick_icon() { printf '%s\n' "$@" >"$stub/style-rows"; return 1; }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/style-notify"; }
     style_page
 )
 if ! grep -q "Night light" "$stub/style-rows"; then
@@ -220,6 +230,8 @@ fi
         printf '%s\n' "$@" >"$stub/config-rows"
         return 1
     }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/config-notify"; }
     configuration_page
 )
 missing=0
@@ -240,6 +252,8 @@ fi
         printf '%s\n' "$@" >"$stub/config-rows-desktop"
         return 1
     }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/config-notify-desktop"; }
     configuration_page
 )
 if ! grep -q "Monitors" "$stub/config-rows-desktop"; then
@@ -279,11 +293,15 @@ chmod +x "$stub/idle-tune.sh"
     pick_icon() { printf '%s\n' "$@" >"$stub/menu-specs"; return 1; }
     # shellcheck disable=SC2329
     pgrep() { return 1; }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/menu-specs-notify"; }
     menu_page
 ) >/dev/null
 (
     # shellcheck disable=SC2329
     pick_icon() { printf '%s\n' "$@" >"$stub/config-specs"; return 1; }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/config-specs-notify"; }
     configuration_page
 ) >/dev/null
 (
@@ -291,6 +309,8 @@ chmod +x "$stub/idle-tune.sh"
     host_is_laptop() { return 0; }
     # shellcheck disable=SC2329
     pick_icon() { printf '%s\n' "$@" >"$stub/idle-specs"; return 1; }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/idle-specs-notify"; }
     idle_page
 ) >/dev/null
 if grep -q 'Disable idle' "$stub/menu-specs" &&
@@ -328,6 +348,8 @@ printf 'AC_DIM=420\nENABLED=1\n' >"$stub/idle-state/idle.conf"
         fi
         return 1
     }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/idle-reload-notify"; }
     idle_page
 ) >/dev/null
 if grep -q 'AC dim: 420 s' "$stub/idle-reload-specs" &&
@@ -352,6 +374,10 @@ mkdir -p "$stub/wp-home/.local/share/wallpapers"
     have() { [[ $1 == magick ]] && return 1; command -v "$1" >/dev/null 2>&1; }
     # shellcheck disable=SC2329
     rofi_pick() { cat >"$stub/wp-rows"; return 1; }
+    # shellcheck disable=SC2329
+    pick_icon() { printf '%s\n' "$@" >"$stub/wp-rows"; return 1; }
+    # shellcheck disable=SC2329
+    notify() { printf '%s\n' "$*" >>"$stub/wp-notify"; }
     wallpaper_page
 )
 if grep -qx 'plain.png' "$stub/wp-rows" &&
