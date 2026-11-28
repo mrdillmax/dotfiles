@@ -172,7 +172,7 @@ lib32-libxcomposite	Games	pkg	yes	any	any	X11 Composite extension library (32-bi
 lib32-mangohud	Games	pkg	yes	any	any	32-bit libraries for MangoHud and MangoApp
 mangohud	Games	pkg	yes	any	any	A Vulkan overlay layer for monitoring FPS, temperatures, CPU/GPU load and more.
 protontricks	Games	pkg	yes	any	any	Run Winetricks commands for Steam Play/Proton games among other common Wine features
-protonup-qt-bin	Games	pkg	yes	any	any	Install and manage Proton-GE for Steam and Wine-GE for Lutris with this graphical user interface.
+protonplus	Games	pkg	yes	any	any	Install and manage Proton-GE, Wine-GE and other compatibility tools.
 steam	Games	pkg	yes	any	any	Valve's digital software delivery system
 sunshine-bin	Games	pkg	yes	any	any	A self-hosted game stream host for Moonlight.
 wine-gecko	Games	pkg	yes	any	any	Wine's built-in replacement for Microsoft's Internet Explorer

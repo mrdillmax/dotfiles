@@ -377,6 +377,13 @@ hl.window_rule({
     float = true,
 })
 
+-- ProtonPlus manages Proton-GE/Wine-GE builds; floating keeps its wizard in
+-- place instead of tiling across the workspace.
+hl.window_rule({
+    match = { class = "^(protonplus|com\\.vysp3r\\.ProtonPlus)$" },
+    float = true,
+})
+
 -- GTK file dialogs from portals must float centered above the application.
 hl.window_rule({
     match = {
