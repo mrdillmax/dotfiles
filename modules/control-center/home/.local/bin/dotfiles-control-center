@@ -1386,34 +1386,84 @@ sound_page() {
     fi
 }
 
-# External monitors over DDC/CI: brightness and contrast. Internal panels are
-# handled by the brightness keys and do not need this page.
+# External monitors over DDC/CI. Every action applies to all monitors unless a
+# single one is picked. Internal panels are handled by the brightness keys.
 display_page() {
-    local choice value current
+    local choice value target_label="All monitors" display name label index code current
+    local -a target_args=()
+    local percent_codes=(10 12 87 62)
+    local percent_names=("Brightness" "Contrast" "Sharpness" "Audio volume")
+
     while :; do
         local -a specs=()
-        current="$(ddc-display.sh get 10 2>/dev/null)"
-        specs+=($'\uf185|Brightness: '"${current:-?}"' %')
-        current="$(ddc-display.sh get 12 2>/dev/null)"
-        specs+=($'\uf042|Contrast: '"${current:-?}"' %')
+        specs+=($'\uf108|Monitor: '"$target_label")
+        for index in "${!percent_codes[@]}"; do
+            current="$(ddc-display.sh get "${percent_codes[$index]}" "${target_args[@]}" 2>/dev/null)"
+            specs+=($'\uf042|'"${percent_names[$index]}"': '"${current:-?}"' %')
+        done
+        specs+=(
+            $'\uf1fc|Color preset'
+            $'\uf0c9|Input source'
+            $'\uf013|Other VCP code…'
+        )
         choice="$(pick_icon "Display" "${specs[@]}")" || return 0
         case "$choice" in
-            "Brightness:"*)
-                value="$(ask_text "Brightness (5-100)")" || continue
-                [[ $value =~ ^[0-9]+$ ]] || continue
-                if ddc-display.sh set 10 "$value" >/dev/null 2>&1; then
-                    notify "Brightness: ${value}%"
+            "Monitor:"*)
+                local -a monitors=($'\uf108|All monitors')
+                local -A monitor_targets=(["All monitors"]="")
+                while IFS=$'\t' read -r display name; do
+                    [[ -n $display ]] || continue
+                    label="${name:-Display $display}"
+                    [[ -n ${monitor_targets[$label]:-} ]] && label+=" ($display)"
+                    monitor_targets["$label"]="$display"
+                    monitors+=($'\uf108|'"$label")
+                done < <(ddc-display.sh list 2>/dev/null)
+                local picked
+                picked="$(pick_icon "Monitor" "${monitors[@]}")" || continue
+                [[ -n ${monitor_targets[$picked]+x} ]] || continue
+                display="${monitor_targets[$picked]}"
+                target_label="$picked"
+                if [[ -z $display ]]; then
+                    target_args=()
                 else
-                    notify "Could not set brightness (check the i2c group)"
+                    target_args=(--display "$display")
                 fi
                 ;;
-            "Contrast:"*)
-                value="$(ask_text "Contrast (0-100)")" || continue
+            Brightness:*|Contrast:*|Sharpness:*|"Audio volume:"*)
+                label="${choice%%:*}"
+                code=""
+                for index in "${!percent_names[@]}"; do
+                    [[ ${percent_names[$index]} == "$label" ]] && code="${percent_codes[$index]}"
+                done
+                value="$(ask_text "$label (0-100)")" || continue
                 [[ $value =~ ^[0-9]+$ ]] || continue
-                if ddc-display.sh set 12 "$value" >/dev/null 2>&1; then
-                    notify "Contrast: ${value}%"
+                if ddc-display.sh set "$code" "$value" "${target_args[@]}" >/dev/null 2>&1; then
+                    notify "$label: ${value}%"
                 else
-                    notify "Could not set contrast (check the i2c group)"
+                    notify "Could not set ${label,,} (check the i2c group)"
+                fi
+                ;;
+            "Color preset"|"Input source")
+                code=18
+                [[ $choice == "Input source" ]] && code=60
+                value="$(ask_text "$choice value (0-255)")" || continue
+                [[ $value =~ ^[0-9]+$ ]] || continue
+                if ddc-display.sh setraw "$code" "$value" "${target_args[@]}" >/dev/null 2>&1; then
+                    notify "$choice: $value"
+                else
+                    notify "Could not set $choice"
+                fi
+                ;;
+            "Other VCP code…")
+                local custom
+                custom="$(ask_text "VCP code (hex or decimal)")" || continue
+                [[ -n $custom ]] || continue
+                value="$(ask_text "Value")" || continue
+                [[ $value =~ ^[0-9]+$ ]] || continue
+                if ddc-display.sh setraw "$custom" "$value" "${target_args[@]}" >/dev/null 2>&1; then
+                    notify "VCP $custom: $value"
+                else
+                    notify "The monitor rejected VCP $custom"
                 fi
                 ;;
             "") return 0 ;;

@@ -67,9 +67,15 @@ set_percent() {
 # Save the exact level and lower the panel. brightnessctl -s does both in one
 # call; DDC/CI has to read every monitor first.
 dim_percent() {
-    local percent
+    local percent current
     percent="$(clamp "$1")"
     if internal_available; then
+        # Keep the exact level ourselves: brightnessctl's saved slot can be
+        # overwritten, which leaves the panel dimmed after a resume.
+        current="$(internal_get)"
+        [[ -n $current ]] || return 1
+        mkdir -p -- "$state_dir" 2>/dev/null || true
+        printf '%s\n' "$current" >"$internal_marker" 2>/dev/null || return 1
         brightnessctl -s set "${percent}%" >/dev/null 2>&1
     elif ddc_available; then
         mkdir -p -- "$state_dir" 2>/dev/null || true
@@ -81,12 +87,21 @@ dim_percent() {
 }
 
 restore() {
-    if internal_available; then
-        brightnessctl -r >/dev/null 2>&1
-    elif ddc_available; then
+    local saved
+    if [[ -r $internal_marker ]]; then
+        saved="$(<"$internal_marker")"
+        rm -f -- "$internal_marker"
+        if [[ $saved =~ ^[0-9]+$ ]] && internal_available; then
+            # -r covers the normal case; the explicit set repairs the level
+            # when another process overwrote brightnessctl's saved slot.
+            brightnessctl -r >/dev/null 2>&1 || true
+            brightnessctl set "${saved}%" >/dev/null 2>&1
+            return 0
+        fi
+    fi
+    if ddc_available; then
         ddc-display.sh restore "$VCP_BRIGHTNESS" >/dev/null 2>&1
     fi
-    rm -f -- "$internal_marker" 2>/dev/null || true
 }
 
 case "${1:-}" in
