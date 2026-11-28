@@ -802,13 +802,30 @@ menu_page() {
 # --------------------------------------------------------------- style -------
 
 wallpaper_apply() {
-    local path="$1"
+    local path="$1" output="${2:-}"
     if require_helper theme-menu.sh; then
+        if [[ -n $output ]]; then
+            if theme-menu.sh --wallpaper "$path" --output "$output" --wallpaper-only >/dev/null 2>&1; then
+                notify "Wallpaper applied to $output: $(basename "$path")"
+            else
+                notify "Wallpaper could not be applied to $output"
+            fi
+            return 0
+        fi
         if theme-menu.sh --wallpaper "$path" --apply >/dev/null 2>&1; then
             notify "Wallpaper applied: $(basename "$path")"
         else
             notify "Wallpaper could not be applied"
         fi
+    fi
+}
+
+# Connected outputs, one name per line.
+wallpaper_outputs() {
+    if have hyprctl && have jq; then
+        hyprctl monitors -j 2>/dev/null | jq -r '.[].name' 2>/dev/null
+    elif have hyprctl; then
+        hyprctl monitors 2>/dev/null | sed -n 's/^Monitor \([^ ]*\).*/\1/p'
     fi
 }
 
@@ -861,7 +878,7 @@ wallpaper_page() {
         "$REAL_HOME/Картинки"
         "$REAL_HOME/Изображения"
     )
-    local dir current image label thumb selected path
+    local dir current image label thumb selected path output="" name
     local -a images=() labels=()
     local -A paths=()
     local index=0 card_mode=0 icons=0
@@ -881,6 +898,23 @@ wallpaper_page() {
     fi
 
     current="$(wallpaper_current_image)"
+
+    # With more than one output, ask which monitor the choice belongs to.
+    local -a monitors=()
+    while IFS= read -r name; do
+        [[ -n $name ]] && monitors+=("$name")
+    done < <(wallpaper_outputs)
+    if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && ((${#monitors[@]} > 1)); then
+        local -a output_specs=($'\uf108|All monitors')
+        for name in "${monitors[@]}"; do
+            output_specs+=($'\uf108|'"$name")
+        done
+        local output_pick
+        output_pick="$(pick_icon "Apply wallpaper to" "${output_specs[@]}" 2>/dev/null)" || output_pick=""
+        if [[ -n $output_pick && $output_pick != "All monitors" ]]; then
+            output="$output_pick"
+        fi
+    fi
 
     if have magick; then
         icons=1
@@ -940,7 +974,7 @@ wallpaper_page() {
     fi
     selected="$(rofi_pick "Wallpaper" "${args[@]}" <"$CACHE_DIR/rows")" || return 0
     [[ -n ${paths[$selected]:-} ]] || return 0
-    wallpaper_apply "${paths[$selected]}"
+    wallpaper_apply "${paths[$selected]}" "$output"
     exit 0
 }
 
@@ -1386,6 +1420,80 @@ sound_page() {
     fi
 }
 
+# Recorder settings: audio source, frame rate and destination. The values
+# live in ~/.config/dotfiles/record.conf, which record.sh reads on start.
+record_config_values() {
+    REC_AUDIO=system
+    REC_FPS=60
+    REC_OUTPUT=""
+    local file="$CONFIG_HOME/dotfiles/record.conf" key value
+    [[ -r $file ]] || return 0
+    while IFS='=' read -r key value; do
+        case "$key" in
+            AUDIO) REC_AUDIO="$value" ;;
+            FPS) REC_FPS="$value" ;;
+            OUTPUT) REC_OUTPUT="$value" ;;
+        esac
+    done <"$file"
+}
+
+record_save() {
+    local file="$CONFIG_HOME/dotfiles/record.conf"
+    mkdir -p "$(dirname "$file")" 2>/dev/null || return 1
+    {
+        printf 'AUDIO=%s\n' "$REC_AUDIO"
+        printf 'FPS=%s\n' "$REC_FPS"
+        printf 'OUTPUT=%s\n' "$REC_OUTPUT"
+    } >"$file"
+}
+
+record_page() {
+    local choice value
+    while :; do
+        record_config_values
+        local output_label="${REC_OUTPUT:-default (XDG Videos/Recordings)}"
+        local audio_label="$REC_AUDIO"
+        local -a specs=(
+            $'\uf131|Audio: '"$audio_label"
+            $'\uf017|Frame rate: '"$REC_FPS"
+            $'\uf07b|Output folder: '"$output_label"
+        )
+        choice="$(pick_icon "Recording" "${specs[@]}")" || return 0
+        case "$choice" in
+            "Audio:"*)
+                local audio_choice
+                audio_choice="$(pick_icon "Audio source" \
+                    $'\uf131|Off' \
+                    $'\uf028|System sound' \
+                    $'\uf130|Microphone' \
+                    $'\uf025|System and microphone')" || continue
+                case "$audio_choice" in
+                    Off) REC_AUDIO=off ;;
+                    "System sound") REC_AUDIO=system ;;
+                    Microphone) REC_AUDIO=mic ;;
+                    "System and microphone") REC_AUDIO=both ;;
+                    *) continue ;;
+                esac
+                record_save && notify "Recording audio: $REC_AUDIO"
+                ;;
+            "Frame rate:"*)
+                value="$(ask_text "Frame rate (30 or 60)")" || continue
+                [[ $value == 30 || $value == 60 ]] || continue
+                record_config_values
+                REC_FPS="$value"
+                record_save && notify "Recording frame rate: $value"
+                ;;
+            "Output folder:"*)
+                value="$(ask_text "Recording folder (empty = XDG Videos/Recordings)")" || continue
+                record_config_values
+                REC_OUTPUT="$value"
+                record_save && notify "Recording folder: ${REC_OUTPUT:-default}"
+                ;;
+            "") return 0 ;;
+        esac
+    done
+}
+
 # External monitors over DDC/CI. Every action applies to all monitors unless a
 # single one is picked. Internal panels are handled by the brightness keys.
 display_page() {
@@ -1530,6 +1638,7 @@ config_check_cmd() {
         Bluetooth)     printf '%s' bluetoothctl ;;
         Monitors)      printf '%s' monitor-profiles.sh ;;
         Display)       printf '%s' ddcutil ;;
+        Recording)     printf '%s' record.sh ;;
         Idle)          printf '%s' idle-tune.sh ;;
         "Night light") printf '%s' nightlight.sh ;;
         Keybinds)      printf '%s' binds-cheatsheet.sh ;;
@@ -1549,6 +1658,7 @@ config_install_cmd() {
         Bluetooth)     printf '%s --only-packages --packages bluez,bluez-utils --yes && sudo systemctl enable --now bluetooth' "$installer" ;;
         Monitors)      printf '%s --modules monitor-profiles --yes' "$installer" ;;
         Display)       printf '%s --only-packages --packages ddcutil --yes && sudo usermod -aG i2c "$USER"' "$installer" ;;
+        Recording)     printf '%s --modules recorder --yes' "$installer" ;;
         Idle)          printf '%s --modules idle --yes' "$installer" ;;
         "Night light") printf '%s --modules nightlight --yes' "$installer" ;;
         Keybinds)      printf '%s --modules binds-cheatsheet --yes' "$installer" ;;
@@ -1593,6 +1703,7 @@ configuration_page() {
         if have ddc-display.sh && ddc-display.sh available >/dev/null 2>&1; then
             specs+=($'\uf108|Display')
         fi
+        have record.sh && specs+=($'\uf03d|Recording')
         specs+=(
             $'\uf017|Idle'
             $'\uf185|Night light'
@@ -1611,6 +1722,7 @@ configuration_page() {
             "Bluetooth") ensure_config_dep "Bluetooth" && bluetooth_page ;;
             "Monitors") ensure_config_dep "Monitors" && monitors_page ;;
             "Display") display_page ;;
+            "Recording") ensure_config_dep "Recording" && record_page ;;
             "Idle") ensure_config_dep "Idle" && idle_page ;;
             "Night light") ensure_config_dep "Night light" && nightlight_page ;;
             "Keybinds") ensure_config_dep "Keybinds" && edit_bind_page ;;

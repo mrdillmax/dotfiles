@@ -37,11 +37,13 @@ ARG_WALLPAPER=""
 ARG_MODE=""
 ARG_TYPE=""
 ARG_SOURCE_INDEX=""
+ARG_OUTPUT=""
 WALLPAPER=""
 MODE=""
 TYPE=""
 SOURCE_INDEX="auto"
 STATE_DIRTY=0
+declare -A WALLPAPER_BY_OUTPUT=()
 
 usage() {
     cat <<'EOF'
@@ -52,6 +54,7 @@ Interactive:
 
 Non-interactive:
   --wallpaper PATH         record a wallpaper (must exist)
+  --output NAME            apply the wallpaper only to that monitor
   --mode dark|light|smart  matugen mode
   --type TYPE              matugen color scheme type
   --source-index N|auto    accent: 0-4 from the wallpaper's source colours
@@ -96,6 +99,7 @@ valid_source_index() {
 while (($#)); do
     case "$1" in
         --wallpaper)  ARG_WALLPAPER="${2:?missing value for --wallpaper}"; shift ;;
+        --output)     ARG_OUTPUT="${2:?missing value for --output}"; shift ;;
         --mode)       ARG_MODE="${2:?missing value for --mode}"; shift ;;
         --type)       ARG_TYPE="${2:?missing value for --type}"; shift ;;
         --source-index) ARG_SOURCE_INDEX="${2:?missing value for --source-index}"; shift ;;
@@ -124,6 +128,7 @@ load_state() {
     while IFS='=' read -r key value; do
         case "$key" in
             wallpaper) [[ -z $WALLPAPER ]] && WALLPAPER="$value" ;;
+            wallpaper_*) WALLPAPER_BY_OUTPUT["${key#wallpaper_}"]="$value" ;;
             mode)      [[ -z $MODE ]] && MODE="$value" ;;
             type)      [[ -z $TYPE ]] && TYPE="$value" ;;
             source_index) [[ -z $ARG_SOURCE_INDEX ]] && SOURCE_INDEX="$value" ;;
@@ -147,7 +152,14 @@ wallpaper_from_hypr() {
 
 load_state
 
-[[ -n $ARG_WALLPAPER ]] && { WALLPAPER="$ARG_WALLPAPER"; STATE_DIRTY=1; }
+if [[ -n $ARG_WALLPAPER ]]; then
+    if [[ -n $ARG_OUTPUT ]]; then
+        WALLPAPER_BY_OUTPUT["$ARG_OUTPUT"]="$ARG_WALLPAPER"
+    else
+        WALLPAPER="$ARG_WALLPAPER"
+    fi
+    STATE_DIRTY=1
+fi
 [[ -n $ARG_MODE ]] && { MODE="$ARG_MODE"; STATE_DIRTY=1; }
 [[ -n $ARG_TYPE ]] && { TYPE="$ARG_TYPE"; STATE_DIRTY=1; }
 [[ -n $ARG_SOURCE_INDEX ]] && { SOURCE_INDEX="$ARG_SOURCE_INDEX"; STATE_DIRTY=1; }
@@ -177,6 +189,10 @@ write_state() {
     tmp="$(mktemp)"
     {
         printf 'wallpaper=%s\n' "$WALLPAPER"
+        local output
+        for output in "${!WALLPAPER_BY_OUTPUT[@]}"; do
+            printf 'wallpaper_%s=%s\n' "$output" "${WALLPAPER_BY_OUTPUT[$output]}"
+        done
         printf 'mode=%s\n' "$MODE"
         printf 'type=%s\n' "$TYPE"
         printf 'source_index=%s\n' "$SOURCE_INDEX"
@@ -201,6 +217,10 @@ sync_wallpaper_path() {
 
 print_state() {
     printf 'wallpaper=%s\n' "$WALLPAPER"
+    local output
+    for output in "${!WALLPAPER_BY_OUTPUT[@]}"; do
+        printf 'wallpaper_%s=%s\n' "$output" "${WALLPAPER_BY_OUTPUT[$output]}"
+    done
     printf 'mode=%s\n' "$MODE"
     printf 'type=%s\n' "$TYPE"
     printf 'source_index=%s\n' "$SOURCE_INDEX"
@@ -209,7 +229,12 @@ print_state() {
 # --------------------------------------------------------------- actions ----
 
 apply_wallpaper() {
-    [[ -n $WALLPAPER && -f $WALLPAPER ]] || die "no wallpaper selected; use --wallpaper PATH"
+    local primary="$WALLPAPER" output image applied=0
+
+    if [[ -n $ARG_OUTPUT ]]; then
+        primary="${WALLPAPER_BY_OUTPUT[$ARG_OUTPUT]:-$WALLPAPER}"
+    fi
+    [[ -n $primary && -f $primary ]] || die "no wallpaper selected; use --wallpaper PATH"
 
     if ! has awww; then
         warn "awww is not installed; wallpaper not applied"
@@ -217,7 +242,7 @@ apply_wallpaper() {
     fi
 
     if ((DRY_RUN)); then
-        info "[dry-run] awww img $WALLPAPER"
+        info "[dry-run] awww img $primary"
         return 0
     fi
 
@@ -226,8 +251,21 @@ apply_wallpaper() {
         return 0
     fi
 
-    awww img "$WALLPAPER"
-    ok "wallpaper applied: $WALLPAPER"
+    if [[ -n $ARG_OUTPUT ]]; then
+        awww img "$primary" --outputs "$ARG_OUTPUT"
+        ok "wallpaper applied to $ARG_OUTPUT: $primary"
+        return 0
+    fi
+
+    awww img "$primary"
+    applied=1
+    for output in "${!WALLPAPER_BY_OUTPUT[@]}"; do
+        image="${WALLPAPER_BY_OUTPUT[$output]}"
+        [[ -n $image && -f $image ]] || continue
+        awww img "$image" --outputs "$output"
+        applied=1
+    done
+    ((applied)) && ok "wallpaper applied: $primary"
 }
 
 sync_color_scheme() {
