@@ -124,9 +124,9 @@ ensure_daemon() {
     # setsid detaches the daemon from the menu that launched it; nohup is the
     # fallback on systems without util-linux.
     if have setsid; then
-        (setsid hyprsunset >"$log" 2>&1 &)
+        (setsid hyprsunset < /dev/null >"$log" 2>&1 &)
     else
-        (nohup hyprsunset >"$log" 2>&1 &)
+        (nohup hyprsunset < /dev/null >"$log" 2>&1 &)
     fi
     # The protocol socket appears a moment after the process; a command sent
     # too early fails and made the Control Center report a broken night light.
